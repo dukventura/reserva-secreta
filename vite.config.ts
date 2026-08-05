@@ -1,15 +1,12 @@
 import { defineConfig } from 'vite'
-import react from '@vitejs/react-refresh' // ou o plugin que estiver usando
+import react from '@vitejs/plugin-react'
+import tailwindcss from '@tailwindcss/vite'
 
+// https://vite.dev/config/
 export default defineConfig({
-  base: '/guia-prime/', // <--- ADICIONE ESSA LINHA AQUI
-  {
-  "name": "guia-prime",
-  "homepage": "https://github.io",
-  "private": true,
-  ...
-}
-
-  plugins: [react()],
-  // mantenha o restante das configurações que já existirem abaixo
+  plugins: [
+    react(),
+    tailwindcss(),
+  ],
+  base: './', // Suporte para caminhos relativos em hospedagens estáticas e GitHub Pages
 })

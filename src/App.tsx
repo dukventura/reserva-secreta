@@ -20,11 +20,19 @@ export function App() {
   const [selectedProfile, setSelectedProfile] = useState<EscortProfile | null>(null);
   const [isAdvertiseOpen, setIsAdvertiseOpen] = useState(false);
   const [isAgeConfirmed, setIsAgeConfirmed] = useState<boolean>(() => {
-    return sessionStorage.getItem('guia_prime_18_confirmed') === 'true';
+    try {
+      return sessionStorage.getItem('guia_prime_18_confirmed') === 'true';
+    } catch {
+      return false;
+    }
   });
 
   const handleConfirmAge = () => {
-    sessionStorage.setItem('guia_prime_18_confirmed', 'true');
+    try {
+      sessionStorage.setItem('guia_prime_18_confirmed', 'true');
+    } catch (e) {
+      console.warn('sessionStorage is unavailable', e);
+    }
     setIsAgeConfirmed(true);
   };
 
