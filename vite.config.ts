@@ -8,5 +8,5 @@ export default defineConfig({
     react(),
     tailwindcss(),
   ],
-  base: './', // Suporte para caminhos relativos em hospedagens estáticas e GitHub Pages
+  base: '/guia-prime/', // Caminho base oficial para o GitHub Pages em dukventura.github.io/guia-prime/
 })
