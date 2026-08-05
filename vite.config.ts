@@ -1,11 +1,8 @@
 import { defineConfig } from 'vite'
-import react from '@vitejs/plugin-react'
-import tailwindcss from '@tailwindcss/vite'
+import react from '@vitejs/react-refresh' // ou o plugin que estiver usando
 
-// https://vite.dev/config/
 export default defineConfig({
-  plugins: [
-    react(),
-    tailwindcss(),
-  ],
+  base: '/guia-prime/', // <--- ADICIONE ESSA LINHA AQUI
+  plugins: [react()],
+  // mantenha o restante das configurações que já existirem abaixo
 })
