@@ -1,0 +1,75 @@
+@import "tailwindcss";
+
+@theme {
+  --color-prime-bg: #08080a;
+  --color-prime-surface: #111116;
+  --color-prime-card: #16161d;
+  --color-prime-cardHover: #1e1e27;
+  --color-prime-border: #272733;
+  --color-prime-gold: #eab308;
+  --color-prime-goldHover: #ca8a04;
+  --color-prime-goldLight: #fde047;
+  --color-prime-whatsapp: #25D366;
+  --color-prime-whatsappHover: #1ea952;
+  --font-sans: 'Inter', sans-serif;
+}
+
+body {
+  background-color: #08080a;
+  color: #f1f5f9;
+  font-family: 'Inter', sans-serif;
+  overflow-x: hidden;
+  -webkit-tap-highlight-color: transparent;
+}
+
+/* Custom scrollbars for dark theme */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+
+::-webkit-scrollbar-track {
+  background: #08080a;
+}
+
+::-webkit-scrollbar-thumb {
+  background: #272733;
+  border-radius: 3px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: #d97706;
+}
+
+/* Glassmorphism effects */
+.glass-panel {
+  background: rgba(18, 18, 22, 0.85);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+}
+
+.glass-nav {
+  background: rgba(11, 11, 15, 0.92);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+}
+
+/* Gold glow text and borders */
+.text-gold-gradient {
+  background: linear-gradient(135deg, #fef08a 0%, #f59e0b 50%, #d97706 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+}
+
+.border-gold-glow {
+  border-color: rgba(234, 179, 8, 0.3);
+  box-shadow: 0 0 15px rgba(234, 179, 8, 0.15);
+}
+
+.btn-whatsapp-glow {
+  box-shadow: 0 4px 20px rgba(37, 211, 102, 0.4);
+}
+
+.btn-gold-glow {
+  box-shadow: 0 4px 20px rgba(234, 179, 8, 0.3);
+}
