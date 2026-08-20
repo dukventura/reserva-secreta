@@ -23,12 +23,12 @@ export const Navbar: React.FC<NavbarProps> = ({ onOpenAdvertise }) => {
             <div className="flex flex-col">
               <div className="flex items-center space-x-1">
                 <span className="text-xl sm:text-2xl font-extrabold tracking-tight text-white font-sans">
-                  GUIA <span className="text-gold-gradient">PRIME</span>
+                  RESERVA <span className="text-gold-gradient">SECRETA</span>
                 </span>
                 <Sparkles className="w-4 h-4 text-amber-400 animate-pulse-slow hidden sm:inline-block" />
               </div>
-              <span className="text-[10px] sm:text-xs text-amber-400/80 tracking-widest uppercase font-semibold">
-                Ilicínea & Boa Esperança
+              <span className="text-[10px] sm:text-xs text-amber-400/90 tracking-wider font-semibold">
+                reservasecreta.com.br • Ilicínea & Boa Esperança
               </span>
             </div>
           </div>

@@ -1,6 +1,7 @@
-# React + TypeScript + Vite
+# Reserva Secreta (reservasecreta.com.br)
 
-This template provides a minimal setup to get React working in Vite with HMR and some Oxlint rules.
+Plataforma VIP & Guia Exclusivo de Acompanhantes em Ilicínea, Boa Esperança e Região.
+Desenvolvido com React 19, TypeScript, Tailwind CSS e Vite.
 
 Currently, two official plugins are available:
 

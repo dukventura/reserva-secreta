@@ -16,7 +16,7 @@ export const AdvertiseModal: React.FC<AdvertiseModalProps> = ({ onClose }) => {
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    const text = `Olá equipe Guia Prime! Gostaria de cadastrar meu perfil:\n- Nome: ${formData.name}\n- Cidade: ${formData.city}\n- Categoria: ${formData.category}\n- Contato: ${formData.whatsapp}`;
+    const text = `Olá equipe Reserva Secreta (reservasecreta.com.br)! Gostaria de cadastrar meu perfil:\n- Nome: ${formData.name}\n- Cidade: ${formData.city}\n- Categoria: ${formData.category}\n- Contato: ${formData.whatsapp}`;
     const url = `https://wa.me/5535999999999?text=${encodeURIComponent(text)}`;
     window.open(url, '_blank');
     onClose();
@@ -40,7 +40,7 @@ export const AdvertiseModal: React.FC<AdvertiseModalProps> = ({ onClose }) => {
             <Crown className="w-6 h-6" />
           </div>
           <h2 className="text-2xl font-extrabold text-white">
-            Anuncie no <span className="text-gold-gradient">Guia Prime</span>
+            Anuncie no <span className="text-gold-gradient">Reserva Secreta</span>
           </h2>
           <p className="text-xs text-gray-300">
             Seja uma acompanhante VIP em Ilicínea, Boa Esperança e região com máxima visibilidade e discrição.

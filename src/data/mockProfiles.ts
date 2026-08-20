@@ -40,7 +40,7 @@ export const mockProfiles: EscortProfile[] = [
     ],
     locations: ['Com Local Próprio Discreto', 'Hotéis / Motéis', 'A Domicílio'],
     whatsapp: '5535999887766',
-    whatsappMessage: 'Olá Valentina, vi seu perfil no Guia Prime e gostaria de verificar sua disponibilidade!'
+    whatsappMessage: 'Olá Valentina, vi seu perfil no Reserva Secreta e gostaria de verificar sua disponibilidade!'
   },
   {
     id: 'isabela-santos',
@@ -79,7 +79,7 @@ export const mockProfiles: EscortProfile[] = [
     ],
     locations: ['Hotéis 5 Estrelas', 'Com Local Luxuoso', 'Resorts da Região'],
     whatsapp: '5535999776655',
-    whatsappMessage: 'Olá Isabela! Encontrei seu perfil no Guia Prime e gostaria de saber mais sobre o atendimento.'
+    whatsappMessage: 'Olá Isabela! Encontrei seu perfil no Reserva Secreta e gostaria de saber mais sobre o atendimento.'
   },
   {
     id: 'sophia-lima',
@@ -117,7 +117,7 @@ export const mockProfiles: EscortProfile[] = [
     ],
     locations: ['Com Local Próprio Ar-condicionado', 'Motéis'],
     whatsapp: '553599665544',
-    whatsappMessage: 'Oi Sophia! Vi seu anúncio no Guia Prime, está disponível hoje?'
+    whatsappMessage: 'Oi Sophia! Vi seu anúncio no Reserva Secreta, está disponível hoje?'
   },
   {
     id: 'camilla-thorne',
@@ -156,7 +156,7 @@ export const mockProfiles: EscortProfile[] = [
     ],
     locations: ['Com Local Próprio Privativo', 'Hotéis & Motéis'],
     whatsapp: '5535999554433',
-    whatsappMessage: 'Olá Camilla, vi seu anúncio no Guia Prime e fiquei encantado. Como funciona seu atendimento?'
+    whatsappMessage: 'Olá Camilla, vi seu anúncio no Reserva Secreta e fiquei encantado. Como funciona seu atendimento?'
   },
   {
     id: 'maya-alencar',
@@ -194,7 +194,7 @@ export const mockProfiles: EscortProfile[] = [
     ],
     locations: ['Com Local Próprio Discreto', 'A Domicílio / Hotéis'],
     whatsapp: '5535999443322',
-    whatsappMessage: 'Oi Maya! Vi seu perfil no Guia Prime e gostaria de agendar um horário com você.'
+    whatsappMessage: 'Oi Maya! Vi seu perfil no Reserva Secreta e gostaria de agendar um horário com você.'
   },
   {
     id: 'leticia-mendes',
@@ -232,6 +232,6 @@ export const mockProfiles: EscortProfile[] = [
     ],
     locations: ['Hotéis & Motéis', 'Com Local Discreto'],
     whatsapp: '5535999332211',
-    whatsappMessage: 'Olá Letícia! Encontrei seu contato no Guia Prime e gostaria de tirar algumas dúvidas sobre o seu atendimento.'
+    whatsappMessage: 'Olá Letícia! Encontrei seu contato no Reserva Secreta e gostaria de tirar algumas dúvidas sobre o seu atendimento.'
   }
 ];

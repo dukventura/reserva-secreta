@@ -16,11 +16,14 @@ export const Footer: React.FC = () => {
                 <Crown className="w-5 h-5" />
               </div>
               <span className="text-xl font-extrabold text-white tracking-tight">
-                GUIA <span className="text-gold-gradient">PRIME</span>
+                RESERVA <span className="text-gold-gradient">SECRETA</span>
               </span>
             </div>
             <p className="text-xs text-gray-400 max-w-md">
               O catálogo mais exclusivo e discreto de acompanhantes VIP em Ilicínea, Boa Esperança e Região do Sul de Minas.
+            </p>
+            <p className="text-[11px] text-amber-400/80 font-mono">
+              reservasecreta.com.br
             </p>
           </div>
 
@@ -44,14 +47,14 @@ export const Footer: React.FC = () => {
             <span>Aviso Legal & Termos de Uso</span>
           </div>
           <p className="leading-relaxed">
-            O <strong>Guia Prime</strong> é uma plataforma publicitária independente destinada ao público adulto (18+). Todas as acompanhantes anunciadas são maiores de idade, atuam de forma autônoma e declaram possuir os direitos das imagens publicadas. A plataforma não possui vínculo empregatício com as anunciantes.
+            O <strong>Reserva Secreta (reservasecreta.com.br)</strong> é uma plataforma publicitária independente destinada ao público adulto (18+). Todas as acompanhantes anunciadas são maiores de idade, atuam de forma autônoma e declaram possuir os direitos das imagens publicadas. A plataforma não possui vínculo empregatício com as anunciantes.
           </p>
         </div>
 
         {/* Copyright & Subfooter */}
         <div className="pt-4 border-t border-white/10 flex flex-col sm:flex-row items-center justify-between text-[11px] text-gray-400 gap-2">
           <div>
-            © {new Date().getFullYear()} <strong>Guia Prime</strong>. Todos os direitos reservados.
+            © {new Date().getFullYear()} <strong>Reserva Secreta (reservasecreta.com.br)</strong>. Todos os direitos reservados.
           </div>
           <div className="flex items-center space-x-4">
             <a href="#" className="hover:text-amber-400 transition-colors">Termos de Uso</a>

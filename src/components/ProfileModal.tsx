@@ -29,7 +29,7 @@ export const ProfileModal: React.FC<ProfileModalProps> = ({ profile, onClose }) 
   const [activeImageIndex, setActiveImageIndex] = useState(0);
 
   const whatsappUrl = `https://wa.me/${profile.whatsapp}?text=${encodeURIComponent(
-    profile.whatsappMessage || `Olá ${profile.name}, vi seu perfil no Guia Prime!`
+    profile.whatsappMessage || `Olá ${profile.name}, vi seu perfil no Reserva Secreta (reservasecreta.com.br)!`
   )}`;
 
   return (
@@ -285,7 +285,7 @@ export const ProfileModal: React.FC<ProfileModalProps> = ({ profile, onClose }) 
           <div className="p-3.5 rounded-2xl bg-amber-500/10 border border-amber-500/20 text-amber-300 text-xs flex items-center space-x-2">
             <Lock className="w-4 h-4 shrink-0 text-amber-400" />
             <span>
-              Ao entrar em contato pelo WhatsApp, mencione que viu o anúncio no <strong>Guia Prime</strong> para um atendimento exclusivo e prioritário.
+              Ao entrar em contato pelo WhatsApp, mencione que viu o anúncio no <strong>Reserva Secreta (reservasecreta.com.br)</strong> para um atendimento exclusivo e prioritário.
             </span>
           </div>
 

@@ -1,9 +1,9 @@
 {
-  "name": "guia-prime",
+  "name": "reserva-secreta",
   "private": true,
   "version": "0.0.0",
   "type": "module",
-  "homepage": "https://dukventura.github.io/guia-prime/",
+  "homepage": "https://reservasecreta.com.br/",
   "scripts": {
     "dev": "vite",
     "build": "tsc -b && vite build",

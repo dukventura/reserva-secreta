@@ -21,7 +21,7 @@ export function App() {
   const [isAdvertiseOpen, setIsAdvertiseOpen] = useState(false);
   const [isAgeConfirmed, setIsAgeConfirmed] = useState<boolean>(() => {
     try {
-      return sessionStorage.getItem('guia_prime_18_confirmed') === 'true';
+      return sessionStorage.getItem('reservasecreta_18_confirmed') === 'true';
     } catch {
       return false;
     }
@@ -29,7 +29,7 @@ export function App() {
 
   const handleConfirmAge = () => {
     try {
-      sessionStorage.setItem('guia_prime_18_confirmed', 'true');
+      sessionStorage.setItem('reservasecreta_18_confirmed', 'true');
     } catch (e) {
       console.warn('sessionStorage is unavailable', e);
     }

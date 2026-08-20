@@ -9,7 +9,7 @@ interface ProfileCardProps {
 
 export const ProfileCard: React.FC<ProfileCardProps> = ({ profile, onSelect }) => {
   const whatsappUrl = `https://wa.me/${profile.whatsapp}?text=${encodeURIComponent(
-    profile.whatsappMessage || `Olá ${profile.name}, vi seu perfil no Guia Prime!`
+    profile.whatsappMessage || `Olá ${profile.name}, vi seu perfil no Reserva Secreta (reservasecreta.com.br)!`
   )}`;
 
   return (

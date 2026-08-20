@@ -8,5 +8,5 @@ export default defineConfig({
     react(),
     tailwindcss(),
   ],
-  base: '/guia-prime/', // Caminho base oficial para o GitHub Pages em dukventura.github.io/guia-prime/
+  base: '/', // Base configurada para domínio raiz (reservasecreta.com.br) e ambiente local
 })

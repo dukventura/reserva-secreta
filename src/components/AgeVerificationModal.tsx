@@ -23,7 +23,7 @@ export const AgeVerificationModal: React.FC<AgeVerificationModalProps> = ({ onCo
             Aviso de Conteúdo Adulto
           </span>
           <h2 className="text-2xl sm:text-3xl font-extrabold text-white tracking-tight">
-            GUIA <span className="text-gold-gradient">PRIME</span>
+            RESERVA <span className="text-gold-gradient">SECRETA</span>
           </h2>
           <p className="text-xs sm:text-sm text-gray-300 leading-relaxed">
             Este site contém materiais exclusivos para maiores de idade. Para continuar navegando, confirme se possui 18 anos ou mais.
