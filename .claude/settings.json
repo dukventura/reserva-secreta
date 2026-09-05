@@ -1,0 +1,8 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(rm -f reserva-secreta-site.zip)",
+      "Bash(zip -rq \"../reserva-secreta-site.zip\" . -x \".DS_Store\")"
+    ]
+  }
+}
