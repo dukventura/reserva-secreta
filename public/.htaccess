@@ -1,6 +1,12 @@
 <IfModule mod_rewrite.c>
   RewriteEngine On
   RewriteBase /
+
+  # Bloqueia arquivos e pastas ocultos, como o .ftp-deploy-sync-state.json
+  # que a action de deploy grava no diretorio. Abre excecao para
+  # .well-known, usado na emissao e renovacao do certificado SSL.
+  RewriteRule "(^|/)\.(?!well-known)" - [F]
+
   RewriteRule ^index\.html$ - [L]
   RewriteCond %{REQUEST_FILENAME} !-f
   RewriteCond %{REQUEST_FILENAME} !-d
