@@ -1,24 +1,18 @@
-name: Deploy to GitHub Pages
+name: Deploy para cPanel (FTP)
 
 on:
   push:
     branches: ["main"]
   workflow_dispatch:
 
-permissions:
-  contents: read
-  pages: write
-  id-token: write
-
+# Um deploy por vez. Nao cancelamos o que ja esta rodando: interromper
+# um envio FTP pela metade deixa o site inconsistente.
 concurrency:
-  group: "pages"
-  cancel-in-progress: true
+  group: "ftp-deploy"
+  cancel-in-progress: false
 
 jobs:
   deploy:
-    environment:
-      name: github-pages
-      url: ${{ steps.deployment.outputs.page_url }}
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
@@ -28,18 +22,27 @@ jobs:
         uses: actions/setup-node@v4
         with:
           node-version: 22
+          cache: npm
 
-      - name: Install dependencies
-        run: npm install
+      - name: Instalar dependencias
+        run: npm ci
 
-      - name: Build static site
+      - name: Build
         run: npm run build
 
-      - name: Upload artifact
-        uses: actions/upload-pages-artifact@v3
+      - name: Enviar dist/ por FTP
+        uses: SamKirkland/FTP-Deploy-Action@v4.3.5
         with:
-          path: './dist'
-
-      - name: Deploy to GitHub Pages
-        id: deployment
-        uses: actions/deploy-pages@v4
+          server: ${{ secrets.FTP_SERVER }}
+          username: ${{ secrets.FTP_USERNAME }}
+          password: ${{ secrets.FTP_PASSWORD }}
+          # ftps = FTP com TLS explicito na porta 21. Se a revenda nao
+          # suportar, defina a variavel FTP_PROTOCOL como "ftp".
+          protocol: ${{ vars.FTP_PROTOCOL || 'ftps' }}
+          port: ${{ vars.FTP_PORT || 21 }}
+          local-dir: ./dist/
+          # Se a conta FTP ja abrir dentro de public_html, defina a
+          # variavel FTP_SERVER_DIR como "./".
+          server-dir: ${{ vars.FTP_SERVER_DIR || './public_html/' }}
+          # Nunca limpar o destino: cgi-bin e php.ini sao do servidor.
+          dangerous-clean-slate: false
