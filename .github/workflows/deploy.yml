@@ -36,10 +36,16 @@ jobs:
           server: ${{ secrets.FTP_SERVER }}
           username: ${{ secrets.FTP_USERNAME }}
           password: ${{ secrets.FTP_PASSWORD }}
-          # ftps = FTP com TLS explicito na porta 21. Se a revenda nao
-          # suportar, defina a variavel FTP_PROTOCOL como "ftp".
-          protocol: ${{ vars.FTP_PROTOCOL || 'ftps' }}
+          # ftp em texto puro porque esta revenda nao oferece alternativa:
+          # o Pure-FTPd anuncia AUTH TLS no FEAT mas responde "500 This
+          # security scheme is not implemented"; a porta 990 (FTPS
+          # implicito) esta fechada e nao ha SSH/SFTP exposto.
+          # Quando o suporte habilitar TLS, basta trocar a variavel
+          # FTP_PROTOCOL para "ftps" - sem precisar de commit.
+          protocol: ${{ vars.FTP_PROTOCOL || 'ftp' }}
           port: ${{ vars.FTP_PORT || 21 }}
+          # 30s (padrao) e apertado na primeira sincronizacao completa.
+          timeout: 60000
           local-dir: ./dist/
           # Se a conta FTP ja abrir dentro de public_html, defina a
           # variavel FTP_SERVER_DIR como "./".
