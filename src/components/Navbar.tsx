@@ -1,21 +1,27 @@
 import React, { useState } from 'react';
-import { PlusCircle, ShieldAlert, Menu, X } from 'lucide-react';
+import { Link, NavLink } from 'react-router-dom';
+import { PlusCircle, ShieldAlert, Menu, X, UserCircle2, LayoutDashboard } from 'lucide-react';
 import { Monograma } from './Logo';
+import { useSession } from '../context/SessionContext';
 
-interface NavbarProps {
-  onOpenAdvertise: () => void;
-}
+const PAINEL_POR_PAPEL: Record<string, string> = {
+  master: '/painel/admin',
+  gerente: '/painel/gerente',
+  profissional: '/painel/profissional',
+  contratante: '/', // contratante nao tem painel dedicado nesta leva
+};
 
-export const Navbar: React.FC<NavbarProps> = ({ onOpenAdvertise }) => {
+export const Navbar: React.FC = () => {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+  const { session, sair } = useSession();
 
   return (
     <header className="sticky top-0 z-40 w-full glass-nav border-b border-white/10 transition-all duration-300">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="flex items-center justify-between h-16 sm:h-20">
-          
+
           {/* Logo Brand */}
-          <div className="flex items-center space-x-3 cursor-pointer group" onClick={() => window.scrollTo({ top: 0, behavior: 'smooth' })}>
+          <Link to="/" className="flex items-center space-x-3 group" onClick={() => setMobileMenuOpen(false)}>
             <Monograma size={40} className="shrink-0" />
             <div className="flex flex-col">
               <span className="text-xl sm:text-2xl font-display font-normal text-marfim leading-tight">
@@ -25,33 +31,59 @@ export const Navbar: React.FC<NavbarProps> = ({ onOpenAdvertise }) => {
                 Ilicínea &amp; Boa Esperança
               </span>
             </div>
-          </div>
+          </Link>
 
           {/* Desktop Right Navigation */}
-          <div className="hidden md:flex items-center space-x-4">
+          <div className="hidden md:flex items-center space-x-3">
             <div className="flex items-center space-x-2 px-3 py-1.5 rounded-campo bg-ouro/10 border border-ouro/20 text-ouro text-xs font-medium">
               <ShieldAlert className="w-3.5 h-3.5" />
               <span>Perfis 100% Verificados</span>
             </div>
 
-            <button
-              onClick={onOpenAdvertise}
+            <NavLink
+              to="/anunciar"
               className="flex items-center space-x-2 px-4 py-2 rounded-campo bg-ouro hover:bg-champanhe text-black font-bold text-sm transition-all duration-300 transform hover:-translate-y-0.5 active:translate-y-0"
             >
               <PlusCircle className="w-4 h-4" />
               <span>Anuncie Conosco</span>
-            </button>
+            </NavLink>
+
+            {session ? (
+              <div className="flex items-center space-x-2">
+                <Link
+                  to={PAINEL_POR_PAPEL[session.role]}
+                  className="flex items-center space-x-1.5 px-3 py-2 rounded-campo bg-white/5 border border-white/10 hover:border-ouro/40 text-marfim text-xs font-semibold transition-colors"
+                >
+                  <LayoutDashboard className="w-3.5 h-3.5 text-ouro" />
+                  <span>{session.name}</span>
+                </Link>
+                <button
+                  onClick={sair}
+                  className="px-3 py-2 rounded-campo bg-white/5 border border-white/10 hover:border-white/30 text-nevoa hover:text-marfim text-xs font-semibold transition-colors"
+                >
+                  Sair
+                </button>
+              </div>
+            ) : (
+              <Link
+                to="/entrar"
+                className="flex items-center space-x-1.5 px-3 py-2 rounded-campo bg-white/5 border border-white/10 hover:border-ouro/40 text-marfim text-xs font-semibold transition-colors"
+              >
+                <UserCircle2 className="w-4 h-4 text-ouro" />
+                <span>Entrar</span>
+              </Link>
+            )}
           </div>
 
           {/* Mobile Right Action & Menu Toggle */}
           <div className="flex items-center space-x-2 md:hidden">
-            <button
-              onClick={onOpenAdvertise}
+            <Link
+              to="/anunciar"
               className="px-3 py-1.5 rounded-campo bg-ouro text-black font-bold text-xs flex items-center space-x-1"
             >
               <PlusCircle className="w-3.5 h-3.5" />
               <span>Anunciar</span>
-            </button>
+            </Link>
             <button
               onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
               className="p-2 rounded-campo bg-white/5 border border-white/10 text-nevoa hover:text-marfim"
@@ -72,23 +104,48 @@ export const Navbar: React.FC<NavbarProps> = ({ onOpenAdvertise }) => {
           </div>
 
           <div className="space-y-2 pt-1">
-            <button
-              onClick={() => {
-                setMobileMenuOpen(false);
-                onOpenAdvertise();
-              }}
+            <Link
+              to="/anunciar"
+              onClick={() => setMobileMenuOpen(false)}
               className="w-full flex items-center justify-center space-x-2 py-3 rounded-campo bg-ouro text-black font-bold text-sm"
             >
               <PlusCircle className="w-4 h-4" />
               <span>Criar Perfil / Anunciar</span>
-            </button>
-            <a
-              href="#grid"
+            </Link>
+            <Link
+              to="/"
               onClick={() => setMobileMenuOpen(false)}
               className="w-full flex items-center justify-center space-x-2 py-2.5 rounded-campo bg-white/5 border border-white/10 text-nevoa font-medium text-sm"
             >
               <span>Ver Perfis Disponíveis</span>
-            </a>
+            </Link>
+            {session ? (
+              <div className="flex gap-2">
+                <Link
+                  to={PAINEL_POR_PAPEL[session.role]}
+                  onClick={() => setMobileMenuOpen(false)}
+                  className="flex-1 flex items-center justify-center space-x-1.5 py-2.5 rounded-campo bg-white/5 border border-white/10 text-marfim text-sm font-semibold"
+                >
+                  <LayoutDashboard className="w-4 h-4 text-ouro" />
+                  <span>{session.name}</span>
+                </Link>
+                <button
+                  onClick={() => { sair(); setMobileMenuOpen(false); }}
+                  className="px-4 rounded-campo bg-white/5 border border-white/10 text-nevoa text-sm font-semibold"
+                >
+                  Sair
+                </button>
+              </div>
+            ) : (
+              <Link
+                to="/entrar"
+                onClick={() => setMobileMenuOpen(false)}
+                className="w-full flex items-center justify-center space-x-1.5 py-2.5 rounded-campo bg-white/5 border border-white/10 text-marfim font-semibold text-sm"
+              >
+                <UserCircle2 className="w-4 h-4 text-ouro" />
+                <span>Entrar</span>
+              </Link>
+            )}
           </div>
         </div>
       )}

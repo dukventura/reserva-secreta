@@ -6,14 +6,12 @@ import { SearchX, RotateCcw } from 'lucide-react';
 interface ProfileGridProps {
   profiles: EscortProfile[];
   filters: FilterState;
-  onSelectProfile: (profile: EscortProfile) => void;
   onResetFilters: () => void;
 }
 
 export const ProfileGrid: React.FC<ProfileGridProps> = ({
   profiles,
   filters,
-  onSelectProfile,
   onResetFilters,
 }) => {
   // Filter logic
@@ -67,11 +65,7 @@ export const ProfileGrid: React.FC<ProfileGridProps> = ({
       {filteredProfiles.length > 0 ? (
         <div className="mt-8 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
           {filteredProfiles.map((profile) => (
-            <ProfileCard
-              key={profile.id}
-              profile={profile}
-              onSelect={onSelectProfile}
-            />
+            <ProfileCard key={profile.id} profile={profile} />
           ))}
         </div>
       ) : (

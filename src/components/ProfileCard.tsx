@@ -1,21 +1,21 @@
 import React from 'react';
+import { Link } from 'react-router-dom';
 import { MapPin, Crown, ShieldCheck, MessageCircle, Eye } from 'lucide-react';
 import type { EscortProfile } from '../types';
 
 interface ProfileCardProps {
   profile: EscortProfile;
-  onSelect: (profile: EscortProfile) => void;
 }
 
-export const ProfileCard: React.FC<ProfileCardProps> = ({ profile, onSelect }) => {
+export const ProfileCard: React.FC<ProfileCardProps> = ({ profile }) => {
   const whatsappUrl = `https://wa.me/${profile.whatsapp}?text=${encodeURIComponent(
     profile.whatsappMessage || `Olá ${profile.name}, vi seu perfil no Reserva Secreta (reservasecreta.com.br)!`
   )}`;
 
   return (
-    <div
-      onClick={() => onSelect(profile)}
-      className="group relative bg-grafite rounded-none overflow-hidden border border-white/10 hover:border-ouro/50 shadow-xl hover:shadow-2xl transition-all duration-300 transform hover:-translate-y-1.5 flex flex-col cursor-pointer"
+    <Link
+      to={`/perfil/${profile.id}`}
+      className="group relative bg-grafite rounded-none overflow-hidden border border-white/10 hover:border-ouro/50 shadow-xl hover:shadow-2xl transition-all duration-300 transform hover:-translate-y-1.5 flex flex-col"
     >
       {/* Card Image Container */}
       <div className="relative aspect-[3/4] w-full overflow-hidden bg-grafite">
@@ -104,17 +104,11 @@ export const ProfileCard: React.FC<ProfileCardProps> = ({ profile, onSelect }) =
 
         {/* Action Buttons */}
         <div className="pt-1 grid grid-cols-5 gap-2">
-          {/* View Profile details button */}
-          <button
-            onClick={(e) => {
-              e.stopPropagation();
-              onSelect(profile);
-            }}
-            className="col-span-3 flex items-center justify-center space-x-1.5 py-2.5 rounded-campo bg-white/5 hover:bg-white/10 border border-white/15 text-marfim font-bold text-xs transition-colors"
-          >
+          {/* View Profile details */}
+          <span className="col-span-3 flex items-center justify-center space-x-1.5 py-2.5 rounded-campo bg-white/5 group-hover:bg-white/10 border border-white/15 text-marfim font-bold text-xs transition-colors">
             <Eye className="w-4 h-4 text-ouro" />
             <span>Ver Perfil</span>
-          </button>
+          </span>
 
           {/* Direct WhatsApp button */}
           <a
@@ -130,6 +124,6 @@ export const ProfileCard: React.FC<ProfileCardProps> = ({ profile, onSelect }) =
         </div>
 
       </div>
-    </div>
+    </Link>
   );
 };

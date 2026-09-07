@@ -1,100 +1,43 @@
-import { useState } from 'react';
-import { Navbar } from './components/Navbar';
-import { Hero } from './components/Hero';
-import { ProfileGrid } from './components/ProfileGrid';
-import { ProfileModal } from './components/ProfileModal';
-import { AgeVerificationModal } from './components/AgeVerificationModal';
-import { AdvertiseModal } from './components/AdvertiseModal';
-import { Footer } from './components/Footer';
-import { mockProfiles } from './data/mockProfiles';
-import type { EscortProfile, FilterState } from './types';
+import { BrowserRouter, Routes, Route } from 'react-router-dom';
+import { SessionProvider } from './context/SessionContext';
+import { ModerationProvider } from './context/ModerationContext';
+import { PublicLayout } from './layouts/PublicLayout';
+import { HomePage } from './pages/HomePage';
+import { CityPage } from './pages/CityPage';
+import { ProfilePage } from './pages/ProfilePage';
+import { AdvertisePage } from './pages/AdvertisePage';
+import { ClientSignupPage } from './pages/ClientSignupPage';
+import { LoginPage } from './pages/LoginPage';
+import { NotFoundPage } from './pages/NotFoundPage';
+import { ProfessionalDashboard } from './pages/dashboard/ProfessionalDashboard';
+import { ManagerDashboard } from './pages/dashboard/ManagerDashboard';
+import { AdminDashboard } from './pages/dashboard/AdminDashboard';
 
 export function App() {
-  const [filters, setFilters] = useState<FilterState>({
-    city: 'Todas',
-    category: 'Todas',
-    searchQuery: '',
-    onlyVerified: false,
-  });
-
-  const [selectedProfile, setSelectedProfile] = useState<EscortProfile | null>(null);
-  const [isAdvertiseOpen, setIsAdvertiseOpen] = useState(false);
-  const [isAgeConfirmed, setIsAgeConfirmed] = useState<boolean>(() => {
-    try {
-      return sessionStorage.getItem('reservasecreta_18_confirmed') === 'true';
-    } catch {
-      return false;
-    }
-  });
-
-  const handleConfirmAge = () => {
-    try {
-      sessionStorage.setItem('reservasecreta_18_confirmed', 'true');
-    } catch (e) {
-      console.warn('sessionStorage is unavailable', e);
-    }
-    setIsAgeConfirmed(true);
-  };
-
-  const handleFilterChange = (updated: Partial<FilterState>) => {
-    setFilters((prev) => ({ ...prev, ...updated }));
-  };
-
-  const handleResetFilters = () => {
-    setFilters({
-      city: 'Todas',
-      category: 'Todas',
-      searchQuery: '',
-      onlyVerified: false,
-    });
-  };
-
   return (
-    <div className="min-h-screen bg-onix text-marfim flex flex-col font-sans selection:bg-ouro selection:text-black">
-      
-      {/* Age Verification Overlay */}
-      {!isAgeConfirmed && (
-        <AgeVerificationModal onConfirm={handleConfirmAge} />
-      )}
+    <SessionProvider>
+      <ModerationProvider>
+        <BrowserRouter>
+          <Routes>
+            {/* Jornada publica: Navbar + Footer + portao de idade */}
+            <Route element={<PublicLayout />}>
+              <Route path="/" element={<HomePage />} />
+              <Route path="/cidade/:cidade" element={<CityPage />} />
+              <Route path="/perfil/:id" element={<ProfilePage />} />
+              <Route path="/anunciar" element={<AdvertisePage />} />
+              <Route path="/cadastro" element={<ClientSignupPage />} />
+              <Route path="/entrar" element={<LoginPage />} />
+              <Route path="*" element={<NotFoundPage />} />
+            </Route>
 
-      {/* Main Header */}
-      <Navbar onOpenAdvertise={() => setIsAdvertiseOpen(true)} />
-
-      {/* Main Content Area */}
-      <main className="flex-1">
-        {/* Hero Section & Filters */}
-        <Hero
-          filters={filters}
-          onFilterChange={handleFilterChange}
-          totalProfiles={mockProfiles.length}
-        />
-
-        {/* Directory Grid */}
-        <ProfileGrid
-          profiles={mockProfiles}
-          filters={filters}
-          onSelectProfile={(profile) => setSelectedProfile(profile)}
-          onResetFilters={handleResetFilters}
-        />
-      </main>
-
-      {/* Profile Details Modal */}
-      {selectedProfile && (
-        <ProfileModal
-          profile={selectedProfile}
-          onClose={() => setSelectedProfile(null)}
-        />
-      )}
-
-      {/* Advertise Modal */}
-      {isAdvertiseOpen && (
-        <AdvertiseModal onClose={() => setIsAdvertiseOpen(false)} />
-      )}
-
-      {/* Footer */}
-      <Footer />
-
-    </div>
+            {/* Paineis logados: casca propria (sidebar), sem Navbar/Footer publicos */}
+            <Route path="/painel/profissional" element={<ProfessionalDashboard />} />
+            <Route path="/painel/gerente" element={<ManagerDashboard />} />
+            <Route path="/painel/admin" element={<AdminDashboard />} />
+          </Routes>
+        </BrowserRouter>
+      </ModerationProvider>
+    </SessionProvider>
   );
 }
 

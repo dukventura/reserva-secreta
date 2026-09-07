@@ -1,6 +1,8 @@
 import React from 'react';
+import { Link } from 'react-router-dom';
 import { Search, MapPin, Sparkles, Filter, CheckCircle2, ShieldCheck, HeartHandshake } from 'lucide-react';
 import type { City, Category, FilterState } from '../types';
+import { slugDaCidade } from '../data/cities';
 
 interface HeroProps {
   filters: FilterState;
@@ -154,8 +156,8 @@ export const Hero: React.FC<HeroProps> = ({ filters, onFilterChange, totalProfil
                 Todos Perfis
               </button>
 
-              <button
-                onClick={() => onFilterChange({ city: 'Ilicínea' })}
+              <Link
+                to={`/cidade/${slugDaCidade('Ilicínea')}`}
                 className={`px-3 py-1 rounded-campo border transition-all ${
                   filters.city === 'Ilicínea'
                     ? 'bg-ouro/20 border-ouro text-champanhe font-semibold'
@@ -163,10 +165,10 @@ export const Hero: React.FC<HeroProps> = ({ filters, onFilterChange, totalProfil
                 }`}
               >
                 Ilicínea
-              </button>
+              </Link>
 
-              <button
-                onClick={() => onFilterChange({ city: 'Boa Esperança' })}
+              <Link
+                to={`/cidade/${slugDaCidade('Boa Esperança')}`}
                 className={`px-3 py-1 rounded-campo border transition-all ${
                   filters.city === 'Boa Esperança'
                     ? 'bg-ouro/20 border-ouro text-champanhe font-semibold'
@@ -174,7 +176,7 @@ export const Hero: React.FC<HeroProps> = ({ filters, onFilterChange, totalProfil
                 }`}
               >
                 Boa Esperança
-              </button>
+              </Link>
 
               <button
                 onClick={() => onFilterChange({ category: 'VIP' })}
