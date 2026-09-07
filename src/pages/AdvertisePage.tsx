@@ -1,7 +1,8 @@
 import React, { useState } from 'react';
 import { Link } from 'react-router-dom';
-import { Crown, MessageCircle, CheckCircle2, Phone, KeyRound, PartyPopper, Info } from 'lucide-react';
+import { MessageCircle, CheckCircle2, Phone, KeyRound, PartyPopper, Info } from 'lucide-react';
 import { useModeration } from '../context/ModerationContext';
+import { Monograma } from '../components/Logo';
 
 /* Cadastro da profissional. A porta de entrada e telefone + codigo,
    como no concorrente analisado no plano estrategico: registro rapido
@@ -55,9 +56,7 @@ export const AdvertisePage: React.FC = () => {
       <div className="bg-grafite border border-ouro/30 shadow-2xl p-6 sm:p-8 space-y-6">
 
         <div className="text-center space-y-2">
-          <div className="w-12 h-12 bg-ouro/10 border border-ouro/30 flex items-center justify-center mx-auto text-ouro">
-            <Crown className="w-6 h-6" />
-          </div>
+          <Monograma size={48} className="mx-auto" />
           <h1 className="text-2xl font-display font-normal text-marfim">
             Anuncie no <span className="text-ouro">Reserva Secreta</span>
           </h1>

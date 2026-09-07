@@ -1,5 +1,6 @@
 import React from 'react';
-import { Crown, ShieldAlert, Lock } from 'lucide-react';
+import { ShieldAlert, Lock } from 'lucide-react';
+import { Monograma } from './Logo';
 
 export const Footer: React.FC = () => {
   return (
@@ -12,10 +13,8 @@ export const Footer: React.FC = () => {
           {/* Logo & Tagline */}
           <div className="md:col-span-6 space-y-2">
             <div className="flex items-center space-x-2">
-              <div className="w-8 h-8 rounded-campo bg-ouro flex items-center justify-center text-black">
-                <Crown className="w-5 h-5" />
-              </div>
-              <span className="text-xl font-extrabold text-marfim tracking-tight">
+              <Monograma size={32} />
+              <span className="text-xl font-display font-normal text-marfim">
                 Reserva <span className="italic text-ouro">Secreta</span>
               </span>
             </div>

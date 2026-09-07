@@ -1,5 +1,6 @@
 import React from 'react';
-import { ShieldAlert, Crown, CheckCircle } from 'lucide-react';
+import { ShieldAlert, CheckCircle } from 'lucide-react';
+import { Monograma } from './Logo';
 
 interface AgeVerificationModalProps {
   onConfirm: () => void;
@@ -10,12 +11,8 @@ export const AgeVerificationModal: React.FC<AgeVerificationModalProps> = ({ onCo
     <div className="fixed inset-0 z-50 overflow-y-auto bg-black/95 backdrop-blur-xl flex items-center justify-center p-4">
       <div className="relative w-full max-w-md bg-grafite rounded-none border border-ouro/30 shadow-2xl p-6 sm:p-8 text-center space-y-6 animate-in zoom-in-95 duration-200">
         
-        {/* Crown Icon Header */}
-        <div className="w-16 h-16 rounded-none bg-ouro p-0.5 mx-auto">
-          <div className="w-full h-full bg-onix rounded-none flex items-center justify-center">
-            <Crown className="w-8 h-8 text-ouro" />
-          </div>
-        </div>
+        {/* Marca */}
+        <Monograma size={64} className="mx-auto" />
 
         {/* Title */}
         <div className="space-y-2">
