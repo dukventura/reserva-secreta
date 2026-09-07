@@ -46,20 +46,20 @@ export const ProfileGrid: React.FC<ProfileGridProps> = ({
       {/* Header section with count */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-6 border-b border-white/10">
         <div>
-          <h2 className="text-xl sm:text-2xl font-extrabold text-white tracking-tight flex items-center space-x-2">
+          <h2 className="text-xl sm:text-2xl font-display font-normal text-marfim tracking-tight flex items-center space-x-2">
             <span>Acompanhantes em Destaque</span>
             {filters.city !== 'Todas' && (
-              <span className="text-amber-400 font-normal">em {filters.city}</span>
+              <span className="text-ouro font-normal">em {filters.city}</span>
             )}
           </h2>
-          <p className="text-xs sm:text-sm text-gray-400 mt-1">
+          <p className="text-xs sm:text-sm text-nevoa mt-1">
             Selecione uma acompanhante para ver fotos, ficha técnica completa e contato WhatsApp.
           </p>
         </div>
 
         {/* Applied filters info */}
-        <div className="flex items-center space-x-2 text-xs text-gray-400">
-          <span>Exibindo <strong className="text-white">{filteredProfiles.length}</strong> de {profiles.length} perfis</span>
+        <div className="flex items-center space-x-2 text-xs text-nevoa">
+          <span>Exibindo <strong className="text-marfim">{filteredProfiles.length}</strong> de {profiles.length} perfis</span>
         </div>
       </div>
 
@@ -75,17 +75,17 @@ export const ProfileGrid: React.FC<ProfileGridProps> = ({
           ))}
         </div>
       ) : (
-        <div className="mt-12 p-8 sm:p-12 text-center glass-panel rounded-3xl border border-white/10 max-w-md mx-auto space-y-4">
-          <div className="w-16 h-16 rounded-full bg-amber-500/10 border border-amber-500/20 flex items-center justify-center mx-auto text-amber-400">
+        <div className="mt-12 p-8 sm:p-12 text-center glass-panel rounded-none border border-white/10 max-w-md mx-auto space-y-4">
+          <div className="w-16 h-16 rounded-campo bg-ouro/10 border border-ouro/20 flex items-center justify-center mx-auto text-ouro">
             <SearchX className="w-8 h-8" />
           </div>
-          <h3 className="text-lg font-bold text-white">Nenhum perfil encontrado</h3>
-          <p className="text-xs sm:text-sm text-gray-400">
+          <h3 className="text-lg font-display font-normal text-marfim">Nenhum perfil encontrado</h3>
+          <p className="text-xs sm:text-sm text-nevoa">
             Não encontramos acompanhantes com os filtros selecionados no momento. Tente alterar a cidade ou a categoria.
           </p>
           <button
             onClick={onResetFilters}
-            className="inline-flex items-center space-x-2 px-4 py-2.5 rounded-xl bg-amber-500 hover:bg-amber-400 text-black font-bold text-xs shadow-lg shadow-amber-500/20 transition-all"
+            className="inline-flex items-center space-x-2 px-4 py-2.5 rounded-campo bg-ouro hover:bg-ouro text-black font-bold text-xs transition-all"
           >
             <RotateCcw className="w-4 h-4" />
             <span>Limpar todos os filtros</span>

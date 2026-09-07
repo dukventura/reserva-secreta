@@ -50,7 +50,7 @@ export function App() {
   };
 
   return (
-    <div className="min-h-screen bg-[#08080a] text-gray-100 flex flex-col font-sans selection:bg-amber-500 selection:text-black">
+    <div className="min-h-screen bg-onix text-marfim flex flex-col font-sans selection:bg-ouro selection:text-black">
       
       {/* Age Verification Overlay */}
       {!isAgeConfirmed && (

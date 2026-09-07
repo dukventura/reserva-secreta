@@ -3,7 +3,7 @@ import { Crown, ShieldAlert, Lock } from 'lucide-react';
 
 export const Footer: React.FC = () => {
   return (
-    <footer className="bg-[#060608] border-t border-white/10 text-gray-400 text-xs py-10 px-4 sm:px-6 lg:px-8">
+    <footer className="bg-onix border-t border-white/10 text-nevoa text-xs py-10 px-4 sm:px-6 lg:px-8">
       <div className="max-w-7xl mx-auto space-y-8">
         
         {/* Top Footer Grid */}
@@ -12,28 +12,28 @@ export const Footer: React.FC = () => {
           {/* Logo & Tagline */}
           <div className="md:col-span-6 space-y-2">
             <div className="flex items-center space-x-2">
-              <div className="w-8 h-8 rounded-lg bg-amber-500 flex items-center justify-center text-black">
+              <div className="w-8 h-8 rounded-campo bg-ouro flex items-center justify-center text-black">
                 <Crown className="w-5 h-5" />
               </div>
-              <span className="text-xl font-extrabold text-white tracking-tight">
-                RESERVA <span className="text-gold-gradient">SECRETA</span>
+              <span className="text-xl font-extrabold text-marfim tracking-tight">
+                Reserva <span className="italic text-ouro">Secreta</span>
               </span>
             </div>
-            <p className="text-xs text-gray-400 max-w-md">
+            <p className="text-xs text-nevoa max-w-md">
               O catálogo mais exclusivo e discreto de acompanhantes VIP em Ilicínea, Boa Esperança e Região do Sul de Minas.
             </p>
-            <p className="text-[11px] text-amber-400/80 font-mono">
+            <p className="text-[11px] text-ouro/80 font-mono">
               reservasecreta.com.br
             </p>
           </div>
 
           {/* Quick Info & 18+ Disclaimer */}
           <div className="md:col-span-6 flex flex-col md:items-end space-y-2">
-            <div className="inline-flex items-center space-x-2 px-3 py-1.5 rounded-full bg-amber-500/10 border border-amber-500/20 text-amber-400 font-semibold text-xs">
+            <div className="inline-flex items-center space-x-2 px-3 py-1.5 rounded-campo bg-ouro/10 border border-ouro/20 text-ouro font-semibold text-xs">
               <ShieldAlert className="w-4 h-4" />
               <span>CONTEÚDO ESTRITAMENTE 18+</span>
             </div>
-            <p className="text-[11px] text-gray-400 max-w-sm text-left md:text-right">
+            <p className="text-[11px] text-nevoa max-w-sm text-left md:text-right">
               Este site atua exclusivamente como veículo de publicidade. Não intermediamos pagamentos nem agendamentos.
             </p>
           </div>
@@ -41,8 +41,8 @@ export const Footer: React.FC = () => {
         </div>
 
         {/* Legal Disclaimer Box */}
-        <div className="p-4 rounded-2xl bg-white/5 border border-white/10 text-[11px] text-gray-400 space-y-2">
-          <div className="flex items-center space-x-1.5 text-amber-400 font-bold">
+        <div className="p-4 rounded-none bg-white/5 border border-white/10 text-[11px] text-nevoa space-y-2">
+          <div className="flex items-center space-x-1.5 text-ouro font-bold">
             <Lock className="w-4 h-4" />
             <span>Aviso Legal & Termos de Uso</span>
           </div>
@@ -52,16 +52,16 @@ export const Footer: React.FC = () => {
         </div>
 
         {/* Copyright & Subfooter */}
-        <div className="pt-4 border-t border-white/10 flex flex-col sm:flex-row items-center justify-between text-[11px] text-gray-400 gap-2">
+        <div className="pt-4 border-t border-white/10 flex flex-col sm:flex-row items-center justify-between text-[11px] text-nevoa gap-2">
           <div>
             © {new Date().getFullYear()} <strong>Reserva Secreta (reservasecreta.com.br)</strong>. Todos os direitos reservados.
           </div>
           <div className="flex items-center space-x-4">
-            <a href="#" className="hover:text-amber-400 transition-colors">Termos de Uso</a>
+            <a href="#" className="hover:text-ouro transition-colors">Termos de Uso</a>
             <span>•</span>
-            <a href="#" className="hover:text-amber-400 transition-colors">Política de Privacidade</a>
+            <a href="#" className="hover:text-ouro transition-colors">Política de Privacidade</a>
             <span>•</span>
-            <a href="#" className="hover:text-amber-400 transition-colors">Contato</a>
+            <a href="#" className="hover:text-ouro transition-colors">Contato</a>
           </div>
         </div>
 
