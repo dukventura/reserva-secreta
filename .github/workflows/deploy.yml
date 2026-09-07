@@ -52,3 +52,44 @@ jobs:
           server-dir: ${{ vars.FTP_SERVER_DIR || './public_html/' }}
           # Nunca limpar o destino: cgi-bin e php.ini sao do servidor.
           dangerous-clean-slate: false
+
+      # A action acima reporta sucesso mesmo gravando num diretorio que o
+      # servidor web nao serve - foi exatamente o que aconteceu nos runs
+      # 6, 7 e 8, e so descobrimos por acaso. Esta etapa fecha esse buraco:
+      # compara o bundle recem-buildado com o que o dominio serve de fato.
+      - name: Conferir que o site no ar serve este build
+        env:
+          SITE: ${{ vars.SITE_URL || 'https://reservasecreta.com.br' }}
+        run: |
+          # O shell do Actions roda com -e -o pipefail: sem os "|| true"
+          # abaixo, um grep sem resultado abortaria a etapa antes de
+          # chegar na mensagem de diagnostico.
+          ESPERADO=$(grep -o 'assets/index-[^"]*\.js' dist/index.html | head -1 || true)
+          if [ -z "$ESPERADO" ]; then
+            echo "Nao consegui ler o nome do bundle em dist/index.html."
+            exit 1
+          fi
+          echo "Bundle deste build: $ESPERADO"
+          echo "Conferindo em $SITE"
+
+          for tentativa in 1 2 3 4 5 6; do
+            SERVIDO=$(curl -fsS --max-time 20 "$SITE/?ci=$GITHUB_RUN_ID-$tentativa" \
+              | grep -o 'assets/index-[^"]*\.js' | head -1 || true)
+            echo "  tentativa $tentativa: no ar = ${SERVIDO:-<nada>}"
+            if [ "$SERVIDO" = "$ESPERADO" ]; then
+              echo "OK: o dominio serve o build deste run."
+              exit 0
+            fi
+            if [ "$tentativa" -lt 6 ]; then sleep 10; fi
+          done
+
+          echo ""
+          echo "FALHA: o envio FTP terminou sem erro, mas o site nao serve este build."
+          echo "Os arquivos foram para um diretorio que o servidor web nao publica."
+          echo ""
+          echo "Ajuste a variavel FTP_SERVER_DIR conforme o Diretorio da conta FTP"
+          echo "no cPanel (Contas de FTP):"
+          echo "  /home/usuario               -> ./public_html/"
+          echo "  /home/usuario/public_html   -> ./"
+          echo "  qualquer outra pasta        -> recrie a conta apontando para public_html"
+          exit 1
