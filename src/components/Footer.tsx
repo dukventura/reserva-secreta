@@ -19,7 +19,7 @@ export const Footer: React.FC = () => {
               </span>
             </div>
             <p className="text-xs text-nevoa max-w-md">
-              O catálogo mais exclusivo e discreto de acompanhantes VIP em Ilicínea, Boa Esperança e Região do Sul de Minas.
+              O catálogo mais exclusivo e discreto de acompanhantes VIP do Sul de Minas.
             </p>
             <p className="text-[11px] text-ouro/80 font-mono">
               reservasecreta.com.br

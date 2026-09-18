@@ -28,7 +28,7 @@ export const Navbar: React.FC = () => {
                 Reserva <span className="italic text-ouro">Secreta</span>
               </span>
               <span className="text-[10px] sm:text-xs text-gray-300 tracking-[0.16em] uppercase">
-                Ilicínea &amp; Boa Esperança
+                Acompanhantes VIP do Sul de Minas
               </span>
             </div>
           </Link>

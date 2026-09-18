@@ -31,7 +31,7 @@ export const AgeVerificationModal: React.FC<AgeVerificationModalProps> = ({ onCo
         <div className="space-y-2 text-left bg-white/5 p-4 rounded-none border border-white/10 text-xs text-nevoa">
           <div className="flex items-start space-x-2">
             <CheckCircle className="w-4 h-4 text-verificado-texto shrink-0 mt-0.5" />
-            <span>Perfis 100% reais e verificados em Ilicínea e Boa Esperança.</span>
+            <span>Perfis 100% reais e verificados no Sul de Minas.</span>
           </div>
           <div className="flex items-start space-x-2">
             <CheckCircle className="w-4 h-4 text-verificado-texto shrink-0 mt-0.5" />

@@ -65,27 +65,8 @@ export const Hero: React.FC<HeroProps> = ({ filters, onFilterChange, totalProfil
           </h1>
 
           <p className="text-base sm:text-xl text-gray-200 max-w-2xl mx-auto font-normal leading-relaxed">
-            Acompanhantes VIP de alto nível em <strong className="text-ouro font-semibold">Ilicínea</strong>, <strong className="text-ouro font-semibold">Boa Esperança</strong> e região. Perfis 100% verificados com contato direto.
+            Acompanhantes VIP de alto nível no <strong className="text-ouro font-semibold">Sul de Minas</strong>. Perfis 100% verificados com contato direto.
           </p>
-
-          {/* 🚀 DOIS BOTÕES DE CTA EM DESTAQUE SEPARADOS (Cliente vs Acompanhante) */}
-          <div className="pt-3 pb-2 flex flex-col sm:flex-row items-center justify-center gap-4 max-w-md mx-auto">
-            <Link
-              to="/cadastro"
-              className="w-full sm:w-auto flex-1 inline-flex items-center justify-center space-x-2.5 px-6 py-3.5 rounded-lg bg-gradient-to-r from-ouro to-[#B89243] text-black font-bold text-base hover:brightness-110 transition-all shadow-xl shadow-ouro/20 border border-ouro active:scale-98"
-            >
-              <UserPlus className="w-5 h-5 text-black" />
-              <span>Sou Cliente — Criar Conta</span>
-            </Link>
-
-            <Link
-              to="/anunciar"
-              className="w-full sm:w-auto flex-1 inline-flex items-center justify-center space-x-2.5 px-6 py-3.5 rounded-lg bg-grafite border-2 border-ouro/50 text-white font-bold text-base hover:bg-ouro/10 hover:border-ouro transition-all shadow-lg active:scale-98"
-            >
-              <Crown className="w-5 h-5 text-ouro" />
-              <span>Quero Anunciar</span>
-            </Link>
-          </div>
 
           {/* Badges de Confiança */}
           <div className="pt-2 flex flex-wrap items-center justify-center gap-3 sm:gap-6 text-xs sm:text-sm text-gray-300">
@@ -104,10 +85,13 @@ export const Hero: React.FC<HeroProps> = ({ filters, onFilterChange, totalProfil
           </div>
         </div>
 
-        {/* 🔍 PAINEL DE FILTRO E BUSCA COM AUTOCOMPLETE DE CIDADES */}
-        <div className="mt-10 sm:mt-14 max-w-4xl mx-auto">
-          <div className="glass-panel p-5 sm:p-7 rounded-xl border border-ouro/30 shadow-2xl shadow-black/80 space-y-5 bg-[#250D15]/90">
-            
+        {/* 🚦 DUAS COLUNAS: CAMINHO DO CLIENTE x CAMINHO DA ACOMPANHANTE */}
+        <div className="mt-10 sm:mt-14 max-w-6xl mx-auto grid grid-cols-1 lg:grid-cols-5 gap-6 items-stretch">
+
+        {/* 🔍 PAINEL DE FILTRO E BUSCA COM AUTOCOMPLETE DE CIDADES (Cliente) */}
+        <div className="lg:col-span-3">
+          <div className="glass-panel h-full p-5 sm:p-7 rounded-xl border border-ouro/30 shadow-2xl shadow-black/80 space-y-5 bg-[#250D15]/90">
+
             <div className="flex items-center justify-between border-b border-white/15 pb-4">
               <div className="flex items-center space-x-2.5 text-white font-semibold text-base">
                 <Filter className="w-5 h-5 text-ouro" />
@@ -137,7 +121,7 @@ export const Hero: React.FC<HeroProps> = ({ filters, onFilterChange, totalProfil
                       setIsCityDropdownOpen(true);
                     }}
                     onFocus={() => setIsCityDropdownOpen(true)}
-                    placeholder="Digite Ilicínea, Boa Esperança..."
+                    placeholder="Digite o nome da sua cidade..."
                     className="w-full bg-[#18080C] text-white placeholder-gray-400 text-sm font-medium rounded-lg px-4 py-3 border border-white/20 focus:border-ouro focus:ring-2 focus:ring-ouro/30 outline-none transition-all pr-10"
                   />
                   <button
@@ -292,7 +276,53 @@ export const Hero: React.FC<HeroProps> = ({ filters, onFilterChange, totalProfil
               </button>
             </div>
 
+            <Link
+              to="/cadastro"
+              className="w-full flex items-center justify-center space-x-2.5 px-6 py-3.5 rounded-lg bg-gradient-to-r from-ouro to-[#B89243] text-black font-bold text-base hover:brightness-110 transition-all shadow-xl shadow-ouro/20 border border-ouro active:scale-98"
+            >
+              <UserPlus className="w-5 h-5 text-black" />
+              <span>Sou Cliente — Criar Conta</span>
+            </Link>
+
           </div>
+        </div>
+
+        {/* 👑 PAINEL DA ACOMPANHANTE */}
+        <div className="lg:col-span-2">
+          <div className="h-full flex flex-col justify-between p-6 sm:p-7 rounded-xl border-2 border-ouro/50 bg-gradient-to-b from-grafite to-[#1E080D] shadow-2xl shadow-black/80 space-y-6">
+            <div className="space-y-4">
+              <div className="w-12 h-12 rounded-full bg-ouro/15 border border-ouro/40 flex items-center justify-center">
+                <Crown className="w-6 h-6 text-ouro" />
+              </div>
+              <h2 className="text-xl sm:text-2xl font-display font-semibold text-white leading-snug">
+                É acompanhante? <span className="text-ouro">Anuncie aqui.</span>
+              </h2>
+              <ul className="space-y-2.5 text-sm text-gray-200">
+                <li className="flex items-start space-x-2">
+                  <CheckCircle2 className="w-4 h-4 text-verificado-texto shrink-0 mt-0.5" />
+                  <span>Contato direto pelo WhatsApp, sem intermediários</span>
+                </li>
+                <li className="flex items-start space-x-2">
+                  <ShieldCheck className="w-4 h-4 text-verificado-texto shrink-0 mt-0.5" />
+                  <span>Selo de perfil verificado gera mais confiança</span>
+                </li>
+                <li className="flex items-start space-x-2">
+                  <HeartHandshake className="w-4 h-4 text-verificado-texto shrink-0 mt-0.5" />
+                  <span>Você controla sua agenda e seu anúncio</span>
+                </li>
+              </ul>
+            </div>
+
+            <Link
+              to="/anunciar"
+              className="w-full inline-flex items-center justify-center space-x-2.5 px-6 py-3.5 rounded-lg bg-transparent border-2 border-ouro text-white font-bold text-base hover:bg-ouro/15 transition-all shadow-lg active:scale-98"
+            >
+              <Crown className="w-5 h-5 text-ouro" />
+              <span>Quero Anunciar</span>
+            </Link>
+          </div>
+        </div>
+
         </div>
 
       </div>
