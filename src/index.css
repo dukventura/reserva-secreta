@@ -4,40 +4,36 @@
    Paleta curta de proposito: onix domina ~80% da composicao, os neutros
    carregam o texto e o ouro ocupa no maximo 10% da area. */
 @theme {
-  --color-onix: #0b0b0c;      /* fundo dominante */
-  --color-grafite: #17181a;   /* cartoes e camadas */
-  --color-ouro: #c6a15b;      /* acao, enfase, fio */
-  --color-champanhe: #e4ce9a; /* hover e texto sobre ouro escuro */
-  --color-marfim: #f4f1ea;    /* texto principal, fundo claro */
-  --color-nevoa: #9c988e;     /* texto secundario */
+  --color-onix: #16070b;      /* fundo vinho profundo elegante */
+  --color-grafite: #270e15;   /* cartões e superfícies vinho escuro */
+  --color-ouro: #d4af37;      /* acao, destaque, botões e detalhes nobres */
+  --color-champanhe: #f5e6c8; /* hover e texto sobre ouro escuro */
+  --color-marfim: #ffffff;    /* texto principal em BRANCO PURO para legibilidade máxima */
+  --color-nevoa: #d1d5db;     /* texto secundario em cinza claro para alto contraste */
 
-  /* Mesmo verde do WhatsApp, rebaixado em luminosidade: o manual da ao
-     ouro a exclusividade de brilhar, e o verde de marca em cheio
-     competia por atencao. Matiz preservada em ~142deg. */
-  --color-whatsapp: #198f44;
-  --color-whatsapp-hover: #147136;
+  /* Mesmo verde do WhatsApp, vibrante e tátil */
+  --color-whatsapp: #1f9d4b;
+  --color-whatsapp-hover: #17833d;
 
-  /* Estado verificado/disponivel, na mesma familia do verde acima.
-     Sao dois valores porque servem a papeis opostos: o cheio preenche
-     selo (texto marfim por cima), o claro e o texto e o icone sobre
-     onix - um verde escuro ali perderia legibilidade. */
-  --color-verificado: #198f44;
-  --color-verificado-texto: #75bd90;
+  /* Estado verificado/disponivel */
+  --color-verificado: #1f9d4b;
+  --color-verificado-texto: #86efac;
 
-  /* Bodoni assina, Jost informa, Plex Mono so em metadados. */
+  /* Tipografia: Plus Jakarta Sans para leitura sem puxadinhos + Bodoni para assinaturas */
   --font-display: 'Bodoni Moda', Georgia, serif;
-  --font-sans: 'Jost', system-ui, sans-serif;
+  --font-sans: 'Plus Jakarta Sans', system-ui, sans-serif;
   --font-mono: 'IBM Plex Mono', ui-monospace, monospace;
 
-  /* Geometria reta faz parte da assinatura: 0 em cartoes, 2px em campos. */
-  --radius-campo: 2px;
+  /* Geometria refinada com bordas levemente arredondadas */
+  --radius-campo: 6px;
 }
 
 body {
   background-color: var(--color-onix);
   color: var(--color-marfim);
   font-family: var(--font-sans);
-  font-weight: 300;
+  font-weight: 400;
+  line-height: 1.6;
   overflow-x: hidden;
   -webkit-tap-highlight-color: transparent;
 }

@@ -28,32 +28,35 @@ export const ProfilePage: React.FC = () => {
   if (!profile) {
     return (
       <div className="max-w-lg mx-auto px-4 py-24 text-center space-y-4">
-        <UserX className="w-10 h-10 text-ouro mx-auto" />
-        <h1 className="text-2xl font-display text-marfim">Perfil não encontrado</h1>
-        <p className="text-sm text-nevoa">Este anúncio pode ter sido removido ou o link está incorreto.</p>
-        <Link to="/" className="inline-block px-5 py-2.5 rounded-campo bg-ouro hover:bg-champanhe text-black font-bold text-sm transition-colors">
+        <UserX className="w-12 h-12 text-ouro mx-auto" />
+        <h1 className="text-2xl font-display text-white">Perfil não encontrado</h1>
+        <p className="text-sm text-gray-300">Este anúncio pode ter sido removido ou o link está incorreto.</p>
+        <Link to="/" className="inline-block px-6 py-3 rounded-lg bg-ouro hover:bg-[#B89243] text-black font-bold text-sm transition-colors shadow-lg">
           Voltar para o catálogo
         </Link>
       </div>
     );
   }
 
+  const firstName = profile.name.split(' ')[0];
   const whatsappUrl = `https://wa.me/${profile.whatsapp}?text=${encodeURIComponent(
     profile.whatsappMessage || `Olá ${profile.name}, vi seu perfil no Reserva Secreta (reservasecreta.com.br)!`
   )}`;
 
   return (
-    <div className="max-w-4xl mx-auto px-4 sm:px-6 py-6 sm:py-10 pb-28 md:pb-10 space-y-6">
+    <div className="max-w-4xl mx-auto px-4 sm:px-6 py-6 sm:py-10 pb-32 md:pb-12 space-y-8">
 
-      <Link to="/" className="inline-flex items-center space-x-2 text-xs text-nevoa hover:text-marfim transition-colors">
-        <ArrowLeft className="w-4 h-4" />
+      {/* Botão de Retorno */}
+      <Link to="/" className="inline-flex items-center space-x-2 text-sm font-semibold text-gray-300 hover:text-ouro transition-colors">
+        <ArrowLeft className="w-4 h-4 text-ouro" />
         <span>Voltar ao catálogo</span>
       </Link>
 
-      <div className="flex items-center justify-between">
-        <div className="flex items-center space-x-2">
-          <span className="w-2.5 h-2.5 rounded-full bg-verificado-texto animate-ping" />
-          <span className="text-xs font-bold text-verificado-texto uppercase tracking-wider">
+      {/* Status Online e Compartilhamento */}
+      <div className="flex items-center justify-between bg-[#270E15] p-3.5 rounded-xl border border-white/10">
+        <div className="flex items-center space-x-2.5">
+          <span className="w-3 h-3 rounded-full bg-emerald-500 animate-ping" />
+          <span className="text-xs sm:text-sm font-bold text-emerald-400 uppercase tracking-wider">
             {profile.isOnline ? 'Online Agora' : 'Disponível para Encontro'}
           </span>
         </div>
@@ -63,21 +66,23 @@ export const ProfilePage: React.FC = () => {
               navigator.share({ title: profile.name, url: window.location.href });
             } else {
               navigator.clipboard.writeText(window.location.href);
-              alert('Link copiado para a área de transferência!');
+              alert('Link do perfil copiado para a área de transferência!');
             }
           }}
-          className="p-2 rounded-campo bg-white/5 hover:bg-white/10 text-nevoa transition-colors"
+          className="flex items-center space-x-1.5 px-3 py-1.5 rounded-lg bg-white/10 hover:bg-white/20 text-white text-xs font-semibold transition-colors"
           title="Compartilhar Perfil"
         >
-          <Share2 className="w-4 h-4" />
+          <Share2 className="w-4 h-4 text-ouro" />
+          <span className="hidden sm:inline">Compartilhar</span>
         </button>
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-12 gap-6 items-start">
+      {/* Grid Principal: Galeria + Detalhes do Perfil */}
+      <div className="grid grid-cols-1 md:grid-cols-12 gap-8 items-start">
 
-        {/* Gallery */}
+        {/* Galeria de Fotos */}
         <div className="md:col-span-6 space-y-3">
-          <div className="relative aspect-[3/4] w-full overflow-hidden bg-grafite border border-white/10 shadow-lg">
+          <div className="relative aspect-[3/4] w-full overflow-hidden rounded-2xl bg-[#18080C] border-2 border-ouro/30 shadow-2xl">
             <img
               src={profile.gallery[activeImageIndex] || profile.coverImage}
               alt={`${profile.name} foto ${activeImageIndex + 1}`}
@@ -87,42 +92,45 @@ export const ProfilePage: React.FC = () => {
               <>
                 <button
                   onClick={() => setActiveImageIndex((prev) => (prev > 0 ? prev - 1 : profile.gallery.length - 1))}
-                  className="absolute left-2 top-1/2 -translate-y-1/2 p-2 rounded-campo bg-black/60 text-marfim hover:bg-black/80 backdrop-blur-md"
+                  className="absolute left-3 top-1/2 -translate-y-1/2 p-2.5 rounded-full bg-black/70 text-white hover:bg-black backdrop-blur-md transition-all"
                 >
-                  <ChevronLeft className="w-5 h-5" />
+                  <ChevronLeft className="w-6 h-6" />
                 </button>
                 <button
                   onClick={() => setActiveImageIndex((prev) => (prev < profile.gallery.length - 1 ? prev + 1 : 0))}
-                  className="absolute right-2 top-1/2 -translate-y-1/2 p-2 rounded-campo bg-black/60 text-marfim hover:bg-black/80 backdrop-blur-md"
+                  className="absolute right-3 top-1/2 -translate-y-1/2 p-2.5 rounded-full bg-black/70 text-white hover:bg-black backdrop-blur-md transition-all"
                 >
-                  <ChevronRight className="w-5 h-5" />
+                  <ChevronRight className="w-6 h-6" />
                 </button>
               </>
             )}
-            <div className="absolute top-3 left-3 flex flex-col space-y-1.5 z-10">
+
+            {/* Badges Flutuantes */}
+            <div className="absolute top-4 left-4 flex flex-col space-y-2 z-10">
               {profile.isVip && (
-                <div className="flex items-center space-x-1 px-3 py-1 rounded-campo bg-ouro text-black font-extrabold text-xs uppercase tracking-wider shadow-lg">
-                  <Crown className="w-3.5 h-3.5" />
+                <div className="flex items-center space-x-1.5 px-3.5 py-1.5 rounded-lg bg-ouro text-black font-extrabold text-xs uppercase tracking-wider shadow-xl">
+                  <Crown className="w-4 h-4" />
                   <span>VIP EXCLUSIVA</span>
                 </div>
               )}
               {profile.isVerified && (
-                <div className="flex items-center space-x-1 px-3 py-1 rounded-campo bg-verificado text-marfim font-bold text-xs uppercase tracking-wider shadow-lg backdrop-blur-md">
-                  <ShieldCheck className="w-3.5 h-3.5" />
+                <div className="flex items-center space-x-1.5 px-3.5 py-1.5 rounded-lg bg-emerald-600 text-white font-bold text-xs uppercase tracking-wider shadow-xl backdrop-blur-md">
+                  <ShieldCheck className="w-4 h-4" />
                   <span>Fotos 100% Reais</span>
                 </div>
               )}
             </div>
           </div>
 
+          {/* Thumbnails da Galeria */}
           {profile.gallery.length > 1 && (
-            <div className="flex items-center space-x-2 overflow-x-auto pb-1">
+            <div className="flex items-center space-x-3 overflow-x-auto pb-2">
               {profile.gallery.map((img, idx) => (
                 <button
                   key={idx}
                   onClick={() => setActiveImageIndex(idx)}
-                  className={`relative w-16 h-20 rounded-campo overflow-hidden border-2 shrink-0 transition-all ${
-                    activeImageIndex === idx ? 'border-ouro scale-105' : 'border-white/10 opacity-60 hover:opacity-100'
+                  className={`relative w-20 h-24 rounded-xl overflow-hidden border-2 shrink-0 transition-all ${
+                    activeImageIndex === idx ? 'border-ouro ring-2 ring-ouro/40 scale-105' : 'border-white/20 opacity-70 hover:opacity-100'
                   }`}
                 >
                   <img src={img} alt="" className="w-full h-full object-cover" />
@@ -132,98 +140,103 @@ export const ProfilePage: React.FC = () => {
           )}
         </div>
 
-        {/* Info */}
-        <div className="md:col-span-6 space-y-5">
-          <div className="border-b border-white/10 pb-4 space-y-2">
-            <h1 className="text-2xl sm:text-3xl font-display font-normal text-marfim tracking-tight flex items-center space-x-2">
+        {/* Informações Principais */}
+        <div className="md:col-span-6 space-y-6">
+          
+          <div className="border-b border-white/15 pb-5 space-y-3">
+            <h1 className="text-3xl sm:text-4xl font-display font-semibold text-white tracking-tight flex items-center space-x-3">
               <span>{profile.name}</span>
-              <span className="text-ouro text-xl font-bold">, {profile.age} anos</span>
+              <span className="text-ouro font-serif text-2xl font-bold">, {profile.age} anos</span>
             </h1>
 
             <div className="flex flex-wrap items-center gap-2">
-              <span className="flex items-center space-x-1 text-xs font-semibold px-3 py-1 rounded-campo bg-ouro/10 border border-ouro/30 text-champanhe">
-                <MapPin className="w-3.5 h-3.5" />
+              <span className="flex items-center space-x-1.5 text-xs font-bold px-3.5 py-1.5 rounded-lg bg-ouro/20 border border-ouro/40 text-white">
+                <MapPin className="w-4 h-4 text-ouro" />
                 <span>{profile.city} ({profile.neighborhood || 'Centro'})</span>
               </span>
-              <span className="px-3 py-1 rounded-campo bg-white/5 border border-white/10 text-nevoa text-xs font-semibold">
+              <span className="px-3.5 py-1.5 rounded-lg bg-white/10 border border-white/15 text-gray-200 text-xs font-semibold">
                 Categoria: {profile.category}
               </span>
             </div>
 
-            <div className="pt-2 flex items-center justify-between">
-              <div className="text-xs text-nevoa uppercase tracking-wider font-semibold">Cachê / Valor:</div>
-              <div className="text-xl sm:text-2xl font-black text-ouro">{profile.hourlyRate}</div>
+            <div className="pt-3 flex items-center justify-between bg-[#270E15] p-4 rounded-xl border border-ouro/20">
+              <div className="text-xs text-gray-300 uppercase tracking-wider font-bold">Cachê / Valor Hora:</div>
+              <div className="text-2xl sm:text-3xl font-black text-ouro">{profile.hourlyRate}</div>
             </div>
           </div>
 
-          <div className="space-y-2 bg-grafite p-4 border border-white/10">
-            <h4 className="text-xs font-bold text-ouro uppercase tracking-wider flex items-center space-x-1">
-              <Sparkles className="w-3.5 h-3.5" />
+          {/* Biografia / Sobre mim */}
+          <div className="space-y-2 bg-[#270E15] p-5 rounded-xl border border-white/10">
+            <h4 className="text-xs font-bold text-ouro uppercase tracking-wider flex items-center space-x-2">
+              <Sparkles className="w-4 h-4 text-ouro" />
               <span>Sobre mim</span>
             </h4>
-            <p className="text-xs sm:text-sm text-marfim leading-relaxed italic">"{profile.bio}"</p>
+            <p className="text-sm sm:text-base text-white leading-relaxed italic">"{profile.bio}"</p>
           </div>
 
+          {/* Ficha Técnica */}
           <div className="space-y-3">
-            <h4 className="text-xs font-extrabold text-nevoa uppercase tracking-wider flex items-center space-x-1">
+            <h4 className="text-xs font-extrabold text-gray-300 uppercase tracking-wider flex items-center space-x-2">
               <UserCheck className="w-4 h-4 text-ouro" />
               <span>Ficha Técnica</span>
             </h4>
-            <div className="grid grid-cols-2 gap-2 text-xs">
-              <div className="p-2.5 rounded-campo bg-white/5 border border-white/10 flex items-center justify-between">
-                <span className="text-nevoa flex items-center space-x-1">
-                  <Ruler className="w-3.5 h-3.5 text-ouro" />
+            <div className="grid grid-cols-2 gap-3 text-sm">
+              <div className="p-3 rounded-xl bg-[#270E15] border border-white/10 flex items-center justify-between">
+                <span className="text-gray-300 flex items-center space-x-1.5">
+                  <Ruler className="w-4 h-4 text-ouro" />
                   <span>Altura:</span>
                 </span>
-                <strong className="text-marfim font-semibold">{profile.specs.height}</strong>
+                <strong className="text-white font-bold">{profile.specs.height}</strong>
               </div>
-              <div className="p-2.5 rounded-campo bg-white/5 border border-white/10 flex items-center justify-between">
-                <span className="text-nevoa flex items-center space-x-1">
-                  <Weight className="w-3.5 h-3.5 text-ouro" />
+              <div className="p-3 rounded-xl bg-[#270E15] border border-white/10 flex items-center justify-between">
+                <span className="text-gray-300 flex items-center space-x-1.5">
+                  <Weight className="w-4 h-4 text-ouro" />
                   <span>Peso:</span>
                 </span>
-                <strong className="text-marfim font-semibold">{profile.specs.weight}</strong>
+                <strong className="text-white font-bold">{profile.specs.weight}</strong>
               </div>
-              <div className="p-2.5 rounded-campo bg-white/5 border border-white/10 flex items-center justify-between">
-                <span className="text-nevoa">Cabelo:</span>
-                <strong className="text-marfim font-semibold">{profile.specs.hair}</strong>
+              <div className="p-3 rounded-xl bg-[#270E15] border border-white/10 flex items-center justify-between">
+                <span className="text-gray-300">Cabelo:</span>
+                <strong className="text-white font-bold">{profile.specs.hair}</strong>
               </div>
-              <div className="p-2.5 rounded-campo bg-white/5 border border-white/10 flex items-center justify-between">
-                <span className="text-nevoa">Olhos:</span>
-                <strong className="text-marfim font-semibold">{profile.specs.eyes}</strong>
+              <div className="p-3 rounded-xl bg-[#270E15] border border-white/10 flex items-center justify-between">
+                <span className="text-gray-300">Olhos:</span>
+                <strong className="text-white font-bold">{profile.specs.eyes}</strong>
               </div>
-              <div className="p-2.5 rounded-campo bg-white/5 border border-white/10 flex items-center justify-between col-span-2">
-                <span className="text-nevoa flex items-center space-x-1">
-                  <Languages className="w-3.5 h-3.5 text-ouro" />
+              <div className="p-3 rounded-xl bg-[#270E15] border border-white/10 flex items-center justify-between col-span-2">
+                <span className="text-gray-300 flex items-center space-x-1.5">
+                  <Languages className="w-4 h-4 text-ouro" />
                   <span>Idiomas:</span>
                 </span>
-                <strong className="text-marfim font-semibold">{profile.specs.languages.join(', ')}</strong>
+                <strong className="text-white font-bold">{profile.specs.languages.join(', ')}</strong>
               </div>
             </div>
           </div>
 
-          <div className="hidden md:block pt-2">
+          {/* Botão de Chamada no Desktop */}
+          <div className="hidden md:block pt-3">
             <a
               href={whatsappUrl}
               target="_blank"
               rel="noopener noreferrer"
-              className="w-full flex items-center justify-center space-x-3 py-4 bg-whatsapp hover:bg-whatsapp-hover text-marfim font-extrabold text-lg shadow-xl transition-all transform hover:scale-[1.02]"
+              className="w-full flex items-center justify-center space-x-3 py-4 bg-emerald-600 hover:bg-emerald-500 text-white font-extrabold text-lg rounded-xl shadow-xl transition-all transform hover:scale-[1.02]"
             >
               <MessageCircle className="w-6 h-6 fill-white" />
-              <span>Chamar no WhatsApp Agora</span>
+              <span>Chamar {firstName} no WhatsApp Agora</span>
             </a>
           </div>
         </div>
       </div>
 
-      <div className="pt-4 border-t border-white/10 space-y-3">
-        <h4 className="text-sm font-extrabold text-marfim uppercase tracking-wider flex items-center space-x-2">
-          <CheckCircle2 className="w-4 h-4 text-verificado-texto" />
+      {/* Serviços */}
+      <div className="pt-6 border-t border-white/15 space-y-4">
+        <h4 className="text-base font-extrabold text-white uppercase tracking-wider flex items-center space-x-2">
+          <CheckCircle2 className="w-5 h-5 text-emerald-400" />
           <span>Serviços & Atendimento</span>
         </h4>
-        <div className="flex flex-wrap gap-2">
+        <div className="flex flex-wrap gap-2.5">
           {profile.services.map((service, idx) => (
-            <span key={idx} className="px-3 py-1.5 rounded-campo bg-verificado/10 border border-verificado/20 text-verificado-texto text-xs font-semibold flex items-center space-x-1">
+            <span key={idx} className="px-4 py-2 rounded-lg bg-emerald-950/60 border border-emerald-500/30 text-emerald-300 text-sm font-semibold flex items-center space-x-1.5">
               <span>✓</span>
               <span>{service}</span>
             </span>
@@ -231,39 +244,47 @@ export const ProfilePage: React.FC = () => {
         </div>
       </div>
 
-      <div className="space-y-3">
-        <h4 className="text-sm font-extrabold text-marfim uppercase tracking-wider flex items-center space-x-2">
-          <MapPin className="w-4 h-4 text-ouro" />
+      {/* Locais Aceitos */}
+      <div className="space-y-4">
+        <h4 className="text-base font-extrabold text-white uppercase tracking-wider flex items-center space-x-2">
+          <MapPin className="w-5 h-5 text-ouro" />
           <span>Locais Aceitos</span>
         </h4>
-        <div className="flex flex-wrap gap-2">
+        <div className="flex flex-wrap gap-2.5">
           {profile.locations.map((loc, idx) => (
-            <span key={idx} className="px-3 py-1.5 rounded-campo bg-white/5 border border-white/10 text-marfim text-xs font-medium">
+            <span key={idx} className="px-4 py-2 rounded-lg bg-[#270E15] border border-white/15 text-white text-sm font-medium">
               {loc}
             </span>
           ))}
         </div>
       </div>
 
-      <div className="p-3.5 bg-ouro/10 border border-ouro/20 text-champanhe text-xs flex items-center space-x-2">
-        <Lock className="w-4 h-4 shrink-0 text-ouro" />
+      {/* Alerta de Sigilo */}
+      <div className="p-4 bg-ouro/15 border border-ouro/30 rounded-xl text-white text-xs sm:text-sm flex items-center space-x-3">
+        <Lock className="w-5 h-5 shrink-0 text-ouro" />
         <span>
-          Ao entrar em contato pelo WhatsApp, mencione que viu o anúncio no <strong>Reserva Secreta (reservasecreta.com.br)</strong> para um atendimento exclusivo e prioritário.
+          Ao entrar em contato pelo WhatsApp, informe que encontrou o anúncio no <strong>Reserva Secreta (reservasecreta.com.br)</strong> para garantia de atendimento VIP.
         </span>
       </div>
 
-      {/* Sticky mobile CTA */}
-      <div className="md:hidden fixed bottom-0 left-0 right-0 z-40 p-3 bg-onix/95 border-t border-white/15 backdrop-blur-xl shadow-2xl">
+      {/* 📲 BARRA FIXA DE WHATSAPP NO RODAPÉ DO CELULAR (STICKY MOBILE BOTTOM BAR) */}
+      <div className="md:hidden fixed bottom-0 left-0 right-0 z-50 p-3 bg-[#16070B]/95 border-t border-ouro/40 backdrop-blur-xl shadow-2xl flex items-center justify-between gap-3">
+        <div className="pl-2">
+          <div className="text-[10px] uppercase font-bold text-gray-300">Cachê / Hora</div>
+          <div className="text-lg font-black text-ouro">{profile.hourlyRate}</div>
+        </div>
+
         <a
           href={whatsappUrl}
           target="_blank"
           rel="noopener noreferrer"
-          className="w-full flex items-center justify-center space-x-3 py-3.5 bg-whatsapp hover:bg-whatsapp-hover text-marfim font-extrabold text-base shadow-2xl active:scale-95 transition-all"
+          className="flex-1 flex items-center justify-center space-x-2.5 py-3.5 px-4 bg-emerald-600 hover:bg-emerald-500 text-white font-black text-base rounded-xl shadow-xl active:scale-95 transition-all"
         >
-          <MessageCircle className="w-6 h-6 fill-white" />
-          <span>Chamar {profile.name.split(' ')[0]} no WhatsApp</span>
+          <MessageCircle className="w-5 h-5 fill-white" />
+          <span>WhatsApp Direto</span>
         </a>
       </div>
+
     </div>
   );
 };
