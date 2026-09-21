@@ -4,6 +4,7 @@ import { db } from '../lib/db';
 import { hashSenha, conferirSenha, emitirToken } from '../lib/auth';
 import { slugUnico } from '../lib/slug';
 import { autenticar } from '../middleware/auth';
+import { loginLimiter, registerLimiter } from '../lib/rateLimit';
 
 export const authRouter = Router();
 
@@ -29,7 +30,7 @@ const cadastroSchema = z.discriminatedUnion('role', [
   }),
 ]);
 
-authRouter.post('/register', async (req, res) => {
+authRouter.post('/register', registerLimiter, async (req, res) => {
   const parsed = cadastroSchema.safeParse(req.body);
   if (!parsed.success) {
     res.status(400).json({ erro: 'Dados inválidos.', detalhes: parsed.error.flatten() });
@@ -97,7 +98,7 @@ const loginSchema = z.object({
   password: z.string().min(1),
 });
 
-authRouter.post('/login', async (req, res) => {
+authRouter.post('/login', loginLimiter, async (req, res) => {
   const parsed = loginSchema.safeParse(req.body);
   if (!parsed.success) {
     res.status(400).json({ erro: 'Informe e-mail e senha.' });

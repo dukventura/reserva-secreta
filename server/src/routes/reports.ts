@@ -2,6 +2,7 @@ import { Router } from 'express';
 import { z } from 'zod';
 import { db } from '../lib/db';
 import { verificarToken } from '../lib/auth';
+import { reportLimiter } from '../lib/rateLimit';
 
 export const reportsRouter = Router();
 
@@ -23,7 +24,7 @@ const denunciaSchema = z.object({
 // conteudo intimo sem consentimento como notificacao direta que a
 // plataforma deve atender sem esperar ordem judicial - travar isso
 // atras de cadastro derrubaria justamente o canal que a lei protege.
-reportsRouter.post('/', async (req, res) => {
+reportsRouter.post('/', reportLimiter, async (req, res) => {
   const parsed = denunciaSchema.safeParse(req.body);
   if (!parsed.success) {
     res.status(400).json({ erro: 'Dados inválidos.', detalhes: parsed.error.flatten() });

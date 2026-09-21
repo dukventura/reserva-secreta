@@ -10,6 +10,11 @@ import { UPLOAD_DIR } from './lib/uploads';
 
 const app = express();
 
+// Necessario pro rate limiting (e qualquer coisa baseada em IP) ver o
+// IP real do visitante em vez do IP interno do Apache/Passenger, que
+// fica na frente do processo Node no cPanel.
+app.set('trust proxy', 1);
+
 app.use(cors({ origin: process.env.CORS_ORIGIN ?? true }));
 app.use(express.json({ limit: '1mb' }));
 
