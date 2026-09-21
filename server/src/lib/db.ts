@@ -103,6 +103,12 @@ interface CitiesTable {
   active: Generated<number>; // MySQL BOOLEAN = TINYINT(1)
 }
 
+interface RateLimitsTable {
+  rl_key: string;
+  count: Generated<number>;
+  reset_at: Date;
+}
+
 export interface Database {
   users: UsersTable;
   professional_profiles: ProfessionalProfilesTable;
@@ -111,6 +117,7 @@ export interface Database {
   reports: ReportsTable;
   audit_log: AuditLogTable;
   cities: CitiesTable;
+  rate_limits: RateLimitsTable;
 }
 
 const pool = createPool({
