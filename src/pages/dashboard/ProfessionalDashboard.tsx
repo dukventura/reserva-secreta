@@ -149,7 +149,7 @@ function ProfessionalDashboardContent() {
 
   if (carregando) {
     return (
-      <DashboardLayout title="Painel da Profissional" navItems={NAV} activeKey={tab} onSelect={setTab}>
+      <DashboardLayout title="Painel da Profissional" navItems={NAV} activeKey={tab} onSelect={setTab} manualHref="/manual/profissional">
         <p className="text-sm text-nevoa">Carregando seu perfil...</p>
       </DashboardLayout>
     );
@@ -157,7 +157,7 @@ function ProfessionalDashboardContent() {
 
   if (!perfil) {
     return (
-      <DashboardLayout title="Painel da Profissional" navItems={NAV} activeKey={tab} onSelect={setTab}>
+      <DashboardLayout title="Painel da Profissional" navItems={NAV} activeKey={tab} onSelect={setTab} manualHref="/manual/profissional">
         <div className="flex items-start space-x-2 bg-red-500/10 border border-red-500/30 p-3.5 text-sm text-red-300">
           <AlertCircle className="w-4 h-4 shrink-0 mt-0.5" />
           <span>{erro || 'Perfil não encontrado.'}</span>
@@ -171,7 +171,7 @@ function ProfessionalDashboardContent() {
   const percentualVerificado = Math.round((verificacoes.filter(Boolean).length / verificacoes.length) * 100);
 
   return (
-    <DashboardLayout title="Painel da Profissional" navItems={NAV} activeKey={tab} onSelect={setTab}>
+    <DashboardLayout title="Painel da Profissional" navItems={NAV} activeKey={tab} onSelect={setTab} manualHref="/manual/profissional">
 
       {erro && (
         <div className="flex items-start space-x-2 bg-red-500/10 border border-red-500/30 p-3 text-xs text-red-300 mb-4">

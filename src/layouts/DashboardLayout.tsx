@@ -1,6 +1,6 @@
 import React from 'react';
 import { Link } from 'react-router-dom';
-import { LogOut, ExternalLink } from 'lucide-react';
+import { LogOut, ExternalLink, BookOpen } from 'lucide-react';
 import { Monograma } from '../components/Logo';
 import { useSession } from '../context/SessionContext';
 import type { UserRole } from '../types';
@@ -24,13 +24,14 @@ interface DashboardLayoutProps {
   activeKey: string;
   onSelect: (key: string) => void;
   children: React.ReactNode;
+  manualHref?: string;
 }
 
 /* Casca compartilhada dos 3 paineis logados (profissional, gerente,
    master). Cada painel gerencia suas proprias abas via activeKey/
    onSelect em vez de sub-rotas aninhadas - suficiente para uma
    demonstracao navegavel, e mais simples de revisar com o cliente. */
-export const DashboardLayout: React.FC<DashboardLayoutProps> = ({ title, navItems, activeKey, onSelect, children }) => {
+export const DashboardLayout: React.FC<DashboardLayoutProps> = ({ title, navItems, activeKey, onSelect, children, manualHref }) => {
   const { session, sair } = useSession();
 
   return (
@@ -63,6 +64,17 @@ export const DashboardLayout: React.FC<DashboardLayoutProps> = ({ title, navItem
         </nav>
 
         <div className="p-3 border-t border-white/10 space-y-1">
+          {manualHref && (
+            <Link
+              to={manualHref}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="flex items-center space-x-2.5 px-3.5 py-2.5 rounded-campo text-sm font-medium text-nevoa hover:text-marfim hover:bg-white/5 transition-colors"
+            >
+              <BookOpen className="w-4 h-4 text-ouro" />
+              <span>Manual</span>
+            </Link>
+          )}
           <Link
             to="/"
             className="flex items-center space-x-2.5 px-3.5 py-2.5 rounded-campo text-sm font-medium text-nevoa hover:text-marfim hover:bg-white/5 transition-colors"

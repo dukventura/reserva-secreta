@@ -12,6 +12,8 @@ import { NotFoundPage } from './pages/NotFoundPage';
 import { ProfessionalDashboard } from './pages/dashboard/ProfessionalDashboard';
 import { ManagerDashboard } from './pages/dashboard/ManagerDashboard';
 import { AdminDashboard } from './pages/dashboard/AdminDashboard';
+import { ManualProfissionalPage } from './pages/ManualProfissionalPage';
+import { ManualAdminPage } from './pages/ManualAdminPage';
 
 export function App() {
   return (
@@ -27,6 +29,8 @@ export function App() {
               <Route path="/anunciar" element={<AdvertisePage />} />
               <Route path="/cadastro" element={<ClientSignupPage />} />
               <Route path="/entrar" element={<LoginPage />} />
+              <Route path="/manual/profissional" element={<ManualProfissionalPage />} />
+              <Route path="/manual/administrativo" element={<ManualAdminPage />} />
               <Route path="*" element={<NotFoundPage />} />
             </Route>
 

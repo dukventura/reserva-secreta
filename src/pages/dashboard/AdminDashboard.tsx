@@ -67,7 +67,7 @@ function AdminDashboardContent() {
   const receitaEstimada = mockPlans.find((p) => p.id === 'plano-vip');
 
   return (
-    <DashboardLayout title="Painel do Admin Master" navItems={NAV} activeKey={tab} onSelect={setTab}>
+    <DashboardLayout title="Painel do Admin Master" navItems={NAV} activeKey={tab} onSelect={setTab} manualHref="/manual/administrativo">
 
       {erro && (
         <div className="flex items-start space-x-2 bg-red-500/10 border border-red-500/30 p-3 text-xs text-red-300 mb-4">
