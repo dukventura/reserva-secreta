@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import {
   LayoutDashboard, ClipboardCheck, Flag, History, CheckCircle2, XCircle,
-  MapPin, ShieldAlert, AlertCircle,
+  MapPin, ShieldAlert, AlertCircle, Images,
 } from 'lucide-react';
 import { DashboardLayout } from '../../layouts/DashboardLayout';
 import { RequireRole } from '../../components/RequireRole';
@@ -10,6 +10,7 @@ import { useModeration } from '../../context/ModerationContext';
 const NAV = [
   { key: 'painel', label: 'Painel', icon: <LayoutDashboard className="w-4 h-4" /> },
   { key: 'aprovacoes', label: 'Aprovações', icon: <ClipboardCheck className="w-4 h-4" /> },
+  { key: 'fotos', label: 'Fotos', icon: <Images className="w-4 h-4" /> },
   { key: 'denuncias', label: 'Denúncias', icon: <Flag className="w-4 h-4" /> },
   { key: 'historico', label: 'Histórico', icon: <History className="w-4 h-4" /> },
 ];
@@ -21,7 +22,7 @@ function fmtData(iso: string | null) {
 
 function ManagerDashboardContent() {
   const [tab, setTab] = useState('painel');
-  const { pendingProfiles, reports, auditLog, carregando, erro, refresh, decideProfile, decideReport } = useModeration();
+  const { pendingProfiles, reports, pendingMedia, auditLog, carregando, erro, refresh, decideProfile, decideReport, decideMedia } = useModeration();
 
   useEffect(() => {
     refresh();
@@ -41,6 +42,7 @@ function ManagerDashboardContent() {
         <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
           {[
             { label: 'Anúncios pendentes', value: pendingProfiles.length, icon: <ClipboardCheck className="w-4 h-4 text-ouro" /> },
+            { label: 'Fotos pendentes', value: pendingMedia.length, icon: <Images className="w-4 h-4 text-ouro" /> },
             { label: 'Denúncias abertas', value: reports.length, icon: <Flag className="w-4 h-4 text-ouro" /> },
             { label: 'Ações registradas', value: auditLog.length, icon: <History className="w-4 h-4 text-ouro" /> },
           ].map((s) => (
@@ -90,6 +92,35 @@ function ManagerDashboardContent() {
               </div>
             </div>
           ))}
+        </div>
+      )}
+
+      {tab === 'fotos' && (
+        <div className="space-y-3 max-w-3xl">
+          {!carregando && pendingMedia.length === 0 && <p className="text-sm text-nevoa">Nenhuma foto pendente no momento.</p>}
+          <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
+            {pendingMedia.map((m) => (
+              <div key={m.id} className="bg-grafite border border-white/10 p-3 space-y-2">
+                <img src={m.url} alt="" className="w-full aspect-[3/4] object-cover rounded-campo" />
+                <div className="text-xs text-marfim font-semibold truncate">{m.profile_name}</div>
+                <div className="text-[10px] text-nevoa">Enviada em {fmtData(m.created_at)}</div>
+                <div className="flex gap-2 pt-1">
+                  <button
+                    onClick={() => decideMedia(m.id, 'aprovado')}
+                    className="flex-1 flex items-center justify-center space-x-1 px-2 py-1.5 rounded-campo bg-verificado hover:opacity-90 text-marfim text-[11px] font-bold transition-opacity"
+                  >
+                    <CheckCircle2 className="w-3.5 h-3.5" /><span>Aprovar</span>
+                  </button>
+                  <button
+                    onClick={() => decideMedia(m.id, 'reprovado')}
+                    className="flex-1 flex items-center justify-center space-x-1 px-2 py-1.5 rounded-campo bg-white/5 border border-white/15 hover:border-red-400/40 text-nevoa hover:text-red-300 text-[11px] font-bold transition-colors"
+                  >
+                    <XCircle className="w-3.5 h-3.5" /><span>Reprovar</span>
+                  </button>
+                </div>
+              </div>
+            ))}
+          </div>
         </div>
       )}
 

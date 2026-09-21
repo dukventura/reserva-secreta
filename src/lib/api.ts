@@ -48,7 +48,11 @@ interface RequestOptions {
 
 async function request<T>(path: string, options: RequestOptions = {}): Promise<T> {
   const headers: Record<string, string> = {};
-  if (options.body !== undefined) headers['Content-Type'] = 'application/json';
+  // FormData (upload de arquivo) define o proprio Content-Type com o
+  // boundary do multipart - se a gente fixar 'application/json' aqui,
+  // o body vira texto ilegivel pro multer do lado do servidor.
+  const isFormData = options.body instanceof FormData;
+  if (options.body !== undefined && !isFormData) headers['Content-Type'] = 'application/json';
 
   if (options.auth) {
     const token = getToken();
@@ -58,7 +62,7 @@ async function request<T>(path: string, options: RequestOptions = {}): Promise<T
   const response = await fetch(`${API_URL}${path}`, {
     method: options.method ?? 'GET',
     headers,
-    body: options.body !== undefined ? JSON.stringify(options.body) : undefined,
+    body: isFormData ? (options.body as FormData) : options.body !== undefined ? JSON.stringify(options.body) : undefined,
   });
 
   const data = await response.json().catch(() => null);
@@ -178,6 +182,14 @@ export interface PendingReport {
   target_slug: string;
 }
 
+export interface PendingMedia {
+  id: number;
+  url: string;
+  created_at: string;
+  profile_name: string;
+  profile_slug: string;
+}
+
 export interface AuditLogEntry {
   id: number;
   action: string;
@@ -254,6 +266,20 @@ export function enviarPerfilParaAprovacao() {
   return request<{ ok: true }>('/api/profiles/me/submit', { method: 'POST', auth: true });
 }
 
+export function enviarFoto(arquivo: File) {
+  const form = new FormData();
+  form.append('foto', arquivo);
+  return request<{ foto: { id: number; url: string; status: 'pendente' } }>('/api/profiles/me/media', {
+    method: 'POST',
+    body: form,
+    auth: true,
+  });
+}
+
+export function removerFoto(id: number) {
+  return request<{ ok: true }>(`/api/profiles/me/media/${id}`, { method: 'DELETE', auth: true });
+}
+
 // ---- moderacao ----
 
 export function listarPerfisPendentes() {
@@ -274,6 +300,18 @@ export function listarDenunciasPendentes() {
 
 export function decidirDenuncia(id: number, status: 'aprovado' | 'reprovado') {
   return request<{ ok: true }>(`/api/moderation/reports/${id}/decide`, {
+    method: 'POST',
+    body: { status },
+    auth: true,
+  });
+}
+
+export function listarFotosPendentes() {
+  return request<{ fotos: PendingMedia[] }>('/api/moderation/media/pending', { auth: true });
+}
+
+export function decidirFoto(id: number, status: 'aprovado' | 'reprovado') {
+  return request<{ ok: true }>(`/api/moderation/media/${id}/decide`, {
     method: 'POST',
     body: { status },
     auth: true,

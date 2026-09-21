@@ -24,7 +24,7 @@ function fmtData(iso: string) {
 
 function AdminDashboardContent() {
   const [tab, setTab] = useState('painel');
-  const { pendingProfiles, reports, auditLog, carregando, erro, refresh } = useModeration();
+  const { pendingProfiles, reports, pendingMedia, auditLog, carregando, erro, refresh } = useModeration();
 
   useEffect(() => {
     refresh();
@@ -44,10 +44,11 @@ function AdminDashboardContent() {
 
       {tab === 'painel' && (
         <div className="space-y-6">
-          <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
+          <div className="grid grid-cols-2 sm:grid-cols-5 gap-4">
             {[
               { label: 'Membros da equipe', value: mockTeam.length },
               { label: 'Anúncios pendentes', value: carregando ? '...' : pendingProfiles.length },
+              { label: 'Fotos pendentes', value: carregando ? '...' : pendingMedia.length },
               { label: 'Denúncias abertas', value: carregando ? '...' : reports.length },
               { label: 'Ações no log', value: carregando ? '...' : auditLog.length },
             ].map((s) => (

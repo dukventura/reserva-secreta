@@ -6,11 +6,17 @@ import { profilesRouter } from './routes/profiles';
 import { moderationRouter } from './routes/moderation';
 import { reportsRouter } from './routes/reports';
 import { citiesRouter } from './routes/cities';
+import { UPLOAD_DIR } from './lib/uploads';
 
 const app = express();
 
 app.use(cors({ origin: process.env.CORS_ORIGIN ?? true }));
 app.use(express.json({ limit: '1mb' }));
+
+// O cPanel serve public/ direto pelo Apache/LiteSpeed via Passenger,
+// mas isso garante que /uploads funciona em qualquer ambiente (dev
+// local, outra hospedagem) sem depender desse detalhe especifico.
+app.use('/uploads', express.static(UPLOAD_DIR));
 
 app.get('/health', (_req, res) => res.json({ ok: true }));
 

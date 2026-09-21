@@ -17,6 +17,10 @@ dist-ssr
 .env.*
 !.env.example
 
+# Fotos enviadas por acompanhantes - conteudo do usuario, nao do codigo.
+server/public/uploads/*
+!server/public/uploads/.gitkeep
+
 # Editor directories and files
 .vscode/*
 !.vscode/extensions.json

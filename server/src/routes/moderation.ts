@@ -3,6 +3,7 @@ import { z } from 'zod';
 import { db } from '../lib/db';
 import { autenticar, exigirPapel } from '../middleware/auth';
 import { registrarAuditoria } from '../lib/audit';
+import { removerArquivoPelaUrl } from '../lib/uploads';
 
 export const moderationRouter = Router();
 moderationRouter.use(autenticar, exigirPapel('gerente', 'master'));
@@ -96,6 +97,51 @@ moderationRouter.post('/reports/:id/decide', async (req, res) => {
     req.user!.sub,
     parsed.data.status === 'aprovado' ? 'Procedeu denúncia e suspendeu anúncio' : 'Arquivou denúncia',
     denuncia.target_name,
+  );
+  res.json({ ok: true });
+});
+
+moderationRouter.get('/media/pending', async (_req, res) => {
+  const fotos = await db
+    .selectFrom('media')
+    .innerJoin('professional_profiles', 'professional_profiles.id', 'media.profile_id')
+    .select([
+      'media.id', 'media.url', 'media.created_at',
+      'professional_profiles.stage_name as profile_name', 'professional_profiles.slug as profile_slug',
+    ])
+    .where('media.status', '=', 'pendente')
+    .orderBy('media.created_at', 'asc')
+    .execute();
+  res.json({ fotos });
+});
+
+moderationRouter.post('/media/:id/decide', async (req, res) => {
+  const parsed = decisaoSchema.safeParse(req.body);
+  if (!parsed.success) {
+    res.status(400).json({ erro: 'Informe status: aprovado ou reprovado.' });
+    return;
+  }
+  const id = Number(req.params.id);
+  const foto = await db
+    .selectFrom('media')
+    .innerJoin('professional_profiles', 'professional_profiles.id', 'media.profile_id')
+    .select(['media.id', 'media.url', 'professional_profiles.stage_name as profile_name'])
+    .where('media.id', '=', id)
+    .executeTakeFirst();
+  if (!foto) {
+    res.status(404).json({ erro: 'Foto não encontrada.' });
+    return;
+  }
+
+  await db.updateTable('media').set({ status: parsed.data.status }).where('id', '=', id).execute();
+  // Reprovada nao aparece em lugar nenhum - libera o espaco em disco em
+  // vez de acumular arquivo orfao que ninguem vai ver de novo.
+  if (parsed.data.status === 'reprovado') removerArquivoPelaUrl(foto.url);
+
+  await registrarAuditoria(
+    req.user!.sub,
+    parsed.data.status === 'aprovado' ? 'Aprovou foto' : 'Reprovou foto',
+    foto.profile_name,
   );
   res.json({ ok: true });
 });

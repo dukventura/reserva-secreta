@@ -1,12 +1,14 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import {
   LayoutDashboard, UserRound, Images, ShieldCheck, BarChart3, CreditCard,
-  Heart, CheckCircle2, Circle, Clock, Upload, Check, AlertCircle, Send, XCircle,
+  Heart, CheckCircle2, Circle, Clock, Upload, Check, AlertCircle, Send, XCircle, Trash2,
 } from 'lucide-react';
 import { DashboardLayout } from '../../layouts/DashboardLayout';
 import { RequireRole } from '../../components/RequireRole';
 import { mockPlans } from '../../data/mockModeration';
-import { buscarMeuPerfil, atualizarMeuPerfil, enviarPerfilParaAprovacao, ApiError, type MyProfile } from '../../lib/api';
+import { buscarMeuPerfil, atualizarMeuPerfil, enviarPerfilParaAprovacao, enviarFoto, removerFoto, ApiError, type MyProfile } from '../../lib/api';
+
+const MAX_FOTOS = 10;
 
 const NAV = [
   { key: 'painel', label: 'Painel', icon: <LayoutDashboard className="w-4 h-4" /> },
@@ -34,6 +36,9 @@ function ProfessionalDashboardContent() {
   const [salvando, setSalvando] = useState(false);
   const [salvo, setSalvo] = useState(false);
   const [enviando, setEnviando] = useState(false);
+  const [enviandoFoto, setEnviandoFoto] = useState(false);
+  const [removendoFotoId, setRemovendoFotoId] = useState<number | null>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   const carregar = () => {
     setCarregando(true);
@@ -62,6 +67,35 @@ function ProfessionalDashboardContent() {
       setErro(err instanceof ApiError ? err.message : 'Não foi possível salvar as alterações.');
     } finally {
       setSalvando(false);
+    }
+  };
+
+  const handleEnviarFoto = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const arquivo = e.target.files?.[0];
+    e.target.value = '';
+    if (!arquivo) return;
+    setEnviandoFoto(true);
+    setErro('');
+    try {
+      await enviarFoto(arquivo);
+      carregar();
+    } catch (err) {
+      setErro(err instanceof ApiError ? err.message : 'Não foi possível enviar a foto.');
+    } finally {
+      setEnviandoFoto(false);
+    }
+  };
+
+  const handleRemoverFoto = async (id: number) => {
+    setRemovendoFotoId(id);
+    setErro('');
+    try {
+      await removerFoto(id);
+      carregar();
+    } catch (err) {
+      setErro(err instanceof ApiError ? err.message : 'Não foi possível remover a foto.');
+    } finally {
+      setRemovendoFotoId(null);
     }
   };
 
@@ -233,25 +267,47 @@ function ProfessionalDashboardContent() {
         <div className="max-w-2xl space-y-3">
           <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
             {perfil.gallery.map((foto) => (
-              <div key={foto.id} className="relative aspect-[3/4] bg-grafite border border-white/10 overflow-hidden">
+              <div key={foto.id} className="relative group aspect-[3/4] bg-grafite border border-white/10 overflow-hidden">
                 <img src={foto.url} alt="" className="w-full h-full object-cover" />
                 {foto.status !== 'aprovado' && (
                   <div className="absolute bottom-0 left-0 right-0 px-2 py-1 text-[10px] text-center font-semibold bg-black/80 text-ouro uppercase">
                     {foto.status === 'pendente' ? 'Em análise' : 'Reprovada'}
                   </div>
                 )}
+                <button
+                  onClick={() => handleRemoverFoto(foto.id)}
+                  disabled={removendoFotoId === foto.id}
+                  title="Remover foto"
+                  className="absolute top-1.5 right-1.5 p-1.5 rounded-full bg-black/70 text-red-300 hover:bg-red-500/80 hover:text-white transition-colors opacity-0 group-hover:opacity-100 disabled:opacity-60"
+                >
+                  <Trash2 className="w-3.5 h-3.5" />
+                </button>
               </div>
             ))}
-            <div
-              title="Upload de fotos ainda não está disponível"
-              className="aspect-[3/4] border-2 border-dashed border-white/10 flex flex-col items-center justify-center space-y-2 text-nevoa/50 cursor-not-allowed"
-            >
-              <Upload className="w-6 h-6" />
-              <span className="text-xs font-medium text-center px-2">Upload ainda não disponível</span>
-            </div>
+            {perfil.gallery.length < MAX_FOTOS && (
+              <button
+                type="button"
+                onClick={() => fileInputRef.current?.click()}
+                disabled={enviandoFoto}
+                className="aspect-[3/4] border-2 border-dashed border-white/15 hover:border-ouro/40 flex flex-col items-center justify-center space-y-2 text-nevoa hover:text-ouro transition-colors disabled:opacity-60"
+              >
+                <Upload className="w-6 h-6" />
+                <span className="text-xs font-medium">{enviandoFoto ? 'Enviando...' : 'Adicionar foto'}</span>
+              </button>
+            )}
           </div>
+          <input
+            ref={fileInputRef}
+            type="file"
+            accept="image/jpeg,image/png,image/webp"
+            onChange={handleEnviarFoto}
+            className="hidden"
+          />
+          <p className="text-xs text-nevoa">
+            Até {MAX_FOTOS} fotos (JPG, PNG ou WEBP, máx. 5MB cada). Fotos novas entram em análise antes de aparecer no seu anúncio público.
+          </p>
           {perfil.gallery.length === 0 && (
-            <p className="text-xs text-nevoa">Nenhuma foto enviada ainda. Fale com nossa equipe para adicionar fotos ao seu anúncio enquanto o upload direto não está pronto.</p>
+            <p className="text-xs text-nevoa">Nenhuma foto enviada ainda.</p>
           )}
         </div>
       )}

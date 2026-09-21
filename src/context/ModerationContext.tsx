@@ -10,12 +10,14 @@ import * as api from '../lib/api';
 interface ModerationContextValue {
   pendingProfiles: api.PendingModerationProfile[];
   reports: api.PendingReport[];
+  pendingMedia: api.PendingMedia[];
   auditLog: api.AuditLogEntry[];
   carregando: boolean;
   erro: string;
   refresh: () => Promise<void>;
   decideProfile: (id: number, status: 'aprovado' | 'reprovado') => Promise<void>;
   decideReport: (id: number, status: 'aprovado' | 'reprovado') => Promise<void>;
+  decideMedia: (id: number, status: 'aprovado' | 'reprovado') => Promise<void>;
 }
 
 const ModerationContext = createContext<ModerationContextValue | undefined>(undefined);
@@ -23,6 +25,7 @@ const ModerationContext = createContext<ModerationContextValue | undefined>(unde
 export const ModerationProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const [pendingProfiles, setPendingProfiles] = useState<api.PendingModerationProfile[]>([]);
   const [reports, setReports] = useState<api.PendingReport[]>([]);
+  const [pendingMedia, setPendingMedia] = useState<api.PendingMedia[]>([]);
   const [auditLog, setAuditLog] = useState<api.AuditLogEntry[]>([]);
   const [carregando, setCarregando] = useState(false);
   const [erro, setErro] = useState('');
@@ -31,13 +34,15 @@ export const ModerationProvider: React.FC<{ children: React.ReactNode }> = ({ ch
     setCarregando(true);
     setErro('');
     try {
-      const [perfis, denuncias, log] = await Promise.all([
+      const [perfis, denuncias, fotos, log] = await Promise.all([
         api.listarPerfisPendentes(),
         api.listarDenunciasPendentes(),
+        api.listarFotosPendentes(),
         api.listarLogAuditoria(),
       ]);
       setPendingProfiles(perfis.perfis);
       setReports(denuncias.denuncias);
+      setPendingMedia(fotos.fotos);
       setAuditLog(log.registros);
     } catch (err) {
       setErro(err instanceof api.ApiError ? err.message : 'Não foi possível carregar os dados de moderação.');
@@ -58,8 +63,14 @@ export const ModerationProvider: React.FC<{ children: React.ReactNode }> = ({ ch
     await refresh();
   }, [refresh]);
 
+  const decideMedia = useCallback(async (id: number, status: 'aprovado' | 'reprovado') => {
+    await api.decidirFoto(id, status);
+    setPendingMedia((prev) => prev.filter((m) => m.id !== id));
+    await refresh();
+  }, [refresh]);
+
   return (
-    <ModerationContext.Provider value={{ pendingProfiles, reports, auditLog, carregando, erro, refresh, decideProfile, decideReport }}>
+    <ModerationContext.Provider value={{ pendingProfiles, reports, pendingMedia, auditLog, carregando, erro, refresh, decideProfile, decideReport, decideMedia }}>
       {children}
     </ModerationContext.Provider>
   );

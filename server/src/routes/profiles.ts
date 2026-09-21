@@ -1,7 +1,9 @@
 import { Router } from 'express';
 import { z } from 'zod';
+import multer from 'multer';
 import { db } from '../lib/db';
 import { autenticar, exigirPapel } from '../middleware/auth';
+import { uploadFoto, urlPublicaUpload, removerArquivoPelaUrl, MAX_FOTOS_POR_PERFIL } from '../lib/uploads';
 
 export const profilesRouter = Router();
 
@@ -160,6 +162,72 @@ profilesRouter.post('/me/submit', autenticar, exigirPapel('profissional'), async
     .set({ status: 'pendente', submitted_at: new Date() })
     .where('id', '=', perfil.id)
     .execute();
+  res.json({ ok: true });
+});
+
+// Foto nova entra como 'pendente' - mesma logica de moderacao do
+// perfil, aplicada por foto: nada aparece na galeria publica sem
+// passar pelo gerente primeiro.
+profilesRouter.post('/me/media', autenticar, exigirPapel('profissional'), (req, res) => {
+  uploadFoto(req, res, async (err: unknown) => {
+    if (err) {
+      const mensagem = err instanceof multer.MulterError && err.code === 'LIMIT_FILE_SIZE'
+        ? 'Arquivo muito grande. Máximo de 5MB.'
+        : err instanceof Error ? err.message : 'Não foi possível processar a imagem.';
+      res.status(400).json({ erro: mensagem });
+      return;
+    }
+    if (!req.file) {
+      res.status(400).json({ erro: 'Nenhuma imagem enviada.' });
+      return;
+    }
+
+    const perfil = await db
+      .selectFrom('professional_profiles')
+      .select('id')
+      .where('user_id', '=', req.user!.sub)
+      .executeTakeFirst();
+    if (!perfil) {
+      res.status(404).json({ erro: 'Perfil não encontrado para esta conta.' });
+      return;
+    }
+
+    const { count } = await db
+      .selectFrom('media')
+      .select(db.fn.countAll<number>().as('count'))
+      .where('profile_id', '=', perfil.id)
+      .executeTakeFirstOrThrow();
+    if (Number(count) >= MAX_FOTOS_POR_PERFIL) {
+      removerArquivoPelaUrl(req.file.filename);
+      res.status(400).json({ erro: `Limite de ${MAX_FOTOS_POR_PERFIL} fotos por perfil atingido.` });
+      return;
+    }
+
+    const url = urlPublicaUpload(req.file.filename);
+    const inserted = await db
+      .insertInto('media')
+      .values({ profile_id: perfil.id, url, position: Number(count) })
+      .executeTakeFirstOrThrow();
+
+    res.status(201).json({ foto: { id: Number(inserted.insertId), url, status: 'pendente' } });
+  });
+});
+
+profilesRouter.delete('/me/media/:id', autenticar, exigirPapel('profissional'), async (req, res) => {
+  const foto = await db
+    .selectFrom('media')
+    .innerJoin('professional_profiles', 'professional_profiles.id', 'media.profile_id')
+    .select(['media.id', 'media.url'])
+    .where('media.id', '=', Number(req.params.id))
+    .where('professional_profiles.user_id', '=', req.user!.sub)
+    .executeTakeFirst();
+  if (!foto) {
+    res.status(404).json({ erro: 'Foto não encontrada.' });
+    return;
+  }
+
+  await db.deleteFrom('media').where('id', '=', foto.id).execute();
+  removerArquivoPelaUrl(foto.url);
   res.json({ ok: true });
 });
 
