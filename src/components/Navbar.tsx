@@ -40,21 +40,25 @@ export const Navbar: React.FC = () => {
               <span>Perfis 100% Verificados</span>
             </div>
 
-            <NavLink
-              to="/cadastro"
-              className="flex items-center space-x-1.5 px-3.5 py-2 rounded-lg bg-gradient-to-r from-ouro to-[#B89243] text-black font-extrabold text-xs uppercase tracking-wide hover:brightness-110 transition-all shadow-md active:scale-95"
-            >
-              <UserPlus className="w-4 h-4 text-black" />
-              <span>Criar Conta Cliente</span>
-            </NavLink>
+            {!session && (
+              <>
+                <NavLink
+                  to="/cadastro"
+                  className="flex items-center space-x-1.5 px-3.5 py-2 rounded-lg bg-gradient-to-r from-ouro to-[#B89243] text-black font-extrabold text-xs uppercase tracking-wide hover:brightness-110 transition-all shadow-md active:scale-95"
+                >
+                  <UserPlus className="w-4 h-4 text-black" />
+                  <span>Criar Conta Cliente</span>
+                </NavLink>
 
-            <NavLink
-              to="/anunciar"
-              className="flex items-center space-x-1.5 px-3.5 py-2 rounded-lg bg-grafite border border-ouro/40 text-white hover:bg-ouro/15 hover:border-ouro font-bold text-xs uppercase tracking-wide transition-all active:scale-95"
-            >
-              <PlusCircle className="w-4 h-4 text-ouro" />
-              <span>Anunciar</span>
-            </NavLink>
+                <NavLink
+                  to="/anunciar"
+                  className="flex items-center space-x-1.5 px-3.5 py-2 rounded-lg bg-grafite border border-ouro/40 text-white hover:bg-ouro/15 hover:border-ouro font-bold text-xs uppercase tracking-wide transition-all active:scale-95"
+                >
+                  <PlusCircle className="w-4 h-4 text-ouro" />
+                  <span>Anunciar</span>
+                </NavLink>
+              </>
+            )}
 
             {session ? (
               <div className="flex items-center space-x-2">
@@ -85,13 +89,15 @@ export const Navbar: React.FC = () => {
 
           {/* Menu de Ação Mobile */}
           <div className="flex items-center space-x-2 md:hidden">
-            <Link
-              to="/cadastro"
-              className="px-3 py-1.5 rounded-lg bg-ouro text-black font-extrabold text-xs flex items-center space-x-1 shadow-md"
-            >
-              <UserPlus className="w-3.5 h-3.5" />
-              <span>Cadastrar</span>
-            </Link>
+            {!session && (
+              <Link
+                to="/cadastro"
+                className="px-3 py-1.5 rounded-lg bg-ouro text-black font-extrabold text-xs flex items-center space-x-1 shadow-md"
+              >
+                <UserPlus className="w-3.5 h-3.5" />
+                <span>Cadastrar</span>
+              </Link>
+            )}
             <button
               onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
               className="p-2 rounded-lg bg-white/10 border border-white/20 text-white hover:bg-white/20"
@@ -112,23 +118,27 @@ export const Navbar: React.FC = () => {
           </div>
 
           <div className="space-y-2.5 pt-1">
-            <Link
-              to="/cadastro"
-              onClick={() => setMobileMenuOpen(false)}
-              className="w-full flex items-center justify-center space-x-2 py-3 rounded-lg bg-gradient-to-r from-ouro to-[#B89243] text-black font-extrabold text-sm shadow-lg"
-            >
-              <UserPlus className="w-4 h-4" />
-              <span>Sou Cliente — Criar Conta Grátis</span>
-            </Link>
+            {!session && (
+              <>
+                <Link
+                  to="/cadastro"
+                  onClick={() => setMobileMenuOpen(false)}
+                  className="w-full flex items-center justify-center space-x-2 py-3 rounded-lg bg-gradient-to-r from-ouro to-[#B89243] text-black font-extrabold text-sm shadow-lg"
+                >
+                  <UserPlus className="w-4 h-4" />
+                  <span>Sou Cliente — Criar Conta Grátis</span>
+                </Link>
 
-            <Link
-              to="/anunciar"
-              onClick={() => setMobileMenuOpen(false)}
-              className="w-full flex items-center justify-center space-x-2 py-3 rounded-lg bg-[#270E15] border border-ouro/40 text-white font-bold text-sm"
-            >
-              <PlusCircle className="w-4 h-4 text-ouro" />
-              <span>Sou Acompanhante — Quero Anunciar</span>
-            </Link>
+                <Link
+                  to="/anunciar"
+                  onClick={() => setMobileMenuOpen(false)}
+                  className="w-full flex items-center justify-center space-x-2 py-3 rounded-lg bg-[#270E15] border border-ouro/40 text-white font-bold text-sm"
+                >
+                  <PlusCircle className="w-4 h-4 text-ouro" />
+                  <span>Sou Acompanhante — Quero Anunciar</span>
+                </Link>
+              </>
+            )}
 
             <Link
               to="/"
