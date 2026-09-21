@@ -30,6 +30,18 @@ interface ProfessionalProfilesTable {
   age: number;
   city: string;
   neighborhood: string | null;
+  height: string | null;
+  weight: string | null;
+  eyes: string | null;
+  hair: string | null;
+  // mysql2 desserializa colunas JSON automaticamente (array), mas o
+  // tipo aceita string tambem - depende do driver reconhecer a coluna
+  // como JSON. Nunca escrever direto: usar JSON.stringify() ao setar.
+  languages: string[] | string | null;
+  silicone: string | null;
+  tattoos: string | null;
+  services: string[] | string | null;
+  locations: string[] | string | null;
   category: Category;
   tagline: string | null;
   bio: string | null;
@@ -84,6 +96,13 @@ interface AuditLogTable {
   created_at: Generated<Date>;
 }
 
+interface CitiesTable {
+  id: Generated<number>;
+  slug: string;
+  name: string;
+  active: Generated<number>; // MySQL BOOLEAN = TINYINT(1)
+}
+
 export interface Database {
   users: UsersTable;
   professional_profiles: ProfessionalProfilesTable;
@@ -91,6 +110,7 @@ export interface Database {
   verifications: VerificationsTable;
   reports: ReportsTable;
   audit_log: AuditLogTable;
+  cities: CitiesTable;
 }
 
 const pool = createPool({

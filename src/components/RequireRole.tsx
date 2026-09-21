@@ -11,12 +11,20 @@ const ROTULO_PAPEL: Record<UserRole, string> = {
   contratante: 'Contratante',
 };
 
-/* Guarda leve para os paineis logados. Sem back-end nao ha token pra
-   validar - isto so orienta a navegacao da demonstracao: sem sessao,
-   manda para /entrar; com papel errado, explica e oferece o caminho
-   certo em vez de simplesmente bloquear. */
+/* Guarda dos paineis logados: sem sessao, manda para /entrar; com
+   papel errado, explica e oferece o caminho certo em vez de so
+   bloquear. A validacao de verdade (o token e' real) acontece no
+   backend em cada chamada - isto e' so a experiencia de navegacao. */
 export const RequireRole: React.FC<{ allow: UserRole[]; children: React.ReactNode }> = ({ allow, children }) => {
-  const { session } = useSession();
+  const { session, carregando } = useSession();
+
+  if (carregando) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-onix p-4">
+        <p className="text-sm text-nevoa">Carregando sessão...</p>
+      </div>
+    );
+  }
 
   if (!session) {
     return (

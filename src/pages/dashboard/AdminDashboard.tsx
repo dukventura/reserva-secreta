@@ -1,8 +1,8 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import {
   LayoutDashboard, Users, Wallet, History, ShieldCheck, ArrowRight,
-  UserPlus, CircleDot,
+  UserPlus, CircleDot, AlertCircle,
 } from 'lucide-react';
 import { DashboardLayout } from '../../layouts/DashboardLayout';
 import { RequireRole } from '../../components/RequireRole';
@@ -24,21 +24,32 @@ function fmtData(iso: string) {
 
 function AdminDashboardContent() {
   const [tab, setTab] = useState('painel');
-  const { pendingProfiles, reports, auditLog } = useModeration();
+  const { pendingProfiles, reports, auditLog, carregando, erro, refresh } = useModeration();
+
+  useEffect(() => {
+    refresh();
+  }, [refresh]);
 
   const receitaEstimada = mockPlans.find((p) => p.id === 'plano-vip');
 
   return (
     <DashboardLayout title="Painel do Admin Master" navItems={NAV} activeKey={tab} onSelect={setTab}>
 
+      {erro && (
+        <div className="flex items-start space-x-2 bg-red-500/10 border border-red-500/30 p-3 text-xs text-red-300 mb-4">
+          <AlertCircle className="w-4 h-4 shrink-0 mt-0.5" />
+          <span>{erro}</span>
+        </div>
+      )}
+
       {tab === 'painel' && (
         <div className="space-y-6">
           <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
             {[
               { label: 'Membros da equipe', value: mockTeam.length },
-              { label: 'Anúncios pendentes', value: pendingProfiles.filter((p) => p.status === 'pendente').length },
-              { label: 'Denúncias abertas', value: reports.filter((r) => r.status === 'pendente').length },
-              { label: 'Ações no log', value: auditLog.length },
+              { label: 'Anúncios pendentes', value: carregando ? '...' : pendingProfiles.length },
+              { label: 'Denúncias abertas', value: carregando ? '...' : reports.length },
+              { label: 'Ações no log', value: carregando ? '...' : auditLog.length },
             ].map((s) => (
               <div key={s.label} className="bg-grafite border border-white/10 p-4 space-y-1.5">
                 <span className="text-[11px] text-nevoa uppercase tracking-wider">{s.label}</span>
@@ -128,12 +139,12 @@ function AdminDashboardContent() {
             {auditLog.map((a) => (
               <div key={a.id} className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-1 p-3 text-xs">
                 <div>
-                  <span className="text-ouro font-mono">{ROTULO_PAPEL[a.actorRole]}</span>
-                  <span className="text-nevoa"> · {a.actor} — </span>
+                  <span className="text-ouro font-mono">{a.actor_role ? ROTULO_PAPEL[a.actor_role] : '—'}</span>
+                  <span className="text-nevoa"> · {a.actor_name ?? 'Conta removida'} — </span>
                   <span className="text-marfim">{a.action}</span>
                   <span className="text-nevoa"> · {a.target}</span>
                 </div>
-                <div className="text-nevoa shrink-0 font-mono">{fmtData(a.timestamp)}</div>
+                <div className="text-nevoa shrink-0 font-mono">{fmtData(a.created_at)}</div>
               </div>
             ))}
           </div>

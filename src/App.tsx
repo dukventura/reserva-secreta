@@ -23,7 +23,7 @@ export function App() {
             <Route element={<PublicLayout />}>
               <Route path="/" element={<HomePage />} />
               <Route path="/cidade/:cidade" element={<CityPage />} />
-              <Route path="/perfil/:id" element={<ProfilePage />} />
+              <Route path="/perfil/:slug" element={<ProfilePage />} />
               <Route path="/anunciar" element={<AdvertisePage />} />
               <Route path="/cadastro" element={<ClientSignupPage />} />
               <Route path="/entrar" element={<LoginPage />} />

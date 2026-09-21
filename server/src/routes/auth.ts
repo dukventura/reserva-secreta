@@ -22,7 +22,7 @@ const cadastroSchema = z.discriminatedUnion('role', [
   }),
   cadastroBase.extend({
     role: z.literal('profissional'),
-    city: z.enum(['Ilicínea', 'Boa Esperança']),
+    city: z.string().trim().min(1),
     category: z.enum(['VIP', 'Mulheres', 'Trans']),
     age: z.number().int().min(18).max(99),
     whatsapp: z.string().trim().min(10).max(20),
@@ -36,6 +36,21 @@ authRouter.post('/register', async (req, res) => {
     return;
   }
   const dados = parsed.data;
+
+  // Cidade valida contra a tabela `cities` em vez de um enum fixo no
+  // codigo: atender uma cidade nova passa a ser so uma linha no banco.
+  if (dados.role === 'profissional') {
+    const cidade = await db
+      .selectFrom('cities')
+      .select('id')
+      .where('name', '=', dados.city)
+      .where('active', '=', 1)
+      .executeTakeFirst();
+    if (!cidade) {
+      res.status(400).json({ erro: 'Cidade não atendida.' });
+      return;
+    }
+  }
 
   const existente = await db.selectFrom('users').select('id').where('email', '=', dados.email).executeTakeFirst();
   if (existente) {

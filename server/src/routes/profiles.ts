@@ -6,32 +6,114 @@ import { autenticar, exigirPapel } from '../middleware/auth';
 export const profilesRouter = Router();
 
 const CAMPOS_PUBLICOS = [
-  'slug', 'stage_name', 'age', 'city', 'neighborhood', 'category',
-  'tagline', 'bio', 'hourly_rate', 'whatsapp', 'is_vip', 'cover_image',
+  'professional_profiles.id', 'professional_profiles.slug', 'professional_profiles.stage_name',
+  'professional_profiles.age', 'professional_profiles.city', 'professional_profiles.neighborhood',
+  'professional_profiles.height', 'professional_profiles.weight', 'professional_profiles.eyes',
+  'professional_profiles.hair', 'professional_profiles.languages', 'professional_profiles.silicone',
+  'professional_profiles.tattoos', 'professional_profiles.services', 'professional_profiles.locations',
+  'professional_profiles.category', 'professional_profiles.tagline', 'professional_profiles.bio',
+  'professional_profiles.hourly_rate', 'professional_profiles.whatsapp', 'professional_profiles.is_vip',
+  'professional_profiles.cover_image',
 ] as const;
+
+function comVerificacao() {
+  // isVerified reflete o documento aprovado de verdade (tabela
+  // verifications), em vez de um campo redundante que poderia
+  // dessincronizar do status real de verificacao.
+  return db
+    .selectFrom('professional_profiles')
+    .leftJoin('verifications', 'verifications.user_id', 'professional_profiles.user_id')
+    .select([...CAMPOS_PUBLICOS, 'verifications.documento_status as documento_status'])
+    .where('professional_profiles.status', '=', 'aprovado');
+}
+
+// mysql2 reconhece o tipo JSON pelo protocolo e ja devolve array/objeto
+// desserializado - so cai em string quando o driver nao tem essa info
+// (ex: outra lib, ou coluna criada como TEXT puro). Tratamos os dois
+// casos para nao depender desse detalhe de driver. Array vazio (nao
+// null) poupa checagem extra em todo lugar que itera a lista no front.
+function parseJsonArray(valor: unknown): string[] {
+  if (Array.isArray(valor)) return valor;
+  if (typeof valor === 'string' && valor) {
+    try {
+      const parsed = JSON.parse(valor);
+      return Array.isArray(parsed) ? parsed : [];
+    } catch {
+      return [];
+    }
+  }
+  return [];
+}
+
+function paraPerfilPublico(row: Awaited<ReturnType<ReturnType<typeof comVerificacao>['executeTakeFirst']>>) {
+  if (!row) return null;
+  const { id: _id, documento_status, languages, services, locations, ...resto } = row;
+  return {
+    ...resto,
+    languages: parseJsonArray(languages),
+    services: parseJsonArray(services),
+    locations: parseJsonArray(locations),
+    is_verified: documento_status === 'aprovado',
+  };
+}
+
+const categoriaQuerySchema = z.enum(['VIP', 'Mulheres', 'Trans']);
 
 // Diretorio publico: only 'aprovado' aparece. E' o portao central do
 // produto - nada entra aqui sem passar pela fila do gerente.
 profilesRouter.get('/', async (req, res) => {
   const { city, category } = req.query;
-  let query = db.selectFrom('professional_profiles').select(CAMPOS_PUBLICOS).where('status', '=', 'aprovado');
-  if (typeof city === 'string' && city !== 'Todas') query = query.where('city', '=', city);
-  if (typeof category === 'string' && category !== 'Todas') query = query.where('category', '=', category as any);
-  const perfis = await query.orderBy('is_vip', 'desc').orderBy('created_at', 'desc').execute();
-  res.json({ perfis });
+  let query = comVerificacao();
+  if (typeof city === 'string' && city !== 'Todas') query = query.where('professional_profiles.city', '=', city);
+  if (typeof category === 'string' && category !== 'Todas') {
+    const parsed = categoriaQuerySchema.safeParse(category);
+    if (!parsed.success) {
+      res.status(400).json({ erro: 'Categoria inválida.' });
+      return;
+    }
+    query = query.where('professional_profiles.category', '=', parsed.data);
+  }
+  const linhas = await query
+    .orderBy('professional_profiles.is_vip', 'desc')
+    .orderBy('professional_profiles.created_at', 'desc')
+    .execute();
+  res.json({ perfis: linhas.map(paraPerfilPublico) });
 });
 
 profilesRouter.get('/me', autenticar, exigirPapel('profissional'), async (req, res) => {
   const perfil = await db
     .selectFrom('professional_profiles')
-    .selectAll()
-    .where('user_id', '=', req.user!.sub)
+    .leftJoin('verifications', 'verifications.user_id', 'professional_profiles.user_id')
+    .selectAll('professional_profiles')
+    .select([
+      'verifications.email_confirmado', 'verifications.telefone_confirmado', 'verifications.documento_status',
+    ])
+    .where('professional_profiles.user_id', '=', req.user!.sub)
     .executeTakeFirst();
   if (!perfil) {
     res.status(404).json({ erro: 'Perfil não encontrado para esta conta.' });
     return;
   }
-  res.json({ perfil });
+  // Ao contrario da galeria publica, aqui mostra qualquer status - e'
+  // a propria dona vendo o que ja enviou, incluindo o que ainda esta
+  // em fila ou foi reprovado.
+  const media = await db
+    .selectFrom('media')
+    .select(['id', 'url', 'status'])
+    .where('profile_id', '=', perfil.id)
+    .orderBy('position', 'asc')
+    .execute();
+
+  const { languages, services, locations, ...resto } = perfil;
+  res.json({
+    perfil: {
+      ...resto,
+      languages: parseJsonArray(languages),
+      services: parseJsonArray(services),
+      locations: parseJsonArray(locations),
+      gallery: media,
+    },
+  });
 });
 
 const edicaoSchema = z.object({
@@ -84,15 +166,21 @@ profilesRouter.post('/me/submit', autenticar, exigirPapel('profissional'), async
 // Fica depois da rota /me de proposito: caso contrario "/me" seria
 // interpretado como um valor de :slug.
 profilesRouter.get('/:slug', async (req, res) => {
-  const perfil = await db
-    .selectFrom('professional_profiles')
-    .select(CAMPOS_PUBLICOS)
-    .where('slug', '=', req.params.slug)
-    .where('status', '=', 'aprovado')
-    .executeTakeFirst();
-  if (!perfil) {
+  const row = await comVerificacao().where('professional_profiles.slug', '=', req.params.slug).executeTakeFirst();
+  if (!row) {
     res.status(404).json({ erro: 'Perfil não encontrado.' });
     return;
   }
-  res.json({ perfil });
+
+  // So fotos ja aprovadas pelo gerente aparecem na galeria publica -
+  // mesma logica de moderacao do perfil, aplicada por foto.
+  const media = await db
+    .selectFrom('media')
+    .select('url')
+    .where('profile_id', '=', row.id)
+    .where('status', '=', 'aprovado')
+    .orderBy('position', 'asc')
+    .execute();
+
+  res.json({ perfil: { ...paraPerfilPublico(row), gallery: media.map((m) => m.url) } });
 });

@@ -1,12 +1,11 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   LayoutDashboard, ClipboardCheck, Flag, History, CheckCircle2, XCircle,
-  Clock, MapPin, ShieldAlert,
+  MapPin, ShieldAlert, AlertCircle,
 } from 'lucide-react';
 import { DashboardLayout } from '../../layouts/DashboardLayout';
 import { RequireRole } from '../../components/RequireRole';
 import { useModeration } from '../../context/ModerationContext';
-import { useSession } from '../../context/SessionContext';
 
 const NAV = [
   { key: 'painel', label: 'Painel', icon: <LayoutDashboard className="w-4 h-4" /> },
@@ -15,28 +14,34 @@ const NAV = [
   { key: 'historico', label: 'Histórico', icon: <History className="w-4 h-4" /> },
 ];
 
-function fmtData(iso: string) {
+function fmtData(iso: string | null) {
+  if (!iso) return '—';
   return new Date(iso).toLocaleDateString('pt-BR', { day: '2-digit', month: 'short', hour: '2-digit', minute: '2-digit' });
 }
 
 function ManagerDashboardContent() {
   const [tab, setTab] = useState('painel');
-  const { pendingProfiles, reports, auditLog, decideProfile, decideReport } = useModeration();
-  const { session } = useSession();
-  const ator = session?.name ?? 'Gerente';
+  const { pendingProfiles, reports, auditLog, carregando, erro, refresh, decideProfile, decideReport } = useModeration();
 
-  const pendentes = pendingProfiles.filter((p) => p.status === 'pendente');
-  const denunciasPendentes = reports.filter((r) => r.status === 'pendente');
+  useEffect(() => {
+    refresh();
+  }, [refresh]);
 
   return (
     <DashboardLayout title="Painel do Gerente" navItems={NAV} activeKey={tab} onSelect={setTab}>
 
+      {erro && (
+        <div className="flex items-start space-x-2 bg-red-500/10 border border-red-500/30 p-3 text-xs text-red-300 mb-4">
+          <AlertCircle className="w-4 h-4 shrink-0 mt-0.5" />
+          <span>{erro}</span>
+        </div>
+      )}
+
       {tab === 'painel' && (
         <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
           {[
-            { label: 'Anúncios pendentes', value: pendentes.length, icon: <ClipboardCheck className="w-4 h-4 text-ouro" /> },
-            { label: 'Denúncias abertas', value: denunciasPendentes.length, icon: <Flag className="w-4 h-4 text-ouro" /> },
-            { label: 'Aprovados (total)', value: pendingProfiles.filter((p) => p.status === 'aprovado').length, icon: <CheckCircle2 className="w-4 h-4 text-verificado-texto" /> },
+            { label: 'Anúncios pendentes', value: pendingProfiles.length, icon: <ClipboardCheck className="w-4 h-4 text-ouro" /> },
+            { label: 'Denúncias abertas', value: reports.length, icon: <Flag className="w-4 h-4 text-ouro" /> },
             { label: 'Ações registradas', value: auditLog.length, icon: <History className="w-4 h-4 text-ouro" /> },
           ].map((s) => (
             <div key={s.label} className="bg-grafite border border-white/10 p-4 space-y-2">
@@ -44,7 +49,7 @@ function ManagerDashboardContent() {
                 <span className="text-[11px] text-nevoa uppercase tracking-wider">{s.label}</span>
                 {s.icon}
               </div>
-              <div className="text-xl font-display text-marfim">{s.value}</div>
+              <div className="text-xl font-display text-marfim">{carregando ? '...' : s.value}</div>
             </div>
           ))}
         </div>
@@ -52,32 +57,32 @@ function ManagerDashboardContent() {
 
       {tab === 'aprovacoes' && (
         <div className="space-y-3 max-w-3xl">
-          {pendentes.length === 0 && <p className="text-sm text-nevoa">Nenhum anúncio pendente no momento.</p>}
-          {pendentes.map((p) => (
+          {!carregando && pendingProfiles.length === 0 && <p className="text-sm text-nevoa">Nenhum anúncio pendente no momento.</p>}
+          {pendingProfiles.map((p) => (
             <div key={p.id} className="flex flex-col sm:flex-row sm:items-center gap-4 bg-grafite border border-white/10 p-4">
-              <img src={p.coverImage} alt="" className="w-16 h-20 object-cover shrink-0" />
+              {p.cover_image ? (
+                <img src={p.cover_image} alt="" className="w-16 h-20 object-cover shrink-0" />
+              ) : (
+                <div className="w-16 h-20 shrink-0 bg-white/5 border border-white/10 flex items-center justify-center text-[10px] text-nevoa text-center px-1">Sem foto</div>
+              )}
               <div className="flex-1 min-w-0 space-y-1">
                 <div className="flex items-center gap-2">
-                  <span className="text-sm font-semibold text-marfim">{p.name}, {p.age}</span>
+                  <span className="text-sm font-semibold text-marfim">{p.stage_name}, {p.age}</span>
                   <span className="text-[10px] px-2 py-0.5 rounded-campo bg-white/5 border border-white/10 text-nevoa uppercase">{p.category}</span>
                 </div>
                 <div className="flex items-center space-x-1.5 text-xs text-nevoa"><MapPin className="w-3 h-3 text-ouro" /><span>{p.city}</span></div>
-                <div className="flex flex-wrap gap-2 text-[11px] text-nevoa pt-1">
-                  <span className={`flex items-center space-x-1 ${p.verificationStatus.email ? 'text-verificado-texto' : ''}`}>{p.verificationStatus.email ? <CheckCircle2 className="w-3.5 h-3.5" /> : <Clock className="w-3.5 h-3.5" />}<span>E-mail</span></span>
-                  <span className={`flex items-center space-x-1 ${p.verificationStatus.telefone ? 'text-verificado-texto' : ''}`}>{p.verificationStatus.telefone ? <CheckCircle2 className="w-3.5 h-3.5" /> : <Clock className="w-3.5 h-3.5" />}<span>Telefone</span></span>
-                  <span className="flex items-center space-x-1"><Clock className="w-3.5 h-3.5" /><span>Documento: {p.verificationStatus.documento}</span></span>
-                </div>
-                <div className="text-[11px] text-nevoa">Enviado em {fmtData(p.submittedAt)}</div>
+                <div className="text-[11px] text-nevoa">WhatsApp: {p.whatsapp}</div>
+                <div className="text-[11px] text-nevoa">Enviado em {fmtData(p.submitted_at)}</div>
               </div>
               <div className="flex sm:flex-col gap-2 shrink-0">
                 <button
-                  onClick={() => decideProfile(p.id, 'aprovado', ator)}
+                  onClick={() => decideProfile(p.id, 'aprovado')}
                   className="flex-1 sm:flex-none flex items-center justify-center space-x-1.5 px-4 py-2 rounded-campo bg-verificado hover:opacity-90 text-marfim text-xs font-bold transition-opacity"
                 >
                   <CheckCircle2 className="w-4 h-4" /><span>Aprovar</span>
                 </button>
                 <button
-                  onClick={() => decideProfile(p.id, 'reprovado', ator)}
+                  onClick={() => decideProfile(p.id, 'reprovado')}
                   className="flex-1 sm:flex-none flex items-center justify-center space-x-1.5 px-4 py-2 rounded-campo bg-white/5 border border-white/15 hover:border-red-400/40 text-nevoa hover:text-red-300 text-xs font-bold transition-colors"
                 >
                   <XCircle className="w-4 h-4" /><span>Reprovar</span>
@@ -90,29 +95,29 @@ function ManagerDashboardContent() {
 
       {tab === 'denuncias' && (
         <div className="space-y-3 max-w-3xl">
-          {denunciasPendentes.length === 0 && <p className="text-sm text-nevoa">Nenhuma denúncia em aberto.</p>}
-          {denunciasPendentes.map((r) => (
+          {!carregando && reports.length === 0 && <p className="text-sm text-nevoa">Nenhuma denúncia em aberto.</p>}
+          {reports.map((r) => (
             <div key={r.id} className="bg-grafite border border-white/10 p-4 space-y-3">
               <div className="flex items-start justify-between gap-3">
                 <div>
                   <div className="flex items-center gap-2">
                     <ShieldAlert className="w-4 h-4 text-ouro shrink-0" />
                     <span className="text-sm font-semibold text-marfim">{r.reason}</span>
-                    {r.anonymous && <span className="text-[10px] px-2 py-0.5 rounded-campo bg-white/5 border border-white/10 text-nevoa">Anônima</span>}
+                    {r.reporter_user_id === null && <span className="text-[10px] px-2 py-0.5 rounded-campo bg-white/5 border border-white/10 text-nevoa">Anônima</span>}
                   </div>
-                  <p className="text-xs text-nevoa mt-1">Sobre: <strong className="text-marfim">{r.targetName}</strong> · {fmtData(r.reportedAt)}</p>
+                  <p className="text-xs text-nevoa mt-1">Sobre: <strong className="text-marfim">{r.target_name}</strong> · {fmtData(r.created_at)}</p>
                 </div>
               </div>
               <p className="text-xs text-nevoa bg-white/5 border border-white/10 p-3">{r.details}</p>
               <div className="flex gap-2">
                 <button
-                  onClick={() => decideReport(r.id, 'aprovado', ator)}
+                  onClick={() => decideReport(r.id, 'aprovado')}
                   className="flex items-center space-x-1.5 px-4 py-2 rounded-campo bg-red-500/15 border border-red-500/30 hover:bg-red-500/25 text-red-300 text-xs font-bold transition-colors"
                 >
                   <CheckCircle2 className="w-4 h-4" /><span>Procede — suspender anúncio</span>
                 </button>
                 <button
-                  onClick={() => decideReport(r.id, 'reprovado', ator)}
+                  onClick={() => decideReport(r.id, 'reprovado')}
                   className="flex items-center space-x-1.5 px-4 py-2 rounded-campo bg-white/5 border border-white/15 text-nevoa hover:text-marfim text-xs font-bold transition-colors"
                 >
                   <XCircle className="w-4 h-4" /><span>Arquivar</span>
@@ -133,7 +138,7 @@ function ManagerDashboardContent() {
                   <span className="text-marfim font-medium">{a.action}</span>
                   <span className="text-nevoa"> — {a.target}</span>
                 </div>
-                <div className="text-nevoa shrink-0 font-mono">{fmtData(a.timestamp)}</div>
+                <div className="text-nevoa shrink-0 font-mono">{fmtData(a.created_at)}</div>
               </div>
             ))}
           </div>

@@ -28,6 +28,11 @@ jobs:
         run: npm ci
 
       - name: Build
+        env:
+          # Sem isso, o build cai no fallback de lib/api.ts
+          # (http://localhost:3001) e o site publicado tenta falar com
+          # localhost do navegador de cada visitante - sempre falha.
+          VITE_API_URL: ${{ vars.VITE_API_URL }}
         run: npm run build
 
       - name: Enviar dist/ por FTP

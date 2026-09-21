@@ -5,6 +5,7 @@ import { authRouter } from './routes/auth';
 import { profilesRouter } from './routes/profiles';
 import { moderationRouter } from './routes/moderation';
 import { reportsRouter } from './routes/reports';
+import { citiesRouter } from './routes/cities';
 
 const app = express();
 
@@ -17,6 +18,7 @@ app.use('/api/auth', authRouter);
 app.use('/api/profiles', profilesRouter);
 app.use('/api/moderation', moderationRouter);
 app.use('/api/reports', reportsRouter);
+app.use('/api/cities', citiesRouter);
 
 // eslint-disable-next-line @typescript-eslint/no-unused-vars
 app.use((err: unknown, _req: express.Request, res: express.Response, _next: express.NextFunction) => {

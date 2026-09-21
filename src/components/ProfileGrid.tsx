@@ -1,10 +1,11 @@
 import React from 'react';
-import type { EscortProfile, FilterState } from '../types';
+import type { FilterState } from '../types';
+import type { PublicProfile } from '../lib/api';
 import { ProfileCard } from './ProfileCard';
 import { SearchX, RotateCcw } from 'lucide-react';
 
 interface ProfileGridProps {
-  profiles: EscortProfile[];
+  profiles: PublicProfile[];
   filters: FilterState;
   onResetFilters: () => void;
 }
@@ -14,23 +15,16 @@ export const ProfileGrid: React.FC<ProfileGridProps> = ({
   filters,
   onResetFilters,
 }) => {
-  // Filter logic
+  // Cidade e categoria ja vem filtradas pela API (query params) - o
+  // que resta filtrar no cliente e' a busca textual livre, que a API
+  // ainda nao suporta.
   const filteredProfiles = profiles.filter((p) => {
-    // City filter
-    if (filters.city !== 'Todas' && p.city !== filters.city) {
-      return false;
-    }
-    // Category filter
-    if (filters.category !== 'Todas' && p.category !== filters.category) {
-      return false;
-    }
-    // Search query filter
     if (filters.searchQuery.trim()) {
       const q = filters.searchQuery.toLowerCase();
-      const matchName = p.name.toLowerCase().includes(q);
-      const matchBio = p.bio.toLowerCase().includes(q);
-      const matchHair = p.specs.hair.toLowerCase().includes(q);
-      const matchServices = p.services.some(s => s.toLowerCase().includes(q));
+      const matchName = p.stage_name.toLowerCase().includes(q);
+      const matchBio = (p.bio ?? '').toLowerCase().includes(q);
+      const matchHair = (p.hair ?? '').toLowerCase().includes(q);
+      const matchServices = p.services.some((s) => s.toLowerCase().includes(q));
       if (!matchName && !matchBio && !matchHair && !matchServices) {
         return false;
       }
@@ -40,7 +34,7 @@ export const ProfileGrid: React.FC<ProfileGridProps> = ({
 
   return (
     <section id="grid" className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 sm:py-12">
-      
+
       {/* Header section with count */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-6 border-b border-white/10">
         <div>
@@ -65,7 +59,7 @@ export const ProfileGrid: React.FC<ProfileGridProps> = ({
       {filteredProfiles.length > 0 ? (
         <div className="mt-8 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
           {filteredProfiles.map((profile) => (
-            <ProfileCard key={profile.id} profile={profile} />
+            <ProfileCard key={profile.slug} profile={profile} />
           ))}
         </div>
       ) : (

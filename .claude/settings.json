@@ -2,7 +2,18 @@
   "permissions": {
     "allow": [
       "Bash(rm -f reserva-secreta-site.zip)",
-      "Bash(zip -rq \"../reserva-secreta-site.zip\" . -x \".DS_Store\")"
+      "Bash(zip -rq \"../reserva-secreta-site.zip\" . -x \".DS_Store\")",
+      "Bash(brew services *)",
+      "Bash(mysqladmin -u root status)",
+      "Bash(break)",
+      "Bash(curl -s -X POST http://localhost:3001/api/auth/register -H 'Content-Type: application/json' -d '{\"role\":\"contratante\",\"name\":\"Teste Smoke\",\"email\":\"smoke@teste.com\",\"password\":\"senha12345\"}')",
+      "Bash(curl -s -X POST http://localhost:3001/api/auth/login -H 'Content-Type: application/json' -d '{\"email\":\"smoke@teste.com\",\"password\":\"senha12345\"}')",
+      "Bash(node -e ' *)",
+      "Bash(lsof -ti:3001 -sTCP:LISTEN)",
+      "Bash(lsof -ti:5173 -sTCP:LISTEN)",
+      "Bash(node -e \"let d='';process.stdin.on\\('data',c=>d+=c\\);process.stdin.on\\('end',\\(\\)=>console.log\\(JSON.stringify\\(JSON.parse\\(d\\),null,2\\)\\)\\)\")",
+      "Bash(curl -s -X POST http://localhost:3001/api/auth/register -H 'Content-Type: application/json' -d '{\"role\":\"profissional\",\"name\":\"Camila Painel Teste\",\"email\":\"camila.painel@x.com\",\"password\":\"senha12345\",\"city\":\"Boa Esperança\",\"category\":\"Mulheres\",\"age\":26,\"whatsapp\":\"35966665555\"}')",
+      "Bash(node -e \"let d='';process.stdin.on\\('data',c=>d+=c\\);process.stdin.on\\('end',\\(\\)=>console.log\\(JSON.parse\\(d\\).token\\)\\)\")"
     ]
   }
 }
