@@ -15,14 +15,6 @@ export interface DemoSession {
   name: string;
 }
 
-export interface TeamMember {
-  id: string;
-  name: string;
-  email: string;
-  role: UserRole;
-  active: boolean;
-}
-
 export interface PlanOption {
   id: string;
   name: string;

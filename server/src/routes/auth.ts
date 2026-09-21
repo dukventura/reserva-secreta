@@ -3,8 +3,9 @@ import { z } from 'zod';
 import { db } from '../lib/db';
 import { hashSenha, conferirSenha, emitirToken } from '../lib/auth';
 import { slugUnico } from '../lib/slug';
-import { autenticar } from '../middleware/auth';
+import { autenticar, exigirPapel } from '../middleware/auth';
 import { loginLimiter, registerLimiter } from '../lib/rateLimit';
+import { registrarAuditoria } from '../lib/audit';
 
 export const authRouter = Router();
 
@@ -121,6 +122,57 @@ authRouter.post('/login', loginLimiter, async (req, res) => {
 
   const token = emitirToken({ sub: usuario.id, role: usuario.role, name: usuario.name });
   res.json({ token, user: { id: usuario.id, role: usuario.role, name: usuario.name } });
+});
+
+// Unica forma de virar master/gerente: o master cria a mao. O
+// cadastro publico (acima) recusa de proposito essas roles - ninguem
+// vira admin se autocadastrando.
+const staffSchema = cadastroBase.extend({
+  role: z.enum(['gerente', 'master']),
+});
+
+authRouter.post('/staff', autenticar, exigirPapel('master'), async (req, res) => {
+  const parsed = staffSchema.safeParse(req.body);
+  if (!parsed.success) {
+    res.status(400).json({ erro: 'Dados inválidos.', detalhes: parsed.error.flatten() });
+    return;
+  }
+  const dados = parsed.data;
+
+  const existente = await db.selectFrom('users').select('id').where('email', '=', dados.email).executeTakeFirst();
+  if (existente) {
+    res.status(409).json({ erro: 'Já existe uma conta com este e-mail.' });
+    return;
+  }
+
+  const passwordHash = await hashSenha(dados.password);
+  const userId = await db.transaction().execute(async (trx) => {
+    const userInsert = await trx
+      .insertInto('users')
+      .values({ role: dados.role, name: dados.name, email: dados.email, password_hash: passwordHash })
+      .executeTakeFirstOrThrow();
+    const id = Number(userInsert.insertId);
+    await trx.insertInto('verifications').values({ user_id: id }).execute();
+    return id;
+  });
+
+  await registrarAuditoria(
+    req.user!.sub,
+    dados.role === 'master' ? 'Criou conta de master' : 'Criou conta de gerente',
+    dados.name,
+  );
+
+  res.status(201).json({ user: { id: userId, role: dados.role, name: dados.name, email: dados.email } });
+});
+
+authRouter.get('/staff', autenticar, exigirPapel('master'), async (_req, res) => {
+  const equipe = await db
+    .selectFrom('users')
+    .select(['id', 'name', 'email', 'role', 'created_at'])
+    .where('role', 'in', ['master', 'gerente'])
+    .orderBy('created_at', 'asc')
+    .execute();
+  res.json({ equipe });
 });
 
 authRouter.get('/me', autenticar, async (req, res) => {

@@ -234,6 +234,22 @@ export function buscarMe() {
   return request<{ user: AuthUser }>('/api/auth/me', { auth: true });
 }
 
+export interface StaffMember {
+  id: number;
+  name: string;
+  email: string;
+  role: 'master' | 'gerente';
+  created_at: string;
+}
+
+export function listarEquipe() {
+  return request<{ equipe: StaffMember[] }>('/api/auth/staff', { auth: true });
+}
+
+export function criarMembroEquipe(dados: { name: string; email: string; password: string; role: 'gerente' | 'master' }) {
+  return request<{ user: AuthUser }>('/api/auth/staff', { method: 'POST', body: dados, auth: true });
+}
+
 // ---- cidades ----
 
 export function listarCidades() {

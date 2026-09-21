@@ -1,13 +1,8 @@
-import type { TeamMember, PlanOption } from '../types';
+import type { PlanOption } from '../types';
 
-/* Dados de demonstracao ainda sem rota no backend: gestao de equipe
-   (falta rota administrativa para o master criar gerentes) e planos
-   (assinatura/cobranca ainda nao existe - pagamentos sao manuais). */
-
-export const mockTeam: TeamMember[] = [
-  { id: 't-001', name: 'Eduardo Ventura', email: 'venturaedu.mkt@gmail.com', role: 'master', active: true },
-  { id: 't-002', name: 'Helena Braga', email: 'helena@reservasecreta.com.br', role: 'gerente', active: true },
-];
+/* Planos de assinatura ainda sem rota no backend - cobranca e' manual
+   via PIX nesta fase. Gestao de equipe (mockTeam) foi removida daqui
+   quando GET/POST /api/auth/staff passou a existir de verdade. */
 
 export const mockPlans: PlanOption[] = [
   {
