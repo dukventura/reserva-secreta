@@ -122,6 +122,16 @@ const edicaoSchema = z.object({
   tagline: z.string().max(255).optional(),
   bio: z.string().max(4000).optional(),
   hourly_rate: z.string().max(40).optional(),
+  neighborhood: z.string().max(120).optional(),
+  height: z.string().max(20).optional(),
+  weight: z.string().max(20).optional(),
+  eyes: z.string().max(60).optional(),
+  hair: z.string().max(60).optional(),
+  silicone: z.string().max(60).optional(),
+  tattoos: z.string().max(60).optional(),
+  languages: z.array(z.string().trim().min(1).max(40)).max(10).optional(),
+  services: z.array(z.string().trim().min(1).max(80)).max(20).optional(),
+  locations: z.array(z.string().trim().min(1).max(80)).max(20).optional(),
 });
 
 profilesRouter.patch('/me', autenticar, exigirPapel('profissional'), async (req, res) => {
@@ -134,7 +144,18 @@ profilesRouter.patch('/me', autenticar, exigirPapel('profissional'), async (req,
     res.status(400).json({ erro: 'Nada para atualizar.' });
     return;
   }
-  await db.updateTable('professional_profiles').set(parsed.data).where('user_id', '=', req.user!.sub).execute();
+
+  // Colunas JSON esperam texto serializado ao escrever - o driver nao
+  // faz essa conversao sozinho no caminho de escrita (so no de
+  // leitura). Sem isso, um array vira o formato de lista do mysql2
+  // (pensado pra clausulas IN (?)), nao um JSON valido.
+  const { languages, services, locations, ...resto } = parsed.data;
+  const valores: Record<string, unknown> = { ...resto };
+  if (languages !== undefined) valores.languages = JSON.stringify(languages);
+  if (services !== undefined) valores.services = JSON.stringify(services);
+  if (locations !== undefined) valores.locations = JSON.stringify(locations);
+
+  await db.updateTable('professional_profiles').set(valores).where('user_id', '=', req.user!.sub).execute();
   res.json({ ok: true });
 });
 

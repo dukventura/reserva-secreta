@@ -6,7 +6,7 @@ import {
 import { DashboardLayout } from '../../layouts/DashboardLayout';
 import { RequireRole } from '../../components/RequireRole';
 import { mockPlans } from '../../data/mockModeration';
-import { buscarMeuPerfil, atualizarMeuPerfil, enviarPerfilParaAprovacao, enviarFoto, removerFoto, ApiError, type MyProfile } from '../../lib/api';
+import { buscarMeuPerfil, atualizarMeuPerfil, enviarPerfilParaAprovacao, enviarFoto, removerFoto, ApiError, type MyProfile, type AtualizacaoPerfil } from '../../lib/api';
 
 const MAX_FOTOS = 10;
 
@@ -32,7 +32,11 @@ function ProfessionalDashboardContent() {
   const [perfil, setPerfil] = useState<MyProfile | null>(null);
   const [carregando, setCarregando] = useState(true);
   const [erro, setErro] = useState('');
-  const [form, setForm] = useState({ tagline: '', bio: '', hourly_rate: '' });
+  const [form, setForm] = useState({
+    tagline: '', bio: '', hourly_rate: '', neighborhood: '',
+    height: '', weight: '', eyes: '', hair: '', silicone: '', tattoos: '',
+    languages: '', services: '', locations: '',
+  });
   const [salvando, setSalvando] = useState(false);
   const [salvo, setSalvo] = useState(false);
   const [enviando, setEnviando] = useState(false);
@@ -46,7 +50,21 @@ function ProfessionalDashboardContent() {
     buscarMeuPerfil()
       .then(({ perfil }) => {
         setPerfil(perfil);
-        setForm({ tagline: perfil.tagline ?? '', bio: perfil.bio ?? '', hourly_rate: perfil.hourly_rate ?? '' });
+        setForm({
+          tagline: perfil.tagline ?? '',
+          bio: perfil.bio ?? '',
+          hourly_rate: perfil.hourly_rate ?? '',
+          neighborhood: perfil.neighborhood ?? '',
+          height: perfil.height ?? '',
+          weight: perfil.weight ?? '',
+          eyes: perfil.eyes ?? '',
+          hair: perfil.hair ?? '',
+          silicone: perfil.silicone ?? '',
+          tattoos: perfil.tattoos ?? '',
+          languages: perfil.languages.join(', '),
+          services: perfil.services.join(', '),
+          locations: perfil.locations.join(', '),
+        });
       })
       .catch((err) => setErro(err instanceof ApiError ? err.message : 'Não foi possível carregar seu perfil.'))
       .finally(() => setCarregando(false));
@@ -54,12 +72,29 @@ function ProfessionalDashboardContent() {
 
   useEffect(carregar, []);
 
+  const paraLista = (texto: string) => texto.split(',').map((s) => s.trim()).filter(Boolean);
+
   const salvar = async (e: React.FormEvent) => {
     e.preventDefault();
     setSalvando(true);
     setErro('');
     try {
-      await atualizarMeuPerfil(form);
+      const payload: AtualizacaoPerfil = {
+        tagline: form.tagline,
+        bio: form.bio,
+        hourly_rate: form.hourly_rate,
+        neighborhood: form.neighborhood,
+        height: form.height,
+        weight: form.weight,
+        eyes: form.eyes,
+        hair: form.hair,
+        silicone: form.silicone,
+        tattoos: form.tattoos,
+        languages: paraLista(form.languages),
+        services: paraLista(form.services),
+        locations: paraLista(form.locations),
+      };
+      await atualizarMeuPerfil(payload);
       setSalvo(true);
       setTimeout(() => setSalvo(false), 2500);
       carregar();
@@ -239,16 +274,69 @@ function ProfessionalDashboardContent() {
               className="w-full bg-grafite text-marfim text-sm rounded-campo px-4 py-2.5 border border-white/15 focus:border-ouro outline-none resize-none"
             />
           </div>
-          <div>
-            <label className="block text-xs font-semibold text-nevoa mb-1.5">Valor / hora</label>
-            <input
-              value={form.hourly_rate}
-              onChange={(e) => setForm({ ...form, hourly_rate: e.target.value })}
-              placeholder="Ex: R$ 300 /h"
-              maxLength={40}
-              className="w-full sm:w-48 bg-grafite text-marfim text-sm rounded-campo px-4 py-2.5 border border-white/15 focus:border-ouro outline-none"
-            />
+          <div className="grid grid-cols-2 gap-4">
+            <div>
+              <label className="block text-xs font-semibold text-nevoa mb-1.5">Valor / hora</label>
+              <input
+                value={form.hourly_rate}
+                onChange={(e) => setForm({ ...form, hourly_rate: e.target.value })}
+                placeholder="Ex: R$ 300 /h"
+                maxLength={40}
+                className="w-full bg-grafite text-marfim text-sm rounded-campo px-4 py-2.5 border border-white/15 focus:border-ouro outline-none"
+              />
+            </div>
+            <div>
+              <label className="block text-xs font-semibold text-nevoa mb-1.5">Bairro</label>
+              <input
+                value={form.neighborhood}
+                onChange={(e) => setForm({ ...form, neighborhood: e.target.value })}
+                maxLength={120}
+                className="w-full bg-grafite text-marfim text-sm rounded-campo px-4 py-2.5 border border-white/15 focus:border-ouro outline-none"
+              />
+            </div>
           </div>
+
+          <h3 className="text-sm font-semibold text-marfim pt-2 border-t border-white/10">Ficha técnica</h3>
+          <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
+            <div>
+              <label className="block text-xs font-semibold text-nevoa mb-1.5">Altura</label>
+              <input value={form.height} onChange={(e) => setForm({ ...form, height: e.target.value })} placeholder="1.68m" maxLength={20} className="w-full bg-grafite text-marfim text-sm rounded-campo px-3 py-2.5 border border-white/15 focus:border-ouro outline-none" />
+            </div>
+            <div>
+              <label className="block text-xs font-semibold text-nevoa mb-1.5">Peso</label>
+              <input value={form.weight} onChange={(e) => setForm({ ...form, weight: e.target.value })} placeholder="58kg" maxLength={20} className="w-full bg-grafite text-marfim text-sm rounded-campo px-3 py-2.5 border border-white/15 focus:border-ouro outline-none" />
+            </div>
+            <div>
+              <label className="block text-xs font-semibold text-nevoa mb-1.5">Olhos</label>
+              <input value={form.eyes} onChange={(e) => setForm({ ...form, eyes: e.target.value })} placeholder="Castanhos" maxLength={60} className="w-full bg-grafite text-marfim text-sm rounded-campo px-3 py-2.5 border border-white/15 focus:border-ouro outline-none" />
+            </div>
+            <div>
+              <label className="block text-xs font-semibold text-nevoa mb-1.5">Cabelo</label>
+              <input value={form.hair} onChange={(e) => setForm({ ...form, hair: e.target.value })} placeholder="Morena" maxLength={60} className="w-full bg-grafite text-marfim text-sm rounded-campo px-3 py-2.5 border border-white/15 focus:border-ouro outline-none" />
+            </div>
+            <div>
+              <label className="block text-xs font-semibold text-nevoa mb-1.5">Silicone</label>
+              <input value={form.silicone} onChange={(e) => setForm({ ...form, silicone: e.target.value })} placeholder="Não" maxLength={60} className="w-full bg-grafite text-marfim text-sm rounded-campo px-3 py-2.5 border border-white/15 focus:border-ouro outline-none" />
+            </div>
+            <div>
+              <label className="block text-xs font-semibold text-nevoa mb-1.5">Tatuagens</label>
+              <input value={form.tattoos} onChange={(e) => setForm({ ...form, tattoos: e.target.value })} placeholder="Delicadas" maxLength={60} className="w-full bg-grafite text-marfim text-sm rounded-campo px-3 py-2.5 border border-white/15 focus:border-ouro outline-none" />
+            </div>
+          </div>
+
+          <div>
+            <label className="block text-xs font-semibold text-nevoa mb-1.5">Idiomas (separados por vírgula)</label>
+            <input value={form.languages} onChange={(e) => setForm({ ...form, languages: e.target.value })} placeholder="Português, Inglês" className="w-full bg-grafite text-marfim text-sm rounded-campo px-4 py-2.5 border border-white/15 focus:border-ouro outline-none" />
+          </div>
+          <div>
+            <label className="block text-xs font-semibold text-nevoa mb-1.5">Serviços (separados por vírgula)</label>
+            <input value={form.services} onChange={(e) => setForm({ ...form, services: e.target.value })} placeholder="Massagem relaxante, Jantar romântico" className="w-full bg-grafite text-marfim text-sm rounded-campo px-4 py-2.5 border border-white/15 focus:border-ouro outline-none" />
+          </div>
+          <div>
+            <label className="block text-xs font-semibold text-nevoa mb-1.5">Locais aceitos (separados por vírgula)</label>
+            <input value={form.locations} onChange={(e) => setForm({ ...form, locations: e.target.value })} placeholder="Com local próprio, Hotéis/Motéis" className="w-full bg-grafite text-marfim text-sm rounded-campo px-4 py-2.5 border border-white/15 focus:border-ouro outline-none" />
+          </div>
+
           <button
             type="submit"
             disabled={salvando}
@@ -257,9 +345,6 @@ function ProfessionalDashboardContent() {
             {salvando ? 'Salvando...' : 'Salvar alterações'}
           </button>
           {salvo && <span className="ml-3 text-xs text-verificado-texto inline-flex items-center space-x-1"><Check className="w-3.5 h-3.5" /><span>Salvo</span></span>}
-          <p className="text-xs text-nevoa pt-2">
-            Altura, peso, olhos, cabelo, idiomas, serviços e locais aceitos ainda só podem ser editados pela nossa equipe — a edição desses campos por aqui ainda não existe.
-          </p>
         </form>
       )}
 

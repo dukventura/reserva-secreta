@@ -258,7 +258,23 @@ export function buscarMeuPerfil() {
   return request<{ perfil: MyProfile }>('/api/profiles/me', { auth: true });
 }
 
-export function atualizarMeuPerfil(dados: { tagline?: string; bio?: string; hourly_rate?: string }) {
+export interface AtualizacaoPerfil {
+  tagline?: string;
+  bio?: string;
+  hourly_rate?: string;
+  neighborhood?: string;
+  height?: string;
+  weight?: string;
+  eyes?: string;
+  hair?: string;
+  silicone?: string;
+  tattoos?: string;
+  languages?: string[];
+  services?: string[];
+  locations?: string[];
+}
+
+export function atualizarMeuPerfil(dados: AtualizacaoPerfil) {
   return request<{ ok: true }>('/api/profiles/me', { method: 'PATCH', body: dados, auth: true });
 }
 
