@@ -156,6 +156,7 @@ export interface MyProfile {
   email_confirmado: number;
   telefone_confirmado: number;
   documento_status: 'pendente' | 'aprovado' | 'reprovado';
+  documento_enviado: boolean;
   gallery: { id: number; url: string; status: 'pendente' | 'aprovado' | 'reprovado' }[];
 }
 
@@ -167,8 +168,9 @@ export interface PendingModerationProfile {
   city: string;
   category: 'VIP' | 'Mulheres' | 'Trans';
   whatsapp: string;
-  cover_image: string | null;
+  thumbnail_url: string | null;
   submitted_at: string | null;
+  approved_photos: number;
 }
 
 export interface PendingReport {
@@ -312,6 +314,12 @@ export function removerFoto(id: number) {
   return request<{ ok: true }>(`/api/profiles/me/media/${id}`, { method: 'DELETE', auth: true });
 }
 
+export function enviarDocumento(arquivo: File) {
+  const form = new FormData();
+  form.append('documento', arquivo);
+  return request<{ ok: true }>('/api/profiles/me/document', { method: 'POST', body: form, auth: true });
+}
+
 // ---- moderacao ----
 
 export function listarPerfisPendentes() {
@@ -348,6 +356,39 @@ export function decidirFoto(id: number, status: 'aprovado' | 'reprovado') {
     body: { status },
     auth: true,
   });
+}
+
+export interface PendingDocument {
+  user_id: number;
+  updated_at: string;
+  user_name: string;
+  profile_slug: string | null;
+  profile_name: string | null;
+}
+
+export function listarDocumentosPendentes() {
+  return request<{ documentos: PendingDocument[] }>('/api/moderation/documents/pending', { auth: true });
+}
+
+export function decidirDocumento(userId: number, status: 'aprovado' | 'reprovado') {
+  return request<{ ok: true }>(`/api/moderation/documents/${userId}/decide`, {
+    method: 'POST',
+    body: { status },
+    auth: true,
+  });
+}
+
+// O arquivo do documento nunca tem URL publica - precisa do token de
+// autenticacao no header, entao vira um blob local em vez de um <img
+// src> direto.
+export async function buscarArquivoDocumento(userId: number): Promise<string> {
+  const token = getToken();
+  const response = await fetch(`${API_URL}/api/moderation/documents/${userId}/file`, {
+    headers: token ? { Authorization: `Bearer ${token}` } : {},
+  });
+  if (!response.ok) throw new ApiError(response.status, 'Não foi possível carregar o documento.');
+  const blob = await response.blob();
+  return URL.createObjectURL(blob);
 }
 
 export function listarLogAuditoria() {

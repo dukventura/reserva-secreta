@@ -4,6 +4,7 @@ import multer from 'multer';
 import { db } from '../lib/db';
 import { autenticar, exigirPapel } from '../middleware/auth';
 import { uploadFoto, urlPublicaUpload, removerArquivoPelaUrl, MAX_FOTOS_POR_PERFIL } from '../lib/uploads';
+import { uploadDocumento, removerDocumento } from '../lib/documentUploads';
 
 export const profilesRouter = Router();
 
@@ -88,7 +89,8 @@ profilesRouter.get('/me', autenticar, exigirPapel('profissional'), async (req, r
     .leftJoin('verifications', 'verifications.user_id', 'professional_profiles.user_id')
     .selectAll('professional_profiles')
     .select([
-      'verifications.email_confirmado', 'verifications.telefone_confirmado', 'verifications.documento_status',
+      'verifications.email_confirmado', 'verifications.telefone_confirmado',
+      'verifications.documento_status', 'verifications.documento_url',
     ])
     .where('professional_profiles.user_id', '=', req.user!.sub)
     .executeTakeFirst();
@@ -106,7 +108,7 @@ profilesRouter.get('/me', autenticar, exigirPapel('profissional'), async (req, r
     .orderBy('position', 'asc')
     .execute();
 
-  const { languages, services, locations, ...resto } = perfil;
+  const { languages, services, locations, documento_url, ...resto } = perfil;
   res.json({
     perfil: {
       ...resto,
@@ -114,6 +116,10 @@ profilesRouter.get('/me', autenticar, exigirPapel('profissional'), async (req, r
       services: parseJsonArray(services),
       locations: parseJsonArray(locations),
       gallery: media,
+      // Nunca expor o nome do arquivo - so' se ja existe um enviado,
+      // pra distinguir "nunca enviou" de "enviou, documento_status
+      // comeca em 'pendente' por padrao pra todo mundo".
+      documento_enviado: documento_url !== null,
     },
   });
 });
@@ -250,6 +256,40 @@ profilesRouter.delete('/me/media/:id', autenticar, exigirPapel('profissional'), 
   await db.deleteFrom('media').where('id', '=', foto.id).execute();
   removerArquivoPelaUrl(foto.url);
   res.json({ ok: true });
+});
+
+// Documento entra como 'pendente' de novo a cada envio - reenviar
+// depois de uma reprovacao (ex: foto ilegivel) reabre a revisao do
+// zero, sem carregar a decisao anterior.
+profilesRouter.post('/me/document', autenticar, exigirPapel('profissional'), (req, res) => {
+  uploadDocumento(req, res, async (err: unknown) => {
+    if (err) {
+      const mensagem = err instanceof multer.MulterError && err.code === 'LIMIT_FILE_SIZE'
+        ? 'Arquivo muito grande. Máximo de 8MB.'
+        : err instanceof Error ? err.message : 'Não foi possível processar o arquivo.';
+      res.status(400).json({ erro: mensagem });
+      return;
+    }
+    if (!req.file) {
+      res.status(400).json({ erro: 'Nenhum arquivo enviado.' });
+      return;
+    }
+
+    const existente = await db
+      .selectFrom('verifications')
+      .select('documento_url')
+      .where('user_id', '=', req.user!.sub)
+      .executeTakeFirst();
+    if (existente?.documento_url) removerDocumento(existente.documento_url);
+
+    await db
+      .updateTable('verifications')
+      .set({ documento_url: req.file.filename, documento_status: 'pendente', revisado_por: null, revisado_em: null })
+      .where('user_id', '=', req.user!.sub)
+      .execute();
+
+    res.status(201).json({ ok: true });
+  });
 });
 
 // Fica depois da rota /me de proposito: caso contrario "/me" seria

@@ -6,7 +6,7 @@ import {
 import { DashboardLayout } from '../../layouts/DashboardLayout';
 import { RequireRole } from '../../components/RequireRole';
 import { mockPlans } from '../../data/mockModeration';
-import { buscarMeuPerfil, atualizarMeuPerfil, enviarPerfilParaAprovacao, enviarFoto, removerFoto, ApiError, type MyProfile, type AtualizacaoPerfil } from '../../lib/api';
+import { buscarMeuPerfil, atualizarMeuPerfil, enviarPerfilParaAprovacao, enviarFoto, removerFoto, enviarDocumento, ApiError, type MyProfile, type AtualizacaoPerfil } from '../../lib/api';
 
 const MAX_FOTOS = 10;
 
@@ -42,7 +42,9 @@ function ProfessionalDashboardContent() {
   const [enviando, setEnviando] = useState(false);
   const [enviandoFoto, setEnviandoFoto] = useState(false);
   const [removendoFotoId, setRemovendoFotoId] = useState<number | null>(null);
+  const [enviandoDocumento, setEnviandoDocumento] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const documentInputRef = useRef<HTMLInputElement>(null);
 
   const carregar = () => {
     setCarregando(true);
@@ -131,6 +133,22 @@ function ProfessionalDashboardContent() {
       setErro(err instanceof ApiError ? err.message : 'Não foi possível remover a foto.');
     } finally {
       setRemovendoFotoId(null);
+    }
+  };
+
+  const handleEnviarDocumento = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const arquivo = e.target.files?.[0];
+    e.target.value = '';
+    if (!arquivo) return;
+    setEnviandoDocumento(true);
+    setErro('');
+    try {
+      await enviarDocumento(arquivo);
+      carregar();
+    } catch (err) {
+      setErro(err instanceof ApiError ? err.message : 'Não foi possível enviar o documento.');
+    } finally {
+      setEnviandoDocumento(false);
     }
   };
 
@@ -402,28 +420,52 @@ function ProfessionalDashboardContent() {
           <div className="h-1.5 bg-white/10 overflow-hidden">
             <div className="h-full bg-ouro" style={{ width: `${percentualVerificado}%` }} />
           </div>
-          {[
-            { label: 'E-mail validado', done: perfil.email_confirmado === 1 },
-            { label: 'Telefone verificado', done: perfil.telefone_confirmado === 1 },
-            { label: 'Documento com foto (RG ou CNH)', done: perfil.documento_status === 'aprovado' },
-          ].map((item) => (
-            <div key={item.label} className="flex items-center justify-between bg-grafite border border-white/10 p-4">
-              <div className="flex items-center space-x-2.5">
-                {item.done ? <CheckCircle2 className="w-5 h-5 text-verificado-texto" /> : <Circle className="w-5 h-5 text-nevoa" />}
-                <span className="text-sm text-marfim">{item.label}</span>
-              </div>
-              {!item.done && (
-                <button
-                  disabled
-                  title="Envio de documento ainda não está disponível"
-                  className="flex items-center space-x-1.5 px-3 py-1.5 rounded-campo bg-white/5 border border-white/10 text-nevoa/50 text-xs font-semibold cursor-not-allowed"
-                >
-                  <Upload className="w-3.5 h-3.5" />
-                  <span>Em breve</span>
-                </button>
-              )}
+
+          <div className="flex items-center justify-between bg-grafite border border-white/10 p-4">
+            <div className="flex items-center space-x-2.5">
+              {perfil.email_confirmado ? <CheckCircle2 className="w-5 h-5 text-verificado-texto" /> : <Circle className="w-5 h-5 text-nevoa" />}
+              <span className="text-sm text-marfim">E-mail validado</span>
             </div>
-          ))}
+          </div>
+          <div className="flex items-center justify-between bg-grafite border border-white/10 p-4">
+            <div className="flex items-center space-x-2.5">
+              {perfil.telefone_confirmado ? <CheckCircle2 className="w-5 h-5 text-verificado-texto" /> : <Circle className="w-5 h-5 text-nevoa" />}
+              <span className="text-sm text-marfim">Telefone verificado</span>
+            </div>
+          </div>
+
+          <div className="flex items-center justify-between bg-grafite border border-white/10 p-4">
+            <div className="flex items-center space-x-2.5">
+              {perfil.documento_status === 'aprovado' ? <CheckCircle2 className="w-5 h-5 text-verificado-texto" /> : <Clock className="w-5 h-5 text-nevoa" />}
+              <div>
+                <div className="text-sm text-marfim">Documento com foto (RG ou CNH)</div>
+                <div className="text-xs text-nevoa">
+                  {!perfil.documento_enviado && 'Nenhum documento enviado ainda'}
+                  {perfil.documento_enviado && perfil.documento_status === 'pendente' && 'Enviado — aguardando análise'}
+                  {perfil.documento_status === 'aprovado' && 'Aprovado'}
+                  {perfil.documento_status === 'reprovado' && 'Reprovado — envie novamente'}
+                </div>
+              </div>
+            </div>
+            {perfil.documento_status !== 'aprovado' && (
+              <button
+                onClick={() => documentInputRef.current?.click()}
+                disabled={enviandoDocumento}
+                className="flex items-center space-x-1.5 px-3 py-1.5 rounded-campo bg-ouro/10 border border-ouro/30 text-ouro text-xs font-semibold hover:bg-ouro/20 transition-colors disabled:opacity-60"
+              >
+                <Upload className="w-3.5 h-3.5" />
+                <span>{enviandoDocumento ? 'Enviando...' : perfil.documento_enviado ? 'Reenviar' : 'Enviar documento'}</span>
+              </button>
+            )}
+          </div>
+          <input
+            ref={documentInputRef}
+            type="file"
+            accept="image/jpeg,image/png,image/webp,application/pdf"
+            onChange={handleEnviarDocumento}
+            className="hidden"
+          />
+
           <p className="text-xs text-nevoa">O documento é revisado por um humano da nossa equipe e usado só para confirmar identidade e maioridade — nunca fica visível no seu anúncio.</p>
         </div>
       )}

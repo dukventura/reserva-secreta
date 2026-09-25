@@ -4,18 +4,42 @@ import { db } from '../lib/db';
 import { autenticar, exigirPapel } from '../middleware/auth';
 import { registrarAuditoria } from '../lib/audit';
 import { removerArquivoPelaUrl } from '../lib/uploads';
+import { caminhoDocumento } from '../lib/documentUploads';
 
 export const moderationRouter = Router();
 moderationRouter.use(autenticar, exigirPapel('gerente', 'master'));
 
 moderationRouter.get('/profiles/pending', async (_req, res) => {
+  // thumbnail_url vem da galeria de verdade (media aprovada), nao de
+  // cover_image - esse campo nunca e' preenchido no fluxo real de
+  // cadastro (/anunciar so grava em `media`), entao sempre aparecia
+  // "Sem foto" mesmo pra perfis com fotos aprovadas. approved_photos
+  // vai junto pro gerente ver de cara se ja da pra aprovar - o botao
+  // de decidir tambem barra no servidor, isto e' so pra nao
+  // surpreender no clique.
   const perfis = await db
     .selectFrom('professional_profiles')
-    .select(['id', 'slug', 'stage_name', 'age', 'city', 'category', 'whatsapp', 'cover_image', 'submitted_at'])
-    .where('status', '=', 'pendente')
-    .orderBy('submitted_at', 'asc')
+    .select((eb) => [
+      'professional_profiles.id', 'professional_profiles.slug', 'professional_profiles.stage_name',
+      'professional_profiles.age', 'professional_profiles.city', 'professional_profiles.category',
+      'professional_profiles.whatsapp', 'professional_profiles.submitted_at',
+      eb.selectFrom('media')
+        .select('media.url')
+        .whereRef('media.profile_id', '=', 'professional_profiles.id')
+        .where('media.status', '=', 'aprovado')
+        .orderBy('media.position', 'asc')
+        .limit(1)
+        .as('thumbnail_url'),
+      eb.selectFrom('media')
+        .select(eb.fn.countAll<number>().as('c'))
+        .whereRef('media.profile_id', '=', 'professional_profiles.id')
+        .where('media.status', '=', 'aprovado')
+        .as('approved_photos'),
+    ])
+    .where('professional_profiles.status', '=', 'pendente')
+    .orderBy('professional_profiles.submitted_at', 'asc')
     .execute();
-  res.json({ perfis });
+  res.json({ perfis: perfis.map((p) => ({ ...p, approved_photos: Number(p.approved_photos) })) });
 });
 
 const decisaoSchema = z.object({ status: z.enum(['aprovado', 'reprovado']) });
@@ -31,6 +55,21 @@ moderationRouter.post('/profiles/:id/decide', async (req, res) => {
   if (!perfil) {
     res.status(404).json({ erro: 'Anúncio não encontrado.' });
     return;
+  }
+
+  if (parsed.data.status === 'aprovado') {
+    // Nunca publicar perfil sem nenhuma foto real - e' exatamente o
+    // problema que a moderacao manual deixou passar antes disso existir.
+    const { count } = await db
+      .selectFrom('media')
+      .select(db.fn.countAll<number>().as('count'))
+      .where('profile_id', '=', id)
+      .where('status', '=', 'aprovado')
+      .executeTakeFirstOrThrow();
+    if (Number(count) === 0) {
+      res.status(400).json({ erro: 'Este perfil ainda não tem nenhuma foto aprovada. Aprove ao menos uma foto antes de publicar o anúncio.' });
+      return;
+    }
   }
 
   await db.updateTable('professional_profiles').set({ status: parsed.data.status }).where('id', '=', id).execute();
@@ -142,6 +181,70 @@ moderationRouter.post('/media/:id/decide', async (req, res) => {
     req.user!.sub,
     parsed.data.status === 'aprovado' ? 'Aprovou foto' : 'Reprovou foto',
     foto.profile_name,
+  );
+  res.json({ ok: true });
+});
+
+moderationRouter.get('/documents/pending', async (_req, res) => {
+  const documentos = await db
+    .selectFrom('verifications')
+    .innerJoin('users', 'users.id', 'verifications.user_id')
+    .leftJoin('professional_profiles', 'professional_profiles.user_id', 'verifications.user_id')
+    .select([
+      'verifications.user_id', 'verifications.updated_at', 'users.name as user_name',
+      'professional_profiles.slug as profile_slug', 'professional_profiles.stage_name as profile_name',
+    ])
+    .where('verifications.documento_status', '=', 'pendente')
+    .where('verifications.documento_url', 'is not', null)
+    .orderBy('verifications.updated_at', 'asc')
+    .execute();
+  res.json({ documentos });
+});
+
+// Nunca serve o documento por URL publica: so essa rota autenticada le
+// o arquivo do disco privado e devolve pro gerente/master.
+moderationRouter.get('/documents/:userId/file', async (req, res) => {
+  const userId = Number(req.params.userId);
+  const verificacao = await db
+    .selectFrom('verifications')
+    .select('documento_url')
+    .where('user_id', '=', userId)
+    .executeTakeFirst();
+  if (!verificacao?.documento_url) {
+    res.status(404).json({ erro: 'Documento não encontrado.' });
+    return;
+  }
+  res.sendFile(caminhoDocumento(verificacao.documento_url));
+});
+
+moderationRouter.post('/documents/:userId/decide', async (req, res) => {
+  const parsed = decisaoSchema.safeParse(req.body);
+  if (!parsed.success) {
+    res.status(400).json({ erro: 'Informe status: aprovado ou reprovado.' });
+    return;
+  }
+  const userId = Number(req.params.userId);
+  const alvo = await db
+    .selectFrom('verifications')
+    .innerJoin('users', 'users.id', 'verifications.user_id')
+    .select(['verifications.user_id', 'users.name as user_name'])
+    .where('verifications.user_id', '=', userId)
+    .executeTakeFirst();
+  if (!alvo) {
+    res.status(404).json({ erro: 'Documento não encontrado.' });
+    return;
+  }
+
+  await db
+    .updateTable('verifications')
+    .set({ documento_status: parsed.data.status, revisado_por: req.user!.sub, revisado_em: new Date() })
+    .where('user_id', '=', userId)
+    .execute();
+
+  await registrarAuditoria(
+    req.user!.sub,
+    parsed.data.status === 'aprovado' ? 'Aprovou documento' : 'Reprovou documento',
+    alvo.user_name,
   );
   res.json({ ok: true });
 });

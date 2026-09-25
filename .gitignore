@@ -21,6 +21,10 @@ dist-ssr
 server/public/uploads/*
 !server/public/uploads/.gitkeep
 
+# Documentos de identidade - dado sensivel, nunca commitar.
+server/private/documents/*
+!server/private/documents/.gitkeep
+
 # Editor directories and files
 .vscode/*
 !.vscode/extensions.json

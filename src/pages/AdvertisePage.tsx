@@ -26,11 +26,11 @@ export const AdvertisePage: React.FC = () => {
   });
 
   useEffect(() => {
+    // Sem pre-selecionar a primeira cidade da lista: isso deixava dar
+    // "OK" no formulario inteiro sem a pessoa escolher a cidade de
+    // proposito, e um clique apressado publicava a cidade errada.
     listarCidades()
-      .then(({ cidades }) => {
-        setCidades(cidades);
-        setFormData((prev) => (prev.city ? prev : { ...prev, city: cidades[0]?.name ?? '' }));
-      })
+      .then(({ cidades }) => setCidades(cidades))
       .catch(() => setErro('Não foi possível carregar a lista de cidades. Recarregue a página.'));
   }, []);
 
@@ -178,7 +178,7 @@ export const AdvertisePage: React.FC = () => {
                 onChange={(e) => setFormData({ ...formData, city: e.target.value })}
                 className="w-full bg-onix text-marfim text-sm rounded-campo px-3 py-2.5 border border-white/15 focus:border-ouro outline-none"
               >
-                {cidades.length === 0 && <option value="">Carregando cidades...</option>}
+                <option value="" disabled>{cidades.length === 0 ? 'Carregando cidades...' : 'Selecione sua cidade'}</option>
                 {cidades.map((c) => (
                   <option key={c.slug} value={c.name}>{c.name}</option>
                 ))}
