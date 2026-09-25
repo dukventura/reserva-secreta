@@ -1,19 +1,24 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import { MessageCircle, CheckCircle2, Mail, KeyRound, PartyPopper, AlertCircle } from 'lucide-react';
+import { MessageCircle, CheckCircle2, Mail, KeyRound, PartyPopper, AlertCircle, MapPin } from 'lucide-react';
 import { useSession } from '../context/SessionContext';
 import { ApiError, enviarPerfilParaAprovacao, listarCidades, type CityOption } from '../lib/api';
 import { Monograma } from '../components/Logo';
 
 type Etapa = 'dados' | 'sucesso';
 type Categoria = 'VIP' | 'Mulheres' | 'Trans';
+const MAX_SUGESTOES = 8;
 
 export const AdvertisePage: React.FC = () => {
   const { registrarProfissional } = useSession();
   const navigate = useNavigate();
   const [etapa, setEtapa] = useState<Etapa>('dados');
   const [cidades, setCidades] = useState<CityOption[]>([]);
+  const [cityQuery, setCityQuery] = useState('');
+  const [cityDropdownAberto, setCityDropdownAberto] = useState(false);
+  const cityDropdownRef = useRef<HTMLDivElement>(null);
   const [erro, setErro] = useState('');
+  const [erroCidade, setErroCidade] = useState('');
   const [enviando, setEnviando] = useState(false);
   const [formData, setFormData] = useState({
     name: '',
@@ -26,17 +31,46 @@ export const AdvertisePage: React.FC = () => {
   });
 
   useEffect(() => {
-    // Sem pre-selecionar a primeira cidade da lista: isso deixava dar
-    // "OK" no formulario inteiro sem a pessoa escolher a cidade de
-    // proposito, e um clique apressado publicava a cidade errada.
+    // Lista completa dos 853 municipios de MG (nao so as 2 cidades que
+    // ja tinham anuncio) - o autocomplete filtra conforme digita, em
+    // vez de um <select> gigante ou travado numa lista curta.
     listarCidades()
       .then(({ cidades }) => setCidades(cidades))
       .catch(() => setErro('Não foi possível carregar a lista de cidades. Recarregue a página.'));
   }, []);
 
+  useEffect(() => {
+    function handleClickOutside(event: MouseEvent) {
+      if (cityDropdownRef.current && !cityDropdownRef.current.contains(event.target as Node)) {
+        setCityDropdownAberto(false);
+      }
+    }
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, []);
+
+  const cidadesFiltradas = cityQuery.trim()
+    ? cidades.filter((c) => c.name.toLowerCase().includes(cityQuery.trim().toLowerCase())).slice(0, MAX_SUGESTOES)
+    : [];
+
+  const handleSelecionarCidade = (cidade: CityOption) => {
+    setFormData((prev) => ({ ...prev, city: cidade.name }));
+    setCityQuery(cidade.name);
+    setCityDropdownAberto(false);
+    setErroCidade('');
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setErro('');
+    setErroCidade('');
+    // Cidade so' e' valida se veio de um clique na sugestao (garante
+    // que bate com uma cidade real da lista, nao texto livre digitado
+    // e nunca selecionado).
+    if (!formData.city || formData.city !== cityQuery) {
+      setErroCidade('Digite o nome da sua cidade e selecione uma opção da lista.');
+      return;
+    }
     setEnviando(true);
     try {
       await registrarProfissional({
@@ -170,19 +204,47 @@ export const AdvertisePage: React.FC = () => {
               </div>
             </div>
 
-            <div>
+            <div className="relative" ref={cityDropdownRef}>
               <label className="block text-xs font-semibold text-nevoa mb-1">Cidade</label>
-              <select
-                required
-                value={formData.city}
-                onChange={(e) => setFormData({ ...formData, city: e.target.value })}
-                className="w-full bg-onix text-marfim text-sm rounded-campo px-3 py-2.5 border border-white/15 focus:border-ouro outline-none"
-              >
-                <option value="" disabled>{cidades.length === 0 ? 'Carregando cidades...' : 'Selecione sua cidade'}</option>
-                {cidades.map((c) => (
-                  <option key={c.slug} value={c.name}>{c.name}</option>
-                ))}
-              </select>
+              <div className="relative">
+                <MapPin className="w-4 h-4 text-ouro absolute left-3.5 top-1/2 -translate-y-1/2" />
+                <input
+                  type="text"
+                  value={cityQuery}
+                  onChange={(e) => {
+                    setCityQuery(e.target.value);
+                    setCityDropdownAberto(true);
+                    if (formData.city) setFormData((prev) => ({ ...prev, city: '' }));
+                  }}
+                  onFocus={() => setCityDropdownAberto(true)}
+                  placeholder={cidades.length === 0 ? 'Carregando cidades...' : 'Digite o nome da sua cidade'}
+                  disabled={cidades.length === 0}
+                  className={`w-full bg-onix text-marfim text-sm rounded-campo pl-10 pr-4 py-2.5 border outline-none disabled:opacity-60 ${
+                    erroCidade ? 'border-red-500' : 'border-white/15 focus:border-ouro'
+                  }`}
+                />
+              </div>
+
+              {cityDropdownAberto && cityQuery.trim() && (
+                <div className="absolute left-0 right-0 top-full mt-1.5 bg-onix border border-ouro/30 rounded-campo shadow-2xl z-20 overflow-hidden max-h-56 overflow-y-auto">
+                  {cidadesFiltradas.length > 0 ? (
+                    cidadesFiltradas.map((c) => (
+                      <button
+                        key={c.slug}
+                        type="button"
+                        onClick={() => handleSelecionarCidade(c)}
+                        className="w-full text-left px-4 py-2.5 text-sm text-marfim hover:bg-ouro/15 transition-colors border-b border-white/5 last:border-b-0"
+                      >
+                        {c.name}
+                      </button>
+                    ))
+                  ) : (
+                    <div className="p-3 text-xs text-nevoa text-center">Nenhuma cidade encontrada</div>
+                  )}
+                </div>
+              )}
+
+              {erroCidade && <p className="mt-1.5 text-[11px] text-red-400">{erroCidade}</p>}
             </div>
 
             <div>
