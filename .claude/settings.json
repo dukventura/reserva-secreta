@@ -13,7 +13,9 @@
       "Bash(lsof -ti:5173 -sTCP:LISTEN)",
       "Bash(node -e \"let d='';process.stdin.on\\('data',c=>d+=c\\);process.stdin.on\\('end',\\(\\)=>console.log\\(JSON.stringify\\(JSON.parse\\(d\\),null,2\\)\\)\\)\")",
       "Bash(curl -s -X POST http://localhost:3001/api/auth/register -H 'Content-Type: application/json' -d '{\"role\":\"profissional\",\"name\":\"Camila Painel Teste\",\"email\":\"camila.painel@x.com\",\"password\":\"senha12345\",\"city\":\"Boa Esperança\",\"category\":\"Mulheres\",\"age\":26,\"whatsapp\":\"35966665555\"}')",
-      "Bash(node -e \"let d='';process.stdin.on\\('data',c=>d+=c\\);process.stdin.on\\('end',\\(\\)=>console.log\\(JSON.parse\\(d\\).token\\)\\)\")"
+      "Bash(node -e \"let d='';process.stdin.on\\('data',c=>d+=c\\);process.stdin.on\\('end',\\(\\)=>console.log\\(JSON.parse\\(d\\).token\\)\\)\")",
+      "Bash(git fetch *)",
+      "Bash(zip -rq \"/private/tmp/claude-501/-Users-eduardoventura-01--Desenvolvimento-Clientes-Reserva-Secreta/125f6d79-b7ef-435e-8cf9-8d9666ffb324/scratchpad/rs-backend-v10.zip\" package.json package-lock.json tsconfig.json src migrations README.md)"
     ]
   }
 }
