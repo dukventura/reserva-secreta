@@ -9,6 +9,7 @@ import * as api from '../lib/api';
 
 interface ModerationContextValue {
   pendingProfiles: api.PendingModerationProfile[];
+  activeProfiles: api.ActiveProfile[];
   reports: api.PendingReport[];
   pendingMedia: api.PendingMedia[];
   pendingDocuments: api.PendingDocument[];
@@ -17,6 +18,7 @@ interface ModerationContextValue {
   erro: string;
   refresh: () => Promise<void>;
   decideProfile: (id: number, status: 'aprovado' | 'reprovado') => Promise<void>;
+  setProfileStatus: (id: number, status: 'aprovado' | 'suspenso') => Promise<void>;
   decideReport: (id: number, status: 'aprovado' | 'reprovado') => Promise<void>;
   decideMedia: (id: number, status: 'aprovado' | 'reprovado') => Promise<void>;
   decideDocument: (userId: number, status: 'aprovado' | 'reprovado') => Promise<void>;
@@ -26,6 +28,7 @@ const ModerationContext = createContext<ModerationContextValue | undefined>(unde
 
 export const ModerationProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const [pendingProfiles, setPendingProfiles] = useState<api.PendingModerationProfile[]>([]);
+  const [activeProfiles, setActiveProfiles] = useState<api.ActiveProfile[]>([]);
   const [reports, setReports] = useState<api.PendingReport[]>([]);
   const [pendingMedia, setPendingMedia] = useState<api.PendingMedia[]>([]);
   const [pendingDocuments, setPendingDocuments] = useState<api.PendingDocument[]>([]);
@@ -37,14 +40,16 @@ export const ModerationProvider: React.FC<{ children: React.ReactNode }> = ({ ch
     setCarregando(true);
     setErro('');
     try {
-      const [perfis, denuncias, fotos, documentos, log] = await Promise.all([
+      const [perfis, ativos, denuncias, fotos, documentos, log] = await Promise.all([
         api.listarPerfisPendentes(),
+        api.listarPerfisAtivos(),
         api.listarDenunciasPendentes(),
         api.listarFotosPendentes(),
         api.listarDocumentosPendentes(),
         api.listarLogAuditoria(),
       ]);
       setPendingProfiles(perfis.perfis);
+      setActiveProfiles(ativos.perfis);
       setReports(denuncias.denuncias);
       setPendingMedia(fotos.fotos);
       setPendingDocuments(documentos.documentos);
@@ -59,6 +64,11 @@ export const ModerationProvider: React.FC<{ children: React.ReactNode }> = ({ ch
   const decideProfile = useCallback(async (id: number, status: 'aprovado' | 'reprovado') => {
     await api.decidirPerfil(id, status);
     setPendingProfiles((prev) => prev.filter((p) => p.id !== id));
+    await refresh();
+  }, [refresh]);
+
+  const setProfileStatus = useCallback(async (id: number, status: 'aprovado' | 'suspenso') => {
+    await api.alterarStatusPerfil(id, status);
     await refresh();
   }, [refresh]);
 
@@ -81,7 +91,7 @@ export const ModerationProvider: React.FC<{ children: React.ReactNode }> = ({ ch
   }, [refresh]);
 
   return (
-    <ModerationContext.Provider value={{ pendingProfiles, reports, pendingMedia, pendingDocuments, auditLog, carregando, erro, refresh, decideProfile, decideReport, decideMedia, decideDocument }}>
+    <ModerationContext.Provider value={{ pendingProfiles, activeProfiles, reports, pendingMedia, pendingDocuments, auditLog, carregando, erro, refresh, decideProfile, setProfileStatus, decideReport, decideMedia, decideDocument }}>
       {children}
     </ModerationContext.Provider>
   );

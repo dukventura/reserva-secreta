@@ -81,6 +81,78 @@ moderationRouter.post('/profiles/:id/decide', async (req, res) => {
   res.json({ ok: true });
 });
 
+moderationRouter.get('/profiles/active', async (_req, res) => {
+  // Anuncios ja publicados (aprovado) ou tirados do ar manualmente
+  // (suspenso) - e' a lista que falta pro gerente conseguir suspender
+  // um anuncio sem precisar passar por uma denuncia primeiro.
+  const perfis = await db
+    .selectFrom('professional_profiles')
+    .select((eb) => [
+      'professional_profiles.id', 'professional_profiles.slug', 'professional_profiles.stage_name',
+      'professional_profiles.age', 'professional_profiles.city', 'professional_profiles.category',
+      'professional_profiles.whatsapp', 'professional_profiles.status',
+      eb.selectFrom('media')
+        .select('media.url')
+        .whereRef('media.profile_id', '=', 'professional_profiles.id')
+        .where('media.status', '=', 'aprovado')
+        .orderBy('media.position', 'asc')
+        .limit(1)
+        .as('thumbnail_url'),
+    ])
+    .where('professional_profiles.status', 'in', ['aprovado', 'suspenso'])
+    .orderBy('professional_profiles.stage_name', 'asc')
+    .execute();
+  res.json({ perfis });
+});
+
+const statusAtivoSchema = z.object({ status: z.enum(['aprovado', 'suspenso']) });
+
+moderationRouter.post('/profiles/:id/status', async (req, res) => {
+  const parsed = statusAtivoSchema.safeParse(req.body);
+  if (!parsed.success) {
+    res.status(400).json({ erro: 'Informe status: aprovado ou suspenso.' });
+    return;
+  }
+  const id = Number(req.params.id);
+  const perfil = await db.selectFrom('professional_profiles').select(['stage_name', 'status']).where('id', '=', id).executeTakeFirst();
+  if (!perfil) {
+    res.status(404).json({ erro: 'Anúncio não encontrado.' });
+    return;
+  }
+
+  // So aceita a transicao entre os dois estados de anuncio ja publicado
+  // - suspender exige que esteja aprovado, reativar exige que esteja
+  // suspenso. Evita usar essa rota pra atalhar a fila de moderacao normal.
+  const transicaoValida =
+    (parsed.data.status === 'suspenso' && perfil.status === 'aprovado') ||
+    (parsed.data.status === 'aprovado' && perfil.status === 'suspenso');
+  if (!transicaoValida) {
+    res.status(400).json({ erro: 'Transição de status inválida para este anúncio.' });
+    return;
+  }
+
+  if (parsed.data.status === 'aprovado') {
+    const { count } = await db
+      .selectFrom('media')
+      .select(db.fn.countAll<number>().as('count'))
+      .where('profile_id', '=', id)
+      .where('status', '=', 'aprovado')
+      .executeTakeFirstOrThrow();
+    if (Number(count) === 0) {
+      res.status(400).json({ erro: 'Este perfil não tem nenhuma foto aprovada. Aprove ao menos uma foto antes de reativar.' });
+      return;
+    }
+  }
+
+  await db.updateTable('professional_profiles').set({ status: parsed.data.status }).where('id', '=', id).execute();
+  await registrarAuditoria(
+    req.user!.sub,
+    parsed.data.status === 'suspenso' ? 'Tirou anúncio do ar' : 'Reativou anúncio',
+    perfil.stage_name,
+  );
+  res.json({ ok: true });
+});
+
 moderationRouter.get('/reports', async (_req, res) => {
   const denuncias = await db
     .selectFrom('reports')

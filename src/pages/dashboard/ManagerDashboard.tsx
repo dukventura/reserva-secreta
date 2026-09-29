@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import {
   LayoutDashboard, ClipboardCheck, Flag, History, CheckCircle2, XCircle,
-  MapPin, ShieldAlert, AlertCircle, Images, FileText, Eye,
+  MapPin, ShieldAlert, AlertCircle, Images, FileText, Eye, Radio, PauseCircle, PlayCircle,
 } from 'lucide-react';
 import { DashboardLayout } from '../../layouts/DashboardLayout';
 import { RequireRole } from '../../components/RequireRole';
@@ -11,6 +11,7 @@ import { buscarArquivoDocumento, ApiError, type PendingDocument } from '../../li
 const NAV = [
   { key: 'painel', label: 'Painel', icon: <LayoutDashboard className="w-4 h-4" /> },
   { key: 'aprovacoes', label: 'Aprovações', icon: <ClipboardCheck className="w-4 h-4" /> },
+  { key: 'ativos', label: 'Anúncios no ar', icon: <Radio className="w-4 h-4" /> },
   { key: 'fotos', label: 'Fotos', icon: <Images className="w-4 h-4" /> },
   { key: 'documentos', label: 'Documentos', icon: <FileText className="w-4 h-4" /> },
   { key: 'denuncias', label: 'Denúncias', icon: <Flag className="w-4 h-4" /> },
@@ -55,7 +56,7 @@ function VerDocumentoButton({ userId }: { userId: number }) {
 
 function ManagerDashboardContent() {
   const [tab, setTab] = useState('painel');
-  const { pendingProfiles, reports, pendingMedia, pendingDocuments, auditLog, carregando, erro, refresh, decideProfile, decideReport, decideMedia, decideDocument } = useModeration();
+  const { pendingProfiles, activeProfiles, reports, pendingMedia, pendingDocuments, auditLog, carregando, erro, refresh, decideProfile, setProfileStatus, decideReport, decideMedia, decideDocument } = useModeration();
 
   useEffect(() => {
     refresh();
@@ -130,6 +131,52 @@ function ManagerDashboardContent() {
                   >
                     <XCircle className="w-4 h-4" /><span>Reprovar</span>
                   </button>
+                </div>
+              </div>
+            );
+          })}
+        </div>
+      )}
+
+      {tab === 'ativos' && (
+        <div className="space-y-3 max-w-3xl">
+          {!carregando && activeProfiles.length === 0 && <p className="text-sm text-nevoa">Nenhum anúncio publicado no momento.</p>}
+          {activeProfiles.map((p) => {
+            const suspenso = p.status === 'suspenso';
+            return (
+              <div key={p.id} className="flex flex-col sm:flex-row sm:items-center gap-4 bg-grafite border border-white/10 p-4">
+                {p.thumbnail_url ? (
+                  <img src={p.thumbnail_url} alt="" className="w-16 h-20 object-cover shrink-0" />
+                ) : (
+                  <div className="w-16 h-20 shrink-0 bg-white/5 border border-white/10 flex items-center justify-center text-[10px] text-nevoa text-center px-1">Sem foto</div>
+                )}
+                <div className="flex-1 min-w-0 space-y-1">
+                  <div className="flex items-center gap-2">
+                    <span className="text-sm font-semibold text-marfim">{p.stage_name}, {p.age}</span>
+                    <span className="text-[10px] px-2 py-0.5 rounded-campo bg-white/5 border border-white/10 text-nevoa uppercase">{p.category}</span>
+                    <span className={`text-[10px] px-2 py-0.5 rounded-campo uppercase font-bold ${suspenso ? 'bg-red-500/15 border border-red-500/30 text-red-300' : 'bg-verificado/15 border border-verificado/30 text-verificado-texto'}`}>
+                      {suspenso ? 'Fora do ar' : 'No ar'}
+                    </span>
+                  </div>
+                  <div className="flex items-center space-x-1.5 text-xs text-nevoa"><MapPin className="w-3 h-3 text-ouro" /><span>{p.city}</span></div>
+                  <div className="text-[11px] text-nevoa">WhatsApp: {p.whatsapp}</div>
+                </div>
+                <div className="flex sm:flex-col gap-2 shrink-0">
+                  {suspenso ? (
+                    <button
+                      onClick={() => setProfileStatus(p.id, 'aprovado')}
+                      className="flex-1 sm:flex-none flex items-center justify-center space-x-1.5 px-4 py-2 rounded-campo bg-verificado hover:opacity-90 text-marfim text-xs font-bold transition-opacity"
+                    >
+                      <PlayCircle className="w-4 h-4" /><span>Reativar</span>
+                    </button>
+                  ) : (
+                    <button
+                      onClick={() => setProfileStatus(p.id, 'suspenso')}
+                      className="flex-1 sm:flex-none flex items-center justify-center space-x-1.5 px-4 py-2 rounded-campo bg-white/5 border border-red-400/30 hover:bg-red-500/15 text-red-300 text-xs font-bold transition-colors"
+                    >
+                      <PauseCircle className="w-4 h-4" /><span>Tirar do ar</span>
+                    </button>
+                  )}
                 </div>
               </div>
             );

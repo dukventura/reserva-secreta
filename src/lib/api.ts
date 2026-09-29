@@ -173,6 +173,18 @@ export interface PendingModerationProfile {
   approved_photos: number;
 }
 
+export interface ActiveProfile {
+  id: number;
+  slug: string;
+  stage_name: string;
+  age: number;
+  city: string;
+  category: 'VIP' | 'Mulheres' | 'Trans';
+  whatsapp: string;
+  status: 'aprovado' | 'suspenso';
+  thumbnail_url: string | null;
+}
+
 export interface PendingReport {
   id: number;
   reason: string;
@@ -328,6 +340,18 @@ export function listarPerfisPendentes() {
 
 export function decidirPerfil(id: number, status: 'aprovado' | 'reprovado') {
   return request<{ ok: true }>(`/api/moderation/profiles/${id}/decide`, {
+    method: 'POST',
+    body: { status },
+    auth: true,
+  });
+}
+
+export function listarPerfisAtivos() {
+  return request<{ perfis: ActiveProfile[] }>('/api/moderation/profiles/active', { auth: true });
+}
+
+export function alterarStatusPerfil(id: number, status: 'aprovado' | 'suspenso') {
+  return request<{ ok: true }>(`/api/moderation/profiles/${id}/status`, {
     method: 'POST',
     body: { status },
     auth: true,
