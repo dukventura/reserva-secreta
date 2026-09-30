@@ -1,11 +1,14 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import { MessageCircle, CheckCircle2, Mail, KeyRound, PartyPopper, AlertCircle, MapPin } from 'lucide-react';
+import {
+  MessageCircle, CheckCircle2, Mail, KeyRound, PartyPopper, AlertCircle, MapPin,
+  ShieldCheck, Upload, Clock,
+} from 'lucide-react';
 import { useSession } from '../context/SessionContext';
-import { ApiError, enviarPerfilParaAprovacao, listarCidades, type CityOption } from '../lib/api';
+import { ApiError, enviarPerfilParaAprovacao, enviarDocumento, enviarSelfie, listarCidades, type CityOption } from '../lib/api';
 import { Monograma } from '../components/Logo';
 
-type Etapa = 'dados' | 'sucesso';
+type Etapa = 'dados' | 'verificacao' | 'sucesso';
 type Categoria = 'VIP' | 'Mulheres' | 'Trans';
 const MAX_SUGESTOES = 8;
 
@@ -29,6 +32,19 @@ export const AdvertisePage: React.FC = () => {
     category: 'VIP' as Categoria,
     whatsapp: '',
   });
+
+  // Etapa de verificacao: documento e selfie viram obrigatorios logo
+  // apos o pre-cadastro, em vez de ficarem escondidos numa aba do
+  // painel que a pessoa so acha se for procurar. So' entra na fila do
+  // gerente (enviarPerfilParaAprovacao) depois dos dois anexados.
+  const [documentoEnviado, setDocumentoEnviado] = useState(false);
+  const [selfieEnviada, setSelfieEnviada] = useState(false);
+  const [enviandoDocumento, setEnviandoDocumento] = useState(false);
+  const [enviandoSelfie, setEnviandoSelfie] = useState(false);
+  const [finalizando, setFinalizando] = useState(false);
+  const [erroVerificacao, setErroVerificacao] = useState('');
+  const documentInputRef = useRef<HTMLInputElement>(null);
+  const selfieInputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
     // Lista completa dos 853 municipios de MG (nao so as 2 cidades que
@@ -82,15 +98,58 @@ export const AdvertisePage: React.FC = () => {
         age: Number(formData.age),
         whatsapp: formData.whatsapp.replace(/\D/g, ''),
       });
-      // Registro cria o perfil como rascunho; enviar para a fila do
-      // gerente e' um passo separado, e e' o que a mensagem de sucesso
-      // abaixo promete ("entrou na fila de analise").
-      await enviarPerfilParaAprovacao();
-      setEtapa('sucesso');
+      // Registro cria o perfil como rascunho - antes de entrar na fila
+      // do gerente, a etapa de verificacao exige documento e selfie.
+      setEtapa('verificacao');
     } catch (err) {
       setErro(err instanceof ApiError ? err.message : 'Não foi possível concluir o cadastro. Tente novamente.');
     } finally {
       setEnviando(false);
+    }
+  };
+
+  const handleEnviarDocumento = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const arquivo = e.target.files?.[0];
+    e.target.value = '';
+    if (!arquivo) return;
+    setEnviandoDocumento(true);
+    setErroVerificacao('');
+    try {
+      await enviarDocumento(arquivo);
+      setDocumentoEnviado(true);
+    } catch (err) {
+      setErroVerificacao(err instanceof ApiError ? err.message : 'Não foi possível enviar o documento.');
+    } finally {
+      setEnviandoDocumento(false);
+    }
+  };
+
+  const handleEnviarSelfie = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const arquivo = e.target.files?.[0];
+    e.target.value = '';
+    if (!arquivo) return;
+    setEnviandoSelfie(true);
+    setErroVerificacao('');
+    try {
+      await enviarSelfie(arquivo);
+      setSelfieEnviada(true);
+    } catch (err) {
+      setErroVerificacao(err instanceof ApiError ? err.message : 'Não foi possível enviar a selfie.');
+    } finally {
+      setEnviandoSelfie(false);
+    }
+  };
+
+  const handleFinalizarVerificacao = async () => {
+    setFinalizando(true);
+    setErroVerificacao('');
+    try {
+      await enviarPerfilParaAprovacao();
+      setEtapa('sucesso');
+    } catch (err) {
+      setErroVerificacao(err instanceof ApiError ? err.message : 'Não foi possível enviar para análise. Tente novamente.');
+    } finally {
+      setFinalizando(false);
     }
   };
 
@@ -104,7 +163,7 @@ export const AdvertisePage: React.FC = () => {
             Anuncie no <span className="text-ouro">Reserva Secreta</span>
           </h1>
           <p className="text-xs text-nevoa">
-            Cadastro grátis em 2 minutos. A verificação de documento acontece depois, só na hora de publicar seu anúncio.
+            Cadastro grátis em poucos minutos. Logo depois dos dados básicos, você envia documento e selfie de verificação — só assim seu anúncio entra na fila de análise.
           </p>
         </div>
 
@@ -266,13 +325,98 @@ export const AdvertisePage: React.FC = () => {
               className="w-full flex items-center justify-center space-x-2 py-3.5 rounded-campo bg-whatsapp hover:bg-whatsapp-hover text-marfim font-extrabold text-sm shadow-xl transition-all disabled:opacity-60"
             >
               <MessageCircle className="w-5 h-5 fill-white" />
-              <span>{enviando ? 'Enviando...' : 'Criar conta e enviar para análise'}</span>
+              <span>{enviando ? 'Criando conta...' : 'Criar conta e continuar'}</span>
             </button>
 
             <p className="text-center text-xs text-nevoa">
               Já tem conta? <Link to="/entrar" className="text-ouro hover:text-champanhe">Entrar</Link>
             </p>
           </form>
+        )}
+
+        {etapa === 'verificacao' && (
+          <div className="space-y-4">
+            <div className="flex items-start space-x-2.5 bg-white/5 p-3.5 border border-white/10">
+              <ShieldCheck className="w-5 h-5 text-ouro shrink-0 mt-0.5" />
+              <p className="text-xs text-nevoa">
+                Conta criada! Pra sua segurança e da plataforma, todo perfil passa por verificação de identidade antes de publicar. Envie os dois itens abaixo — nenhum fica visível no seu anúncio, são revisados só pela nossa equipe.
+              </p>
+            </div>
+
+            {erroVerificacao && (
+              <div className="flex items-start space-x-2 bg-red-500/10 border border-red-500/30 p-3 text-xs text-red-300">
+                <AlertCircle className="w-4 h-4 shrink-0 mt-0.5" />
+                <span>{erroVerificacao}</span>
+              </div>
+            )}
+
+            <div className="bg-onix border border-white/10 p-4 space-y-3">
+              <div className="flex items-center space-x-2.5">
+                {documentoEnviado ? <CheckCircle2 className="w-5 h-5 text-verificado-texto" /> : <Clock className="w-5 h-5 text-nevoa" />}
+                <div>
+                  <div className="text-sm text-marfim font-semibold">Documento com foto (RG ou CNH)</div>
+                  <div className="text-xs text-nevoa">{documentoEnviado ? 'Enviado' : 'Obrigatório pra continuar'}</div>
+                </div>
+              </div>
+              <button
+                type="button"
+                onClick={() => documentInputRef.current?.click()}
+                disabled={enviandoDocumento}
+                className="flex items-center space-x-1.5 px-3 py-1.5 rounded-campo bg-ouro/10 border border-ouro/30 text-ouro text-xs font-semibold hover:bg-ouro/20 transition-colors disabled:opacity-60"
+              >
+                <Upload className="w-3.5 h-3.5" />
+                <span>{enviandoDocumento ? 'Enviando...' : documentoEnviado ? 'Reenviar' : 'Enviar documento'}</span>
+              </button>
+              <input
+                ref={documentInputRef}
+                type="file"
+                accept="image/jpeg,image/png,image/webp,application/pdf"
+                onChange={handleEnviarDocumento}
+                className="hidden"
+              />
+            </div>
+
+            <div className="bg-onix border border-white/10 p-4 space-y-3">
+              <div className="flex items-center space-x-2.5">
+                {selfieEnviada ? <CheckCircle2 className="w-5 h-5 text-verificado-texto" /> : <Clock className="w-5 h-5 text-nevoa" />}
+                <div>
+                  <div className="text-sm text-marfim font-semibold">Selfie de verificação</div>
+                  <div className="text-xs text-nevoa">{selfieEnviada ? 'Enviada' : 'Obrigatória pra continuar'}</div>
+                </div>
+              </div>
+              <div className="bg-white/5 border border-white/10 p-3 text-xs text-nevoa space-y-1.5">
+                <p>Tire uma foto sua segurando um papel escrito à mão com:</p>
+                <p className="text-marfim font-semibold text-sm">"Reserva Secreta — {new Date().toLocaleDateString('pt-BR')}"</p>
+                <p>Seu rosto e a folha precisam aparecer nítidos na mesma foto.</p>
+              </div>
+              <button
+                type="button"
+                onClick={() => selfieInputRef.current?.click()}
+                disabled={enviandoSelfie}
+                className="flex items-center space-x-1.5 px-3 py-1.5 rounded-campo bg-ouro/10 border border-ouro/30 text-ouro text-xs font-semibold hover:bg-ouro/20 transition-colors disabled:opacity-60"
+              >
+                <Upload className="w-3.5 h-3.5" />
+                <span>{enviandoSelfie ? 'Enviando...' : selfieEnviada ? 'Reenviar' : 'Enviar selfie'}</span>
+              </button>
+              <input
+                ref={selfieInputRef}
+                type="file"
+                accept="image/jpeg,image/png,image/webp"
+                onChange={handleEnviarSelfie}
+                className="hidden"
+              />
+            </div>
+
+            <button
+              type="button"
+              onClick={handleFinalizarVerificacao}
+              disabled={!documentoEnviado || !selfieEnviada || finalizando}
+              className="w-full flex items-center justify-center space-x-2 py-3.5 rounded-campo bg-whatsapp hover:bg-whatsapp-hover text-marfim font-extrabold text-sm shadow-xl transition-all disabled:opacity-40 disabled:cursor-not-allowed"
+            >
+              <MessageCircle className="w-5 h-5 fill-white" />
+              <span>{finalizando ? 'Enviando...' : 'Enviar para análise'}</span>
+            </button>
+          </div>
         )}
 
         {etapa === 'sucesso' && (

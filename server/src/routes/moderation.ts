@@ -28,9 +28,12 @@ async function bloqueiaPublicacao(profileId: number, userId: number): Promise<st
 
   const verificacao = await db
     .selectFrom('verifications')
-    .select('selfie_status')
+    .select(['selfie_status', 'documento_status'])
     .where('user_id', '=', userId)
     .executeTakeFirst();
+  if (verificacao?.documento_status !== 'aprovado') {
+    return 'O documento de identidade deste profissional ainda não foi aprovado. Aprove o documento antes de publicar o anúncio.';
+  }
   if (verificacao?.selfie_status !== 'aprovado') {
     return 'A selfie de verificação deste profissional ainda não foi aprovada. Aprove a selfie antes de publicar o anúncio.';
   }
