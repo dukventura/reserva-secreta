@@ -18,7 +18,8 @@
       "Bash(zip -rq \"/private/tmp/claude-501/-Users-eduardoventura-01--Desenvolvimento-Clientes-Reserva-Secreta/125f6d79-b7ef-435e-8cf9-8d9666ffb324/scratchpad/rs-backend-v10.zip\" package.json package-lock.json tsconfig.json src migrations README.md)",
       "Bash(sed -i '' \"s#/painel'#/painel/profissional'#\" selfie_ui_test.js)",
       "Bash(node selfie_ui_test.js)",
-      "Bash(zip -rq \"/private/tmp/claude-501/-Users-eduardoventura-01--Desenvolvimento-Clientes-Reserva-Secreta/125f6d79-b7ef-435e-8cf9-8d9666ffb324/scratchpad/rs-backend-v11.zip\" package.json package-lock.json tsconfig.json src migrations README.md)"
+      "Bash(zip -rq \"/private/tmp/claude-501/-Users-eduardoventura-01--Desenvolvimento-Clientes-Reserva-Secreta/125f6d79-b7ef-435e-8cf9-8d9666ffb324/scratchpad/rs-backend-v11.zip\" package.json package-lock.json tsconfig.json src migrations README.md)",
+      "Bash(zip -rq \"/private/tmp/claude-501/-Users-eduardoventura-01--Desenvolvimento-Clientes-Reserva-Secreta/125f6d79-b7ef-435e-8cf9-8d9666ffb324/scratchpad/rs-backend-v12.zip\" package.json package-lock.json tsconfig.json src migrations README.md)"
     ]
   }
 }
