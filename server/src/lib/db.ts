@@ -71,6 +71,8 @@ interface VerificationsTable {
   telefone_confirmado: Generated<number>;
   documento_status: Generated<ModerationStatus>;
   documento_url: string | null;
+  selfie_status: Generated<ModerationStatus>;
+  selfie_url: string | null;
   revisado_por: number | null;
   revisado_em: Date | null;
   updated_at: Generated<Date>;

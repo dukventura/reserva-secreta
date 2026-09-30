@@ -5,9 +5,38 @@ import { autenticar, exigirPapel } from '../middleware/auth';
 import { registrarAuditoria } from '../lib/audit';
 import { removerArquivoPelaUrl } from '../lib/uploads';
 import { caminhoDocumento } from '../lib/documentUploads';
+import { caminhoSelfie } from '../lib/selfieUploads';
 
 export const moderationRouter = Router();
 moderationRouter.use(autenticar, exigirPapel('gerente', 'master'));
+
+// Checagens que valem tanto pra aprovar da fila quanto pra reativar um
+// anuncio suspenso - nunca publicar sem pelo menos 1 foto aprovada nem
+// sem a selfie de verificacao aprovada (confirma que quem se cadastrou
+// e' quem aparece nas fotos e no documento). Devolve null se pode
+// publicar, ou a mensagem de erro pra devolver ao gerente.
+async function bloqueiaPublicacao(profileId: number, userId: number): Promise<string | null> {
+  const { count } = await db
+    .selectFrom('media')
+    .select(db.fn.countAll<number>().as('count'))
+    .where('profile_id', '=', profileId)
+    .where('status', '=', 'aprovado')
+    .executeTakeFirstOrThrow();
+  if (Number(count) === 0) {
+    return 'Este perfil ainda não tem nenhuma foto aprovada. Aprove ao menos uma foto antes de publicar o anúncio.';
+  }
+
+  const verificacao = await db
+    .selectFrom('verifications')
+    .select('selfie_status')
+    .where('user_id', '=', userId)
+    .executeTakeFirst();
+  if (verificacao?.selfie_status !== 'aprovado') {
+    return 'A selfie de verificação deste profissional ainda não foi aprovada. Aprove a selfie antes de publicar o anúncio.';
+  }
+
+  return null;
+}
 
 moderationRouter.get('/profiles/pending', async (_req, res) => {
   // thumbnail_url vem da galeria de verdade (media aprovada), nao de
@@ -51,23 +80,16 @@ moderationRouter.post('/profiles/:id/decide', async (req, res) => {
     return;
   }
   const id = Number(req.params.id);
-  const perfil = await db.selectFrom('professional_profiles').select(['stage_name']).where('id', '=', id).executeTakeFirst();
+  const perfil = await db.selectFrom('professional_profiles').select(['stage_name', 'user_id']).where('id', '=', id).executeTakeFirst();
   if (!perfil) {
     res.status(404).json({ erro: 'Anúncio não encontrado.' });
     return;
   }
 
   if (parsed.data.status === 'aprovado') {
-    // Nunca publicar perfil sem nenhuma foto real - e' exatamente o
-    // problema que a moderacao manual deixou passar antes disso existir.
-    const { count } = await db
-      .selectFrom('media')
-      .select(db.fn.countAll<number>().as('count'))
-      .where('profile_id', '=', id)
-      .where('status', '=', 'aprovado')
-      .executeTakeFirstOrThrow();
-    if (Number(count) === 0) {
-      res.status(400).json({ erro: 'Este perfil ainda não tem nenhuma foto aprovada. Aprove ao menos uma foto antes de publicar o anúncio.' });
+    const erroPublicacao = await bloqueiaPublicacao(id, perfil.user_id);
+    if (erroPublicacao) {
+      res.status(400).json({ erro: erroPublicacao });
       return;
     }
   }
@@ -114,7 +136,7 @@ moderationRouter.post('/profiles/:id/status', async (req, res) => {
     return;
   }
   const id = Number(req.params.id);
-  const perfil = await db.selectFrom('professional_profiles').select(['stage_name', 'status']).where('id', '=', id).executeTakeFirst();
+  const perfil = await db.selectFrom('professional_profiles').select(['stage_name', 'status', 'user_id']).where('id', '=', id).executeTakeFirst();
   if (!perfil) {
     res.status(404).json({ erro: 'Anúncio não encontrado.' });
     return;
@@ -132,14 +154,9 @@ moderationRouter.post('/profiles/:id/status', async (req, res) => {
   }
 
   if (parsed.data.status === 'aprovado') {
-    const { count } = await db
-      .selectFrom('media')
-      .select(db.fn.countAll<number>().as('count'))
-      .where('profile_id', '=', id)
-      .where('status', '=', 'aprovado')
-      .executeTakeFirstOrThrow();
-    if (Number(count) === 0) {
-      res.status(400).json({ erro: 'Este perfil não tem nenhuma foto aprovada. Aprove ao menos uma foto antes de reativar.' });
+    const erroPublicacao = await bloqueiaPublicacao(id, perfil.user_id);
+    if (erroPublicacao) {
+      res.status(400).json({ erro: erroPublicacao });
       return;
     }
   }
@@ -316,6 +333,70 @@ moderationRouter.post('/documents/:userId/decide', async (req, res) => {
   await registrarAuditoria(
     req.user!.sub,
     parsed.data.status === 'aprovado' ? 'Aprovou documento' : 'Reprovou documento',
+    alvo.user_name,
+  );
+  res.json({ ok: true });
+});
+
+moderationRouter.get('/selfies/pending', async (_req, res) => {
+  const selfies = await db
+    .selectFrom('verifications')
+    .innerJoin('users', 'users.id', 'verifications.user_id')
+    .leftJoin('professional_profiles', 'professional_profiles.user_id', 'verifications.user_id')
+    .select([
+      'verifications.user_id', 'verifications.updated_at', 'users.name as user_name',
+      'professional_profiles.slug as profile_slug', 'professional_profiles.stage_name as profile_name',
+    ])
+    .where('verifications.selfie_status', '=', 'pendente')
+    .where('verifications.selfie_url', 'is not', null)
+    .orderBy('verifications.updated_at', 'asc')
+    .execute();
+  res.json({ selfies });
+});
+
+// Mesma logica do arquivo de documento: nunca serve por URL publica,
+// so' essa rota autenticada le do disco privado.
+moderationRouter.get('/selfies/:userId/file', async (req, res) => {
+  const userId = Number(req.params.userId);
+  const verificacao = await db
+    .selectFrom('verifications')
+    .select('selfie_url')
+    .where('user_id', '=', userId)
+    .executeTakeFirst();
+  if (!verificacao?.selfie_url) {
+    res.status(404).json({ erro: 'Selfie não encontrada.' });
+    return;
+  }
+  res.sendFile(caminhoSelfie(verificacao.selfie_url));
+});
+
+moderationRouter.post('/selfies/:userId/decide', async (req, res) => {
+  const parsed = decisaoSchema.safeParse(req.body);
+  if (!parsed.success) {
+    res.status(400).json({ erro: 'Informe status: aprovado ou reprovado.' });
+    return;
+  }
+  const userId = Number(req.params.userId);
+  const alvo = await db
+    .selectFrom('verifications')
+    .innerJoin('users', 'users.id', 'verifications.user_id')
+    .select(['verifications.user_id', 'users.name as user_name'])
+    .where('verifications.user_id', '=', userId)
+    .executeTakeFirst();
+  if (!alvo) {
+    res.status(404).json({ erro: 'Selfie não encontrada.' });
+    return;
+  }
+
+  await db
+    .updateTable('verifications')
+    .set({ selfie_status: parsed.data.status })
+    .where('user_id', '=', userId)
+    .execute();
+
+  await registrarAuditoria(
+    req.user!.sub,
+    parsed.data.status === 'aprovado' ? 'Aprovou selfie de verificação' : 'Reprovou selfie de verificação',
     alvo.user_name,
   );
   res.json({ ok: true });

@@ -5,6 +5,7 @@ import { db } from '../lib/db';
 import { autenticar, exigirPapel } from '../middleware/auth';
 import { uploadFoto, urlPublicaUpload, removerArquivoPelaUrl, MAX_FOTOS_POR_PERFIL } from '../lib/uploads';
 import { uploadDocumento, removerDocumento } from '../lib/documentUploads';
+import { uploadSelfie, removerSelfie } from '../lib/selfieUploads';
 
 export const profilesRouter = Router();
 
@@ -91,6 +92,7 @@ profilesRouter.get('/me', autenticar, exigirPapel('profissional'), async (req, r
     .select([
       'verifications.email_confirmado', 'verifications.telefone_confirmado',
       'verifications.documento_status', 'verifications.documento_url',
+      'verifications.selfie_status', 'verifications.selfie_url',
     ])
     .where('professional_profiles.user_id', '=', req.user!.sub)
     .executeTakeFirst();
@@ -108,7 +110,7 @@ profilesRouter.get('/me', autenticar, exigirPapel('profissional'), async (req, r
     .orderBy('position', 'asc')
     .execute();
 
-  const { languages, services, locations, documento_url, ...resto } = perfil;
+  const { languages, services, locations, documento_url, selfie_url, ...resto } = perfil;
   res.json({
     perfil: {
       ...resto,
@@ -120,6 +122,7 @@ profilesRouter.get('/me', autenticar, exigirPapel('profissional'), async (req, r
       // pra distinguir "nunca enviou" de "enviou, documento_status
       // comeca em 'pendente' por padrao pra todo mundo".
       documento_enviado: documento_url !== null,
+      selfie_enviada: selfie_url !== null,
     },
   });
 });
@@ -285,6 +288,41 @@ profilesRouter.post('/me/document', autenticar, exigirPapel('profissional'), (re
     await db
       .updateTable('verifications')
       .set({ documento_url: req.file.filename, documento_status: 'pendente', revisado_por: null, revisado_em: null })
+      .where('user_id', '=', req.user!.sub)
+      .execute();
+
+    res.status(201).json({ ok: true });
+  });
+});
+
+// Selfie segurando papel com a data do dia - mesma logica do
+// documento (reenvio reabre revisao do zero), mas em arquivo/rota
+// separados porque sao dois documentos distintos pro gerente comparar
+// lado a lado (rosto x identidade x foto de perfil).
+profilesRouter.post('/me/selfie', autenticar, exigirPapel('profissional'), (req, res) => {
+  uploadSelfie(req, res, async (err: unknown) => {
+    if (err) {
+      const mensagem = err instanceof multer.MulterError && err.code === 'LIMIT_FILE_SIZE'
+        ? 'Arquivo muito grande. Máximo de 8MB.'
+        : err instanceof Error ? err.message : 'Não foi possível processar o arquivo.';
+      res.status(400).json({ erro: mensagem });
+      return;
+    }
+    if (!req.file) {
+      res.status(400).json({ erro: 'Nenhum arquivo enviado.' });
+      return;
+    }
+
+    const existente = await db
+      .selectFrom('verifications')
+      .select('selfie_url')
+      .where('user_id', '=', req.user!.sub)
+      .executeTakeFirst();
+    if (existente?.selfie_url) removerSelfie(existente.selfie_url);
+
+    await db
+      .updateTable('verifications')
+      .set({ selfie_url: req.file.filename, selfie_status: 'pendente' })
       .where('user_id', '=', req.user!.sub)
       .execute();
 

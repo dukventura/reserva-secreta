@@ -25,6 +25,10 @@ server/public/uploads/*
 server/private/documents/*
 !server/private/documents/.gitkeep
 
+# Selfies de verificacao - mesmo motivo do documento.
+server/private/selfies/*
+!server/private/selfies/.gitkeep
+
 # Editor directories and files
 .vscode/*
 !.vscode/extensions.json

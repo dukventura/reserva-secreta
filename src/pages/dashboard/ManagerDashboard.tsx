@@ -6,7 +6,7 @@ import {
 import { DashboardLayout } from '../../layouts/DashboardLayout';
 import { RequireRole } from '../../components/RequireRole';
 import { useModeration } from '../../context/ModerationContext';
-import { buscarArquivoDocumento, ApiError, type PendingDocument } from '../../lib/api';
+import { buscarArquivoDocumento, buscarArquivoSelfie, ApiError, type PendingDocument, type PendingSelfie } from '../../lib/api';
 
 const NAV = [
   { key: 'painel', label: 'Painel', icon: <LayoutDashboard className="w-4 h-4" /> },
@@ -14,6 +14,7 @@ const NAV = [
   { key: 'ativos', label: 'Anúncios no ar', icon: <Radio className="w-4 h-4" /> },
   { key: 'fotos', label: 'Fotos', icon: <Images className="w-4 h-4" /> },
   { key: 'documentos', label: 'Documentos', icon: <FileText className="w-4 h-4" /> },
+  { key: 'selfies', label: 'Selfies', icon: <Eye className="w-4 h-4" /> },
   { key: 'denuncias', label: 'Denúncias', icon: <Flag className="w-4 h-4" /> },
   { key: 'historico', label: 'Histórico', icon: <History className="w-4 h-4" /> },
 ];
@@ -23,7 +24,7 @@ function fmtData(iso: string | null) {
   return new Date(iso).toLocaleDateString('pt-BR', { day: '2-digit', month: 'short', hour: '2-digit', minute: '2-digit' });
 }
 
-function VerDocumentoButton({ userId }: { userId: number }) {
+function VerArquivoButton({ userId, buscar, rotulo }: { userId: number; buscar: (userId: number) => Promise<string>; rotulo: string }) {
   const [carregando, setCarregando] = useState(false);
   const [erro, setErro] = useState('');
 
@@ -31,10 +32,10 @@ function VerDocumentoButton({ userId }: { userId: number }) {
     setCarregando(true);
     setErro('');
     try {
-      const url = await buscarArquivoDocumento(userId);
+      const url = await buscar(userId);
       window.open(url, '_blank', 'noopener,noreferrer');
     } catch (err) {
-      setErro(err instanceof ApiError ? err.message : 'Não foi possível abrir o documento.');
+      setErro(err instanceof ApiError ? err.message : `Não foi possível abrir ${rotulo.toLowerCase()}.`);
     } finally {
       setCarregando(false);
     }
@@ -47,7 +48,7 @@ function VerDocumentoButton({ userId }: { userId: number }) {
         disabled={carregando}
         className="flex items-center space-x-1.5 px-3 py-1.5 rounded-campo bg-white/10 border border-white/20 text-marfim text-xs font-bold hover:bg-white/20 transition-colors disabled:opacity-60"
       >
-        <Eye className="w-3.5 h-3.5" /><span>{carregando ? 'Abrindo...' : 'Ver documento'}</span>
+        <Eye className="w-3.5 h-3.5" /><span>{carregando ? 'Abrindo...' : rotulo}</span>
       </button>
       {erro && <span className="text-[10px] text-red-400">{erro}</span>}
     </div>
@@ -56,7 +57,7 @@ function VerDocumentoButton({ userId }: { userId: number }) {
 
 function ManagerDashboardContent() {
   const [tab, setTab] = useState('painel');
-  const { pendingProfiles, activeProfiles, reports, pendingMedia, pendingDocuments, auditLog, carregando, erro, refresh, decideProfile, setProfileStatus, decideReport, decideMedia, decideDocument } = useModeration();
+  const { pendingProfiles, activeProfiles, reports, pendingMedia, pendingDocuments, pendingSelfies, auditLog, carregando, erro, refresh, decideProfile, setProfileStatus, decideReport, decideMedia, decideDocument, decideSelfie } = useModeration();
 
   useEffect(() => {
     refresh();
@@ -73,11 +74,12 @@ function ManagerDashboardContent() {
       )}
 
       {tab === 'painel' && (
-        <div className="grid grid-cols-2 sm:grid-cols-5 gap-4">
+        <div className="grid grid-cols-2 sm:grid-cols-6 gap-4">
           {[
             { label: 'Anúncios pendentes', value: pendingProfiles.length, icon: <ClipboardCheck className="w-4 h-4 text-ouro" /> },
             { label: 'Fotos pendentes', value: pendingMedia.length, icon: <Images className="w-4 h-4 text-ouro" /> },
             { label: 'Documentos pendentes', value: pendingDocuments.length, icon: <FileText className="w-4 h-4 text-ouro" /> },
+            { label: 'Selfies pendentes', value: pendingSelfies.length, icon: <Eye className="w-4 h-4 text-ouro" /> },
             { label: 'Denúncias abertas', value: reports.length, icon: <Flag className="w-4 h-4 text-ouro" /> },
             { label: 'Ações registradas', value: auditLog.length, icon: <History className="w-4 h-4 text-ouro" /> },
           ].map((s) => (
@@ -222,7 +224,7 @@ function ManagerDashboardContent() {
                 <div className="text-sm font-semibold text-marfim">{d.profile_name ?? d.user_name}</div>
                 <div className="text-[11px] text-nevoa">Enviado em {fmtData(d.updated_at)}</div>
               </div>
-              <VerDocumentoButton userId={d.user_id} />
+              <VerArquivoButton userId={d.user_id} buscar={buscarArquivoDocumento} rotulo="Ver documento" />
               <div className="flex sm:flex-col gap-2 shrink-0">
                 <button
                   onClick={() => decideDocument(d.user_id, 'aprovado')}
@@ -232,6 +234,36 @@ function ManagerDashboardContent() {
                 </button>
                 <button
                   onClick={() => decideDocument(d.user_id, 'reprovado')}
+                  className="flex-1 sm:flex-none flex items-center justify-center space-x-1.5 px-4 py-2 rounded-campo bg-white/5 border border-white/15 hover:border-red-400/40 text-nevoa hover:text-red-300 text-xs font-bold transition-colors"
+                >
+                  <XCircle className="w-4 h-4" /><span>Reprovar</span>
+                </button>
+              </div>
+            </div>
+          ))}
+        </div>
+      )}
+
+      {tab === 'selfies' && (
+        <div className="space-y-3 max-w-3xl">
+          <p className="text-xs text-nevoa mb-1">Compare o rosto da selfie com o documento e com as fotos do perfil antes de aprovar.</p>
+          {!carregando && pendingSelfies.length === 0 && <p className="text-sm text-nevoa">Nenhuma selfie pendente no momento.</p>}
+          {pendingSelfies.map((s: PendingSelfie) => (
+            <div key={s.user_id} className="flex flex-col sm:flex-row sm:items-center gap-4 bg-grafite border border-white/10 p-4">
+              <div className="flex-1 min-w-0 space-y-1">
+                <div className="text-sm font-semibold text-marfim">{s.profile_name ?? s.user_name}</div>
+                <div className="text-[11px] text-nevoa">Enviada em {fmtData(s.updated_at)}</div>
+              </div>
+              <VerArquivoButton userId={s.user_id} buscar={buscarArquivoSelfie} rotulo="Ver selfie" />
+              <div className="flex sm:flex-col gap-2 shrink-0">
+                <button
+                  onClick={() => decideSelfie(s.user_id, 'aprovado')}
+                  className="flex-1 sm:flex-none flex items-center justify-center space-x-1.5 px-4 py-2 rounded-campo bg-verificado hover:opacity-90 text-marfim text-xs font-bold transition-opacity"
+                >
+                  <CheckCircle2 className="w-4 h-4" /><span>Aprovar</span>
+                </button>
+                <button
+                  onClick={() => decideSelfie(s.user_id, 'reprovado')}
                   className="flex-1 sm:flex-none flex items-center justify-center space-x-1.5 px-4 py-2 rounded-campo bg-white/5 border border-white/15 hover:border-red-400/40 text-nevoa hover:text-red-300 text-xs font-bold transition-colors"
                 >
                   <XCircle className="w-4 h-4" /><span>Reprovar</span>

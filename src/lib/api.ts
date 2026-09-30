@@ -157,6 +157,8 @@ export interface MyProfile {
   telefone_confirmado: number;
   documento_status: 'pendente' | 'aprovado' | 'reprovado';
   documento_enviado: boolean;
+  selfie_status: 'pendente' | 'aprovado' | 'reprovado';
+  selfie_enviada: boolean;
   gallery: { id: number; url: string; status: 'pendente' | 'aprovado' | 'reprovado' }[];
 }
 
@@ -332,6 +334,12 @@ export function enviarDocumento(arquivo: File) {
   return request<{ ok: true }>('/api/profiles/me/document', { method: 'POST', body: form, auth: true });
 }
 
+export function enviarSelfie(arquivo: File) {
+  const form = new FormData();
+  form.append('selfie', arquivo);
+  return request<{ ok: true }>('/api/profiles/me/selfie', { method: 'POST', body: form, auth: true });
+}
+
 // ---- moderacao ----
 
 export function listarPerfisPendentes() {
@@ -411,6 +419,36 @@ export async function buscarArquivoDocumento(userId: number): Promise<string> {
     headers: token ? { Authorization: `Bearer ${token}` } : {},
   });
   if (!response.ok) throw new ApiError(response.status, 'Não foi possível carregar o documento.');
+  const blob = await response.blob();
+  return URL.createObjectURL(blob);
+}
+
+export interface PendingSelfie {
+  user_id: number;
+  updated_at: string;
+  user_name: string;
+  profile_slug: string | null;
+  profile_name: string | null;
+}
+
+export function listarSelfiesPendentes() {
+  return request<{ selfies: PendingSelfie[] }>('/api/moderation/selfies/pending', { auth: true });
+}
+
+export function decidirSelfie(userId: number, status: 'aprovado' | 'reprovado') {
+  return request<{ ok: true }>(`/api/moderation/selfies/${userId}/decide`, {
+    method: 'POST',
+    body: { status },
+    auth: true,
+  });
+}
+
+export async function buscarArquivoSelfie(userId: number): Promise<string> {
+  const token = getToken();
+  const response = await fetch(`${API_URL}/api/moderation/selfies/${userId}/file`, {
+    headers: token ? { Authorization: `Bearer ${token}` } : {},
+  });
+  if (!response.ok) throw new ApiError(response.status, 'Não foi possível carregar a selfie.');
   const blob = await response.blob();
   return URL.createObjectURL(blob);
 }

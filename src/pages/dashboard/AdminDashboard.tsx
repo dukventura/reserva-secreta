@@ -25,7 +25,7 @@ function fmtData(iso: string) {
 
 function AdminDashboardContent() {
   const [tab, setTab] = useState('painel');
-  const { pendingProfiles, reports, pendingMedia, pendingDocuments, auditLog, carregando, erro, refresh } = useModeration();
+  const { pendingProfiles, reports, pendingMedia, pendingDocuments, pendingSelfies, auditLog, carregando, erro, refresh } = useModeration();
   const [equipe, setEquipe] = useState<StaffMember[]>([]);
   const [carregandoEquipe, setCarregandoEquipe] = useState(true);
   const [erroEquipe, setErroEquipe] = useState('');
@@ -78,12 +78,13 @@ function AdminDashboardContent() {
 
       {tab === 'painel' && (
         <div className="space-y-6">
-          <div className="grid grid-cols-2 sm:grid-cols-6 gap-4">
+          <div className="grid grid-cols-2 sm:grid-cols-7 gap-4">
             {[
               { label: 'Membros da equipe', value: carregandoEquipe ? '...' : equipe.length },
               { label: 'Anúncios pendentes', value: carregando ? '...' : pendingProfiles.length },
               { label: 'Fotos pendentes', value: carregando ? '...' : pendingMedia.length },
               { label: 'Documentos pendentes', value: carregando ? '...' : pendingDocuments.length },
+              { label: 'Selfies pendentes', value: carregando ? '...' : pendingSelfies.length },
               { label: 'Denúncias abertas', value: carregando ? '...' : reports.length },
               { label: 'Ações no log', value: carregando ? '...' : auditLog.length },
             ].map((s) => (

@@ -6,7 +6,7 @@ import {
 import { DashboardLayout } from '../../layouts/DashboardLayout';
 import { RequireRole } from '../../components/RequireRole';
 import { mockPlans } from '../../data/mockModeration';
-import { buscarMeuPerfil, atualizarMeuPerfil, enviarPerfilParaAprovacao, enviarFoto, removerFoto, enviarDocumento, ApiError, type MyProfile, type AtualizacaoPerfil } from '../../lib/api';
+import { buscarMeuPerfil, atualizarMeuPerfil, enviarPerfilParaAprovacao, enviarFoto, removerFoto, enviarDocumento, enviarSelfie, ApiError, type MyProfile, type AtualizacaoPerfil } from '../../lib/api';
 
 const MAX_FOTOS = 10;
 
@@ -43,8 +43,10 @@ function ProfessionalDashboardContent() {
   const [enviandoFoto, setEnviandoFoto] = useState(false);
   const [removendoFotoId, setRemovendoFotoId] = useState<number | null>(null);
   const [enviandoDocumento, setEnviandoDocumento] = useState(false);
+  const [enviandoSelfie, setEnviandoSelfie] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const documentInputRef = useRef<HTMLInputElement>(null);
+  const selfieInputRef = useRef<HTMLInputElement>(null);
 
   const carregar = () => {
     setCarregando(true);
@@ -152,6 +154,22 @@ function ProfessionalDashboardContent() {
     }
   };
 
+  const handleEnviarSelfie = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const arquivo = e.target.files?.[0];
+    e.target.value = '';
+    if (!arquivo) return;
+    setEnviandoSelfie(true);
+    setErro('');
+    try {
+      await enviarSelfie(arquivo);
+      carregar();
+    } catch (err) {
+      setErro(err instanceof ApiError ? err.message : 'Não foi possível enviar a selfie.');
+    } finally {
+      setEnviandoSelfie(false);
+    }
+  };
+
   const enviarParaAprovacao = async () => {
     setEnviando(true);
     setErro('');
@@ -185,7 +203,7 @@ function ProfessionalDashboardContent() {
   }
 
   const podeEnviar = perfil.status === 'rascunho' || perfil.status === 'reprovado';
-  const verificacoes = [perfil.email_confirmado === 1, perfil.telefone_confirmado === 1, perfil.documento_status === 'aprovado'];
+  const verificacoes = [perfil.email_confirmado === 1, perfil.telefone_confirmado === 1, perfil.documento_status === 'aprovado', perfil.selfie_status === 'aprovado'];
   const percentualVerificado = Math.round((verificacoes.filter(Boolean).length / verificacoes.length) * 100);
 
   return (
@@ -467,6 +485,45 @@ function ProfessionalDashboardContent() {
           />
 
           <p className="text-xs text-nevoa">O documento é revisado por um humano da nossa equipe e usado só para confirmar identidade e maioridade — nunca fica visível no seu anúncio.</p>
+
+          <div className="bg-grafite border border-white/10 p-4 space-y-3">
+            <div className="flex items-center space-x-2.5">
+              {perfil.selfie_status === 'aprovado' ? <CheckCircle2 className="w-5 h-5 text-verificado-texto" /> : <Clock className="w-5 h-5 text-nevoa" />}
+              <div>
+                <div className="text-sm text-marfim">Selfie de verificação</div>
+                <div className="text-xs text-nevoa">
+                  {!perfil.selfie_enviada && 'Nenhuma selfie enviada ainda'}
+                  {perfil.selfie_enviada && perfil.selfie_status === 'pendente' && 'Enviada — aguardando análise'}
+                  {perfil.selfie_status === 'aprovado' && 'Aprovada'}
+                  {perfil.selfie_status === 'reprovado' && 'Reprovada — envie novamente'}
+                </div>
+              </div>
+            </div>
+
+            <div className="bg-onix border border-white/10 p-3 text-xs text-nevoa space-y-1.5">
+              <p>Seu anúncio <strong className="text-marfim">só é publicado depois dessa selfie ser aprovada</strong>. Tire uma foto sua segurando um papel escrito à mão com:</p>
+              <p className="text-marfim font-semibold text-sm">"Reserva Secreta — {new Date().toLocaleDateString('pt-BR')}"</p>
+              <p>Seu rosto e a folha precisam aparecer nítidos na mesma foto.</p>
+            </div>
+
+            {perfil.selfie_status !== 'aprovado' && (
+              <button
+                onClick={() => selfieInputRef.current?.click()}
+                disabled={enviandoSelfie}
+                className="flex items-center space-x-1.5 px-3 py-1.5 rounded-campo bg-ouro/10 border border-ouro/30 text-ouro text-xs font-semibold hover:bg-ouro/20 transition-colors disabled:opacity-60"
+              >
+                <Upload className="w-3.5 h-3.5" />
+                <span>{enviandoSelfie ? 'Enviando...' : perfil.selfie_enviada ? 'Reenviar' : 'Enviar selfie'}</span>
+              </button>
+            )}
+          </div>
+          <input
+            ref={selfieInputRef}
+            type="file"
+            accept="image/jpeg,image/png,image/webp"
+            onChange={handleEnviarSelfie}
+            className="hidden"
+          />
         </div>
       )}
 

@@ -13,6 +13,7 @@ interface ModerationContextValue {
   reports: api.PendingReport[];
   pendingMedia: api.PendingMedia[];
   pendingDocuments: api.PendingDocument[];
+  pendingSelfies: api.PendingSelfie[];
   auditLog: api.AuditLogEntry[];
   carregando: boolean;
   erro: string;
@@ -22,6 +23,7 @@ interface ModerationContextValue {
   decideReport: (id: number, status: 'aprovado' | 'reprovado') => Promise<void>;
   decideMedia: (id: number, status: 'aprovado' | 'reprovado') => Promise<void>;
   decideDocument: (userId: number, status: 'aprovado' | 'reprovado') => Promise<void>;
+  decideSelfie: (userId: number, status: 'aprovado' | 'reprovado') => Promise<void>;
 }
 
 const ModerationContext = createContext<ModerationContextValue | undefined>(undefined);
@@ -32,6 +34,7 @@ export const ModerationProvider: React.FC<{ children: React.ReactNode }> = ({ ch
   const [reports, setReports] = useState<api.PendingReport[]>([]);
   const [pendingMedia, setPendingMedia] = useState<api.PendingMedia[]>([]);
   const [pendingDocuments, setPendingDocuments] = useState<api.PendingDocument[]>([]);
+  const [pendingSelfies, setPendingSelfies] = useState<api.PendingSelfie[]>([]);
   const [auditLog, setAuditLog] = useState<api.AuditLogEntry[]>([]);
   const [carregando, setCarregando] = useState(false);
   const [erro, setErro] = useState('');
@@ -40,12 +43,13 @@ export const ModerationProvider: React.FC<{ children: React.ReactNode }> = ({ ch
     setCarregando(true);
     setErro('');
     try {
-      const [perfis, ativos, denuncias, fotos, documentos, log] = await Promise.all([
+      const [perfis, ativos, denuncias, fotos, documentos, selfies, log] = await Promise.all([
         api.listarPerfisPendentes(),
         api.listarPerfisAtivos(),
         api.listarDenunciasPendentes(),
         api.listarFotosPendentes(),
         api.listarDocumentosPendentes(),
+        api.listarSelfiesPendentes(),
         api.listarLogAuditoria(),
       ]);
       setPendingProfiles(perfis.perfis);
@@ -53,6 +57,7 @@ export const ModerationProvider: React.FC<{ children: React.ReactNode }> = ({ ch
       setReports(denuncias.denuncias);
       setPendingMedia(fotos.fotos);
       setPendingDocuments(documentos.documentos);
+      setPendingSelfies(selfies.selfies);
       setAuditLog(log.registros);
     } catch (err) {
       setErro(err instanceof api.ApiError ? err.message : 'Não foi possível carregar os dados de moderação.');
@@ -90,8 +95,14 @@ export const ModerationProvider: React.FC<{ children: React.ReactNode }> = ({ ch
     await refresh();
   }, [refresh]);
 
+  const decideSelfie = useCallback(async (userId: number, status: 'aprovado' | 'reprovado') => {
+    await api.decidirSelfie(userId, status);
+    setPendingSelfies((prev) => prev.filter((s) => s.user_id !== userId));
+    await refresh();
+  }, [refresh]);
+
   return (
-    <ModerationContext.Provider value={{ pendingProfiles, activeProfiles, reports, pendingMedia, pendingDocuments, auditLog, carregando, erro, refresh, decideProfile, setProfileStatus, decideReport, decideMedia, decideDocument }}>
+    <ModerationContext.Provider value={{ pendingProfiles, activeProfiles, reports, pendingMedia, pendingDocuments, pendingSelfies, auditLog, carregando, erro, refresh, decideProfile, setProfileStatus, decideReport, decideMedia, decideDocument, decideSelfie }}>
       {children}
     </ModerationContext.Provider>
   );
