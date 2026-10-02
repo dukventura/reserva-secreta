@@ -119,6 +119,18 @@ interface SubscriptionsTable {
   updated_at: Generated<Date>;
 }
 
+export type PlanRequestStatus = 'pendente' | 'atendido' | 'recusado' | 'cancelado';
+
+interface PlanRequestsTable {
+  id: Generated<number>;
+  user_id: number;
+  plan_id: number;
+  status: Generated<PlanRequestStatus>;
+  created_at: Generated<Date>;
+  resolved_at: Date | null;
+  resolved_by: number | null;
+}
+
 interface ReportsTable {
   id: Generated<number>;
   target_profile_id: number;
@@ -164,6 +176,7 @@ export interface Database {
   subscriptions: SubscriptionsTable;
   plans: PlansTable;
   payments: PaymentsTable;
+  plan_requests: PlanRequestsTable;
 }
 
 const pool = createPool({

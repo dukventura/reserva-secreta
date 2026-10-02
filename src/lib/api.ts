@@ -164,6 +164,7 @@ export interface MyProfile {
   plano_nome: string | null;
   max_fotos: number;
   boost_ate: string | null;
+  pedido_plano_pendente: { id: number; plano_nome: string; created_at: string } | null;
   gallery: { id: number; url: string; status: 'pendente' | 'aprovado' | 'reprovado' }[];
 }
 
@@ -345,6 +346,14 @@ export function enviarSelfie(arquivo: File) {
   return request<{ ok: true }>('/api/profiles/me/selfie', { method: 'POST', body: form, auth: true });
 }
 
+export function solicitarPlano(planId: number) {
+  return request<{ ok: true; id: number }>('/api/profiles/me/plan-requests', { method: 'POST', body: { plan_id: planId }, auth: true });
+}
+
+export function cancelarPedidoPlano(id: number) {
+  return request<{ ok: true }>(`/api/profiles/me/plan-requests/${id}/cancelar`, { method: 'POST', auth: true });
+}
+
 // ---- moderacao ----
 
 export function listarPerfisPendentes() {
@@ -514,6 +523,7 @@ export interface FinanceSummary {
   assinantes_ativos: number;
   vencendo_7_dias: number;
   impulsos_ativos: number;
+  pedidos_pendentes: number;
 }
 
 export function listarPlanosPublicos() {
@@ -566,6 +576,28 @@ export function listarPagamentos(userId?: number) {
 
 export function buscarResumoFinanceiro() {
   return request<FinanceSummary>('/api/finance/summary', { auth: true });
+}
+
+export interface PlanRequestRow {
+  id: number;
+  user_id: number;
+  created_at: string;
+  stage_name: string;
+  plan_id: number;
+  plano_nome: string;
+  preco_centavos: number;
+}
+
+export function listarPedidosPlano() {
+  return request<{ pedidos: PlanRequestRow[] }>('/api/finance/plan-requests', { auth: true });
+}
+
+export function atenderPedidoPlano(id: number) {
+  return request<{ ok: true; vence_em: string }>(`/api/finance/plan-requests/${id}/atender`, { method: 'POST', auth: true });
+}
+
+export function recusarPedidoPlano(id: number) {
+  return request<{ ok: true }>(`/api/finance/plan-requests/${id}/recusar`, { method: 'POST', auth: true });
 }
 
 // ---- denuncias publicas ----

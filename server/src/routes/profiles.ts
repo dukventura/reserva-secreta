@@ -117,6 +117,15 @@ profilesRouter.get('/me', autenticar, exigirPapel('profissional'), async (req, r
     .orderBy('position', 'asc')
     .execute();
 
+  // So' pode existir um pedido pendente por vez (ver POST /me/plan-requests).
+  const pedidoPendente = await db
+    .selectFrom('plan_requests')
+    .innerJoin('plans', 'plans.id', 'plan_requests.plan_id')
+    .select(['plan_requests.id', 'plan_requests.created_at', 'plans.nome as plano_nome'])
+    .where('plan_requests.user_id', '=', req.user!.sub)
+    .where('plan_requests.status', '=', 'pendente')
+    .executeTakeFirst();
+
   const { languages, services, locations, documento_url, selfie_url, ...resto } = perfil;
   res.json({
     perfil: {
@@ -131,8 +140,56 @@ profilesRouter.get('/me', autenticar, exigirPapel('profissional'), async (req, r
       documento_enviado: documento_url !== null,
       selfie_enviada: selfie_url !== null,
       max_fotos: await limiteFotos(req.user!.sub),
+      pedido_plano_pendente: pedidoPendente
+        ? { id: pedidoPendente.id, plano_nome: pedidoPendente.plano_nome, created_at: pedidoPendente.created_at }
+        : null,
     },
   });
+});
+
+const pedidoPlanoSchema = z.object({ plan_id: z.number().int() });
+
+// A propria profissional gera o pedido - antes disso, pedir um plano
+// so' existia como mensagem informal de WhatsApp pra equipe.
+profilesRouter.post('/me/plan-requests', autenticar, exigirPapel('profissional'), async (req, res) => {
+  const parsed = pedidoPlanoSchema.safeParse(req.body);
+  if (!parsed.success) {
+    res.status(400).json({ erro: 'Informe o plano.' });
+    return;
+  }
+  const plano = await db.selectFrom('plans').select('id').where('id', '=', parsed.data.plan_id).where('ativo', '=', 1).executeTakeFirst();
+  if (!plano) {
+    res.status(400).json({ erro: 'Plano inexistente ou desativado.' });
+    return;
+  }
+  const existente = await db
+    .selectFrom('plan_requests')
+    .select('id')
+    .where('user_id', '=', req.user!.sub)
+    .where('status', '=', 'pendente')
+    .executeTakeFirst();
+  if (existente) {
+    res.status(409).json({ erro: 'Você já tem um pedido de plano em aberto. Cancele-o antes de pedir outro.' });
+    return;
+  }
+  const inserted = await db.insertInto('plan_requests').values({ user_id: req.user!.sub, plan_id: plano.id }).executeTakeFirstOrThrow();
+  res.status(201).json({ ok: true, id: Number(inserted.insertId) });
+});
+
+profilesRouter.post('/me/plan-requests/:id/cancelar', autenticar, exigirPapel('profissional'), async (req, res) => {
+  const id = Number(req.params.id);
+  const pedido = await db
+    .selectFrom('plan_requests')
+    .select(['id', 'status'])
+    .where('id', '=', id)
+    .where('user_id', '=', req.user!.sub)
+    .executeTakeFirst();
+  if (!pedido || pedido.status !== 'pendente') {
+    res.status(404).json({ erro: 'Pedido não encontrado ou já resolvido.' });
+    return;
+  }
+  await db.updateTable('plan_requests').set({ status: 'cancelado', resolved_at: new Date() }).where('id', '=', id).execute();
+  res.json({ ok: true });
 });
 
 const edicaoSchema = z.object({

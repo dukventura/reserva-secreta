@@ -4,6 +4,7 @@ import { sql } from 'kysely';
 import { db } from '../lib/db';
 import { autenticar, exigirPapel } from '../middleware/auth';
 import { registrarAuditoria } from '../lib/audit';
+import { ativarPlanoParaUsuario, somarDias } from '../lib/plans';
 
 // Catalogo publico (so planos ativos) - a profissional ve no proprio
 // painel o que cada plano oferece.
@@ -99,18 +100,6 @@ financeRouter.get('/subscriptions', async (_req, res) => {
   res.json({ assinaturas });
 });
 
-function somarDias(base: Date, dias: number): Date {
-  const d = new Date(base);
-  d.setDate(d.getDate() + dias);
-  return d;
-}
-
-function inicioDoDia(d: Date): Date {
-  const c = new Date(d);
-  c.setHours(0, 0, 0, 0);
-  return c;
-}
-
 const ativarSchema = z.object({
   plan_id: z.number().int(),
   dias: z.number().int().min(1).max(365).optional(),
@@ -118,9 +107,7 @@ const ativarSchema = z.object({
   observacao: z.string().trim().max(500).optional(),
 });
 
-// Serve pra ativar, renovar, trocar de plano e reativar. Renovacao do
-// mesmo plano ainda em dia soma ao vencimento atual (ninguem perde dia
-// pago); qualquer outro caso comeca a contar de hoje.
+// Serve pra ativar, renovar, trocar de plano e reativar.
 financeRouter.post('/subscriptions/:userId/ativar', async (req, res) => {
   const parsed = ativarSchema.safeParse(req.body);
   if (!parsed.success) {
@@ -139,37 +126,14 @@ financeRouter.post('/subscriptions/:userId/ativar', async (req, res) => {
     return;
   }
 
-  const dias = parsed.data.dias ?? plano.duracao_dias;
-  const valor = parsed.data.valor_centavos ?? plano.preco_centavos;
-  const hoje = inicioDoDia(new Date());
-
-  const atual = await db.selectFrom('subscriptions').selectAll().where('user_id', '=', userId).executeTakeFirst();
-  const renovacao = atual?.status === 'ativo' && atual.plan_id === plano.id && inicioDoDia(atual.vence_em) >= hoje;
-  const base = renovacao ? inicioDoDia(atual!.vence_em) : hoje;
-  const venceEm = somarDias(base, dias);
-
-  await db.transaction().execute(async (trx) => {
-    await trx
-      .insertInto('subscriptions')
-      .values({ user_id: userId, plan_id: plano.id, status: 'ativo', vence_em: venceEm, ultimo_pagamento_em: hoje, registrado_por: req.user!.sub })
-      .onDuplicateKeyUpdate({ plan_id: plano.id, status: 'ativo', vence_em: venceEm, ultimo_pagamento_em: hoje, registrado_por: req.user!.sub })
-      .execute();
-    await trx
-      .updateTable('professional_profiles')
-      .set({ is_vip: plano.selo_vip, prioridade: plano.prioridade })
-      .where('user_id', '=', userId)
-      .execute();
-    await trx
-      .insertInto('payments')
-      .values({
-        user_id: userId, tipo: 'plano', plan_id: plano.id, valor_centavos: valor, dias,
-        observacao: parsed.data.observacao || null, registrado_por: req.user!.sub,
-      })
-      .execute();
+  const atualAntes = await db.selectFrom('subscriptions').select('status').where('user_id', '=', userId).executeTakeFirst();
+  const { venceEm, renovacao } = await ativarPlanoParaUsuario({
+    userId, plano, dias: parsed.data.dias, valorCentavos: parsed.data.valor_centavos,
+    observacao: parsed.data.observacao, registradoPor: req.user!.sub,
   });
 
-  const acao = renovacao ? 'Renovou' : atual ? 'Ativou/reativou' : 'Ativou';
-  await registrarAuditoria(req.user!.sub, `${acao} plano ${plano.nome} (${dias} dias)`, perfil.stage_name);
+  const acao = renovacao ? 'Renovou' : atualAntes ? 'Ativou/reativou' : 'Ativou';
+  await registrarAuditoria(req.user!.sub, `${acao} plano ${plano.nome} (${parsed.data.dias ?? plano.duracao_dias} dias)`, perfil.stage_name);
   res.json({ ok: true, vence_em: venceEm.toISOString().slice(0, 10), renovacao });
 });
 
@@ -286,10 +250,81 @@ financeRouter.get('/summary', async (_req, res) => {
     .select(db.fn.countAll<number>().as('c'))
     .where(sql<boolean>`boost_ate > NOW()`)
     .executeTakeFirstOrThrow();
+  const pedidos = await db
+    .selectFrom('plan_requests')
+    .select(db.fn.countAll<number>().as('c'))
+    .where('status', '=', 'pendente')
+    .executeTakeFirstOrThrow();
   res.json({
     receita_mes_centavos: Number(receita.total),
     assinantes_ativos: Number(ativos.c),
     vencendo_7_dias: Number(vencendo.c),
     impulsos_ativos: Number(impulsos.c),
+    pedidos_pendentes: Number(pedidos.c),
   });
+});
+
+financeRouter.get('/plan-requests', async (_req, res) => {
+  const pedidos = await db
+    .selectFrom('plan_requests')
+    .innerJoin('professional_profiles', 'professional_profiles.user_id', 'plan_requests.user_id')
+    .innerJoin('plans', 'plans.id', 'plan_requests.plan_id')
+    .select([
+      'plan_requests.id', 'plan_requests.user_id', 'plan_requests.created_at',
+      'professional_profiles.stage_name', 'plans.id as plan_id', 'plans.nome as plano_nome', 'plans.preco_centavos',
+    ])
+    .where('plan_requests.status', '=', 'pendente')
+    .orderBy('plan_requests.created_at', 'asc')
+    .execute();
+  res.json({ pedidos });
+});
+
+financeRouter.post('/plan-requests/:id/atender', async (req, res) => {
+  const id = Number(req.params.id);
+  const pedido = await db
+    .selectFrom('plan_requests')
+    .innerJoin('professional_profiles', 'professional_profiles.user_id', 'plan_requests.user_id')
+    .select(['plan_requests.id', 'plan_requests.user_id', 'plan_requests.plan_id', 'plan_requests.status', 'professional_profiles.stage_name'])
+    .where('plan_requests.id', '=', id)
+    .executeTakeFirst();
+  if (!pedido || pedido.status !== 'pendente') {
+    res.status(404).json({ erro: 'Pedido não encontrado ou já resolvido.' });
+    return;
+  }
+  const plano = await db.selectFrom('plans').selectAll().where('id', '=', pedido.plan_id).executeTakeFirst();
+  if (!plano || !plano.ativo) {
+    res.status(400).json({ erro: 'Este plano não está mais disponível. Recuse o pedido e oriente a profissional a escolher outro.' });
+    return;
+  }
+
+  const { venceEm } = await ativarPlanoParaUsuario({ userId: pedido.user_id, plano, registradoPor: req.user!.sub });
+  await db
+    .updateTable('plan_requests')
+    .set({ status: 'atendido', resolved_at: new Date(), resolved_by: req.user!.sub })
+    .where('id', '=', id)
+    .execute();
+
+  await registrarAuditoria(req.user!.sub, `Atendeu pedido de plano ${plano.nome}`, pedido.stage_name);
+  res.json({ ok: true, vence_em: venceEm.toISOString().slice(0, 10) });
+});
+
+financeRouter.post('/plan-requests/:id/recusar', async (req, res) => {
+  const id = Number(req.params.id);
+  const pedido = await db
+    .selectFrom('plan_requests')
+    .innerJoin('professional_profiles', 'professional_profiles.user_id', 'plan_requests.user_id')
+    .select(['plan_requests.id', 'plan_requests.status', 'professional_profiles.stage_name'])
+    .where('plan_requests.id', '=', id)
+    .executeTakeFirst();
+  if (!pedido || pedido.status !== 'pendente') {
+    res.status(404).json({ erro: 'Pedido não encontrado ou já resolvido.' });
+    return;
+  }
+  await db
+    .updateTable('plan_requests')
+    .set({ status: 'recusado', resolved_at: new Date(), resolved_by: req.user!.sub })
+    .where('id', '=', id)
+    .execute();
+  await registrarAuditoria(req.user!.sub, 'Recusou pedido de plano', pedido.stage_name);
+  res.json({ ok: true });
 });

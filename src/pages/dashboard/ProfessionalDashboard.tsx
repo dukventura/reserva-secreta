@@ -5,7 +5,14 @@ import {
 } from 'lucide-react';
 import { DashboardLayout } from '../../layouts/DashboardLayout';
 import { RequireRole } from '../../components/RequireRole';
-import { buscarMeuPerfil, listarPlanosPublicos, atualizarMeuPerfil, enviarPerfilParaAprovacao, enviarFoto, removerFoto, enviarDocumento, enviarSelfie, ApiError, type MyProfile, type AtualizacaoPerfil, type Plan } from '../../lib/api';
+import {
+  buscarMeuPerfil, listarPlanosPublicos, atualizarMeuPerfil, enviarPerfilParaAprovacao, enviarFoto, removerFoto,
+  enviarDocumento, enviarSelfie, solicitarPlano, cancelarPedidoPlano, ApiError,
+  type MyProfile, type AtualizacaoPerfil, type Plan,
+} from '../../lib/api';
+
+// TODO: trocar pelo numero real de WhatsApp da equipe assim que existir.
+const WHATSAPP_EQUIPE = '5535999999999';
 
 const NAV = [
   { key: 'painel', label: 'Painel', icon: <LayoutDashboard className="w-4 h-4" /> },
@@ -42,6 +49,8 @@ function ProfessionalDashboardContent() {
   const [enviandoDocumento, setEnviandoDocumento] = useState(false);
   const [enviandoSelfie, setEnviandoSelfie] = useState(false);
   const [planos, setPlanos] = useState<Plan[]>([]);
+  const [solicitandoPlanoId, setSolicitandoPlanoId] = useState<number | null>(null);
+  const [cancelandoPedido, setCancelandoPedido] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const documentInputRef = useRef<HTMLInputElement>(null);
   const selfieInputRef = useRef<HTMLInputElement>(null);
@@ -169,6 +178,37 @@ function ProfessionalDashboardContent() {
       setErro(err instanceof ApiError ? err.message : 'Não foi possível enviar a selfie.');
     } finally {
       setEnviandoSelfie(false);
+    }
+  };
+
+  const handleSolicitarPlano = async (plano: Plan) => {
+    setSolicitandoPlanoId(plano.id);
+    setErro('');
+    try {
+      await solicitarPlano(plano.id);
+      // Abre o WhatsApp com a mensagem pronta pra equipe nao depender
+      // de ficar checando o painel - o pedido ja fica registrado no
+      // sistema independente disso.
+      const texto = encodeURIComponent(`Olá! Quero assinar o plano ${plano.nome} (${(plano.preco_centavos / 100).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}) no Reserva Secreta.`);
+      window.open(`https://wa.me/${WHATSAPP_EQUIPE}?text=${texto}`, '_blank', 'noopener,noreferrer');
+      carregar();
+    } catch (err) {
+      setErro(err instanceof ApiError ? err.message : 'Não foi possível enviar o pedido.');
+    } finally {
+      setSolicitandoPlanoId(null);
+    }
+  };
+
+  const handleCancelarPedido = async (id: number) => {
+    setCancelandoPedido(true);
+    setErro('');
+    try {
+      await cancelarPedidoPlano(id);
+      carregar();
+    } catch (err) {
+      setErro(err instanceof ApiError ? err.message : 'Não foi possível cancelar o pedido.');
+    } finally {
+      setCancelandoPedido(false);
     }
   };
 
@@ -581,12 +621,29 @@ function ProfessionalDashboardContent() {
               <div className="text-xs text-amber-300 font-semibold">Impulso ativo até {impulsoAte.toLocaleString('pt-BR', { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' })} — seu perfil está no topo da cidade.</div>
             )}
           </div>
-          <p className="text-xs text-nevoa">O pagamento é combinado diretamente com a nossa equipe via PIX. Assim que confirmado, o plano é ativado no seu anúncio.</p>
+          <p className="text-xs text-nevoa">O pagamento é combinado diretamente com a nossa equipe via PIX. Peça o plano abaixo, confirme o pagamento pelo WhatsApp e assim que recebermos, o plano é ativado no seu anúncio.</p>
+
+          {perfil.pedido_plano_pendente && (
+            <div className="flex items-center justify-between gap-3 bg-ouro/10 border border-ouro/30 p-4">
+              <div>
+                <div className="text-sm font-semibold text-marfim">Pedido enviado: plano {perfil.pedido_plano_pendente.plano_nome}</div>
+                <div className="text-xs text-nevoa">Em {new Date(perfil.pedido_plano_pendente.created_at).toLocaleString('pt-BR')} — aguardando confirmação da equipe.</div>
+              </div>
+              <button
+                onClick={() => handleCancelarPedido(perfil.pedido_plano_pendente!.id)}
+                disabled={cancelandoPedido}
+                className="shrink-0 flex items-center space-x-1.5 px-3 py-1.5 rounded-campo bg-white/5 border border-white/15 hover:border-red-400/40 text-nevoa hover:text-red-300 text-xs font-bold transition-colors disabled:opacity-60"
+              >
+                <XCircle className="w-3.5 h-3.5" /><span>{cancelandoPedido ? 'Cancelando...' : 'Cancelar pedido'}</span>
+              </button>
+            </div>
+          )}
+
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
             {planos.map((plano) => {
               const atual = planoAtivo && perfil.plano_nome === plano.nome;
               return (
-                <div key={plano.id} className={`p-5 space-y-3 border ${atual ? 'border-ouro bg-ouro/5' : 'border-white/10 bg-grafite'}`}>
+                <div key={plano.id} className={`p-5 space-y-3 border flex flex-col ${atual ? 'border-ouro bg-ouro/5' : 'border-white/10 bg-grafite'}`}>
                   <div className="flex items-center justify-between">
                     <div className="text-sm font-semibold text-marfim">{plano.nome}</div>
                     {atual && <span className="text-[10px] px-2 py-0.5 rounded-campo bg-ouro text-black font-bold uppercase">Atual</span>}
@@ -595,11 +652,20 @@ function ProfessionalDashboardContent() {
                     {(plano.preco_centavos / 100).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}
                     <span className="text-xs text-nevoa ml-1">/{plano.duracao_dias} dias</span>
                   </div>
-                  <ul className="space-y-1.5 text-xs text-nevoa">
+                  <ul className="space-y-1.5 text-xs text-nevoa flex-1">
                     <li className="flex items-start space-x-1.5"><Check className="w-3.5 h-3.5 text-verificado-texto shrink-0 mt-0.5" /><span>Até {plano.max_fotos} fotos</span></li>
                     {plano.prioridade > 0 && <li className="flex items-start space-x-1.5"><Check className="w-3.5 h-3.5 text-verificado-texto shrink-0 mt-0.5" /><span>Prioridade na listagem da cidade</span></li>}
                     {plano.selo_vip === 1 && <li className="flex items-start space-x-1.5"><Check className="w-3.5 h-3.5 text-verificado-texto shrink-0 mt-0.5" /><span>Selo VIP no anúncio</span></li>}
                   </ul>
+                  {!atual && (
+                    <button
+                      onClick={() => handleSolicitarPlano(plano)}
+                      disabled={solicitandoPlanoId === plano.id || !!perfil.pedido_plano_pendente}
+                      className="w-full flex items-center justify-center space-x-1.5 px-3 py-2 rounded-campo bg-ouro hover:bg-champanhe text-black font-bold text-xs transition-colors disabled:opacity-50"
+                    >
+                      <Send className="w-3.5 h-3.5" /><span>{solicitandoPlanoId === plano.id ? 'Enviando...' : 'Solicitar este plano'}</span>
+                    </button>
+                  )}
                 </div>
               );
             })}

@@ -4,8 +4,9 @@ import {
 } from 'lucide-react';
 import {
   listarAssinaturas, listarPlanos, criarPlano, editarPlano, ativarPlano, cancelarAssinatura,
-  ativarImpulso, encerrarImpulso, listarPagamentos, buscarResumoFinanceiro, ApiError,
-  type SubscriptionRow, type Plan, type PlanInput, type PaymentRow, type FinanceSummary,
+  ativarImpulso, encerrarImpulso, listarPagamentos, buscarResumoFinanceiro,
+  listarPedidosPlano, atenderPedidoPlano, recusarPedidoPlano, ApiError,
+  type SubscriptionRow, type Plan, type PlanInput, type PaymentRow, type FinanceSummary, type PlanRequestRow,
 } from '../../lib/api';
 
 function fmtReais(centavos: number) {
@@ -545,10 +546,59 @@ function AbaPagamentos() {
   );
 }
 
+// ---------- Pedidos ----------
+
+function AbaPedidos({ pedidos, onAtualizar }: { pedidos: PlanRequestRow[]; onAtualizar: () => void }) {
+  const [processandoId, setProcessandoId] = useState<number | null>(null);
+  const [erro, setErro] = useState('');
+
+  const executar = async (id: number, fn: () => Promise<unknown>) => {
+    setProcessandoId(id);
+    setErro('');
+    try {
+      await fn();
+      onAtualizar();
+    } catch (err) {
+      setErro(err instanceof ApiError ? err.message : 'Não foi possível concluir.');
+    } finally {
+      setProcessandoId(null);
+    }
+  };
+
+  return (
+    <div className="space-y-3">
+      <p className="text-xs text-nevoa">Pedidos feitos pela própria profissional na aba "Plano" do painel dela. Confirme o PIX fora do site antes de atender.</p>
+      <Erro texto={erro} />
+      <div className="border border-white/10 divide-y divide-white/10">
+        {pedidos.length === 0 && <p className="text-sm text-nevoa p-4">Nenhum pedido pendente.</p>}
+        {pedidos.map((p) => (
+          <div key={p.id} className="flex flex-col sm:flex-row sm:items-center gap-3 p-3.5">
+            <div className="flex-1 min-w-0">
+              <div className="text-sm font-semibold text-marfim">{p.stage_name}</div>
+              <div className="text-xs text-nevoa">
+                Quer o plano <span className="text-ouro font-semibold">{p.plano_nome}</span> ({fmtReais(p.preco_centavos)}) · pedido em {fmtDataHora(p.created_at)}
+              </div>
+            </div>
+            <div className="flex gap-2 shrink-0">
+              <button onClick={() => executar(p.id, () => atenderPedidoPlano(p.id))} disabled={processandoId === p.id} className={btnPrimario}>
+                <CheckCircle2 className="w-3.5 h-3.5" /><span>Atender</span>
+              </button>
+              <button onClick={() => executar(p.id, () => recusarPedidoPlano(p.id))} disabled={processandoId === p.id} className={btnPerigo}>
+                <XCircle className="w-3.5 h-3.5" /><span>Recusar</span>
+              </button>
+            </div>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
+
 // ---------- Painel ----------
 
 export function FinancePanel() {
-  const [aba, setAba] = useState<'assinaturas' | 'planos' | 'pagamentos'>('assinaturas');
+  const [aba, setAba] = useState<'assinaturas' | 'planos' | 'pedidos' | 'pagamentos'>('assinaturas');
+  const [pedidos, setPedidos] = useState<PlanRequestRow[]>([]);
   const [assinaturas, setAssinaturas] = useState<SubscriptionRow[]>([]);
   const [planos, setPlanos] = useState<Plan[]>([]);
   const [resumo, setResumo] = useState<FinanceSummary | null>(null);
@@ -560,11 +610,12 @@ export function FinancePanel() {
 
   const carregar = useCallback(() => {
     setErro('');
-    Promise.all([listarAssinaturas(), listarPlanos(), buscarResumoFinanceiro()])
-      .then(([a, p, r]) => {
+    Promise.all([listarAssinaturas(), listarPlanos(), buscarResumoFinanceiro(), listarPedidosPlano()])
+      .then(([a, p, r, pd]) => {
         setAssinaturas(a.assinaturas);
         setPlanos(p.planos);
         setResumo(r);
+        setPedidos(pd.pedidos);
         setVersaoPagamentos((v) => v + 1);
       })
       .catch((err) => setErro(err instanceof ApiError ? err.message : 'Não foi possível carregar o financeiro.'))
@@ -602,10 +653,15 @@ export function FinancePanel() {
           <div className="text-2xl font-display text-marfim">{resumo ? resumo.impulsos_ativos : '...'}</div>
           <span className="text-[11px] text-nevoa">no topo agora</span>
         </div>
+        <div className={`border p-4 space-y-1.5 ${resumo && resumo.pedidos_pendentes > 0 ? 'bg-ouro/10 border-ouro/30' : 'bg-grafite border-white/10'}`}>
+          <span className="text-[11px] text-nevoa uppercase tracking-wider">Pedidos de plano</span>
+          <div className={`text-2xl font-display ${resumo && resumo.pedidos_pendentes > 0 ? 'text-ouro' : 'text-marfim'}`}>{resumo ? resumo.pedidos_pendentes : '...'}</div>
+          <span className="text-[11px] text-nevoa">aguardando atendimento</span>
+        </div>
       </div>
 
       <div className="flex gap-1 border-b border-white/10">
-        {([['assinaturas', 'Assinaturas'], ['planos', 'Planos'], ['pagamentos', 'Pagamentos']] as const).map(([k, l]) => (
+        {([['assinaturas', 'Assinaturas'], ['planos', 'Planos'], ['pedidos', `Pedidos${pedidos.length > 0 ? ` (${pedidos.length})` : ''}`], ['pagamentos', 'Pagamentos']] as const).map(([k, l]) => (
           <button
             key={k}
             onClick={() => setAba(k)}
@@ -646,6 +702,7 @@ export function FinancePanel() {
       )}
 
       {aba === 'planos' && <AbaPlanos planos={planos} onAtualizar={carregar} />}
+      {aba === 'pedidos' && <AbaPedidos pedidos={pedidos} onAtualizar={carregar} />}
       {aba === 'pagamentos' && <AbaPagamentos key={versaoPagamentos} />}
     </div>
   );
