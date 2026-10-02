@@ -405,6 +405,85 @@ moderationRouter.post('/selfies/:userId/decide', async (req, res) => {
   res.json({ ok: true });
 });
 
+// Financeiro e' coisa de Admin Master - gerente ja passa pelo
+// moderationRouter.use() do topo, mas essas rotas especificas exigem
+// o papel mais alto por cima disso.
+moderationRouter.get('/subscriptions', exigirPapel('master'), async (_req, res) => {
+  const assinaturas = await db
+    .selectFrom('professional_profiles')
+    .innerJoin('users', 'users.id', 'professional_profiles.user_id')
+    .leftJoin('subscriptions', 'subscriptions.user_id', 'professional_profiles.user_id')
+    .select([
+      'professional_profiles.user_id', 'professional_profiles.stage_name', 'professional_profiles.is_vip',
+      'users.email', 'subscriptions.status', 'subscriptions.vence_em', 'subscriptions.ultimo_pagamento_em',
+    ])
+    .orderBy('professional_profiles.stage_name', 'asc')
+    .execute();
+  res.json({ assinaturas });
+});
+
+const pagamentoSchema = z.object({ dias: z.number().int().min(1).max(365).optional() });
+const DIAS_PADRAO_VIP = 30;
+
+moderationRouter.post('/subscriptions/:userId/pagamento', exigirPapel('master'), async (req, res) => {
+  const parsed = pagamentoSchema.safeParse(req.body);
+  if (!parsed.success) {
+    res.status(400).json({ erro: 'Dados inválidos.' });
+    return;
+  }
+  const userId = Number(req.params.userId);
+  const perfil = await db.selectFrom('professional_profiles').select('stage_name').where('user_id', '=', userId).executeTakeFirst();
+  if (!perfil) {
+    res.status(404).json({ erro: 'Profissional não encontrada.' });
+    return;
+  }
+
+  const dias = parsed.data.dias ?? DIAS_PADRAO_VIP;
+  const hoje = new Date();
+  const venceEm = new Date(hoje);
+  venceEm.setDate(venceEm.getDate() + dias);
+
+  await db.transaction().execute(async (trx) => {
+    await trx
+      .insertInto('subscriptions')
+      .values({
+        user_id: userId,
+        status: 'ativo',
+        vence_em: venceEm,
+        ultimo_pagamento_em: hoje,
+        registrado_por: req.user!.sub,
+      })
+      .onDuplicateKeyUpdate({
+        status: 'ativo',
+        vence_em: venceEm,
+        ultimo_pagamento_em: hoje,
+        registrado_por: req.user!.sub,
+      })
+      .execute();
+    await trx.updateTable('professional_profiles').set({ is_vip: 1 }).where('user_id', '=', userId).execute();
+  });
+
+  await registrarAuditoria(req.user!.sub, `Registrou pagamento VIP (${dias} dias)`, perfil.stage_name);
+  res.json({ ok: true, vence_em: venceEm.toISOString().slice(0, 10) });
+});
+
+moderationRouter.post('/subscriptions/:userId/cancelar', exigirPapel('master'), async (req, res) => {
+  const userId = Number(req.params.userId);
+  const perfil = await db.selectFrom('professional_profiles').select('stage_name').where('user_id', '=', userId).executeTakeFirst();
+  if (!perfil) {
+    res.status(404).json({ erro: 'Profissional não encontrada.' });
+    return;
+  }
+
+  await db.transaction().execute(async (trx) => {
+    await trx.updateTable('subscriptions').set({ status: 'cancelado' }).where('user_id', '=', userId).execute();
+    await trx.updateTable('professional_profiles').set({ is_vip: 0 }).where('user_id', '=', userId).execute();
+  });
+
+  await registrarAuditoria(req.user!.sub, 'Cancelou assinatura VIP', perfil.stage_name);
+  res.json({ ok: true });
+});
+
 moderationRouter.get('/audit-log', async (req, res) => {
   // Gerente ve so as proprias acoes; master ve o log inteiro - mesma
   // distincao que ja estava desenhada no plano estrategico e no painel

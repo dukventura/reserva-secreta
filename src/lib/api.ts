@@ -159,6 +159,8 @@ export interface MyProfile {
   documento_enviado: boolean;
   selfie_status: 'pendente' | 'aprovado' | 'reprovado';
   selfie_enviada: boolean;
+  subscription_status: 'ativo' | 'vencido' | 'cancelado' | null;
+  subscription_vence_em: string | null;
   gallery: { id: number; url: string; status: 'pendente' | 'aprovado' | 'reprovado' }[];
 }
 
@@ -455,6 +457,32 @@ export async function buscarArquivoSelfie(userId: number): Promise<string> {
 
 export function listarLogAuditoria() {
   return request<{ registros: AuditLogEntry[] }>('/api/moderation/audit-log', { auth: true });
+}
+
+export interface SubscriptionRow {
+  user_id: number;
+  stage_name: string;
+  is_vip: number;
+  email: string;
+  status: 'ativo' | 'vencido' | 'cancelado' | null;
+  vence_em: string | null;
+  ultimo_pagamento_em: string | null;
+}
+
+export function listarAssinaturas() {
+  return request<{ assinaturas: SubscriptionRow[] }>('/api/moderation/subscriptions', { auth: true });
+}
+
+export function registrarPagamento(userId: number, dias?: number) {
+  return request<{ ok: true; vence_em: string }>(`/api/moderation/subscriptions/${userId}/pagamento`, {
+    method: 'POST',
+    body: dias ? { dias } : {},
+    auth: true,
+  });
+}
+
+export function cancelarAssinatura(userId: number) {
+  return request<{ ok: true }>(`/api/moderation/subscriptions/${userId}/cancelar`, { method: 'POST', auth: true });
 }
 
 // ---- denuncias publicas ----

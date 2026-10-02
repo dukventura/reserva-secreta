@@ -78,6 +78,19 @@ interface VerificationsTable {
   updated_at: Generated<Date>;
 }
 
+export type SubscriptionStatus = 'ativo' | 'vencido' | 'cancelado';
+
+interface SubscriptionsTable {
+  id: Generated<number>;
+  user_id: number;
+  status: Generated<SubscriptionStatus>;
+  vence_em: Date;
+  ultimo_pagamento_em: Date;
+  registrado_por: number | null;
+  created_at: Generated<Date>;
+  updated_at: Generated<Date>;
+}
+
 interface ReportsTable {
   id: Generated<number>;
   target_profile_id: number;
@@ -120,6 +133,7 @@ export interface Database {
   audit_log: AuditLogTable;
   cities: CitiesTable;
   rate_limits: RateLimitsTable;
+  subscriptions: SubscriptionsTable;
 }
 
 const pool = createPool({

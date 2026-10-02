@@ -2,13 +2,16 @@ import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import {
   LayoutDashboard, Users, Wallet, History, ShieldCheck, ArrowRight,
-  UserPlus, AlertCircle,
+  UserPlus, AlertCircle, CheckCircle2, XCircle, Clock,
 } from 'lucide-react';
 import { DashboardLayout } from '../../layouts/DashboardLayout';
 import { RequireRole } from '../../components/RequireRole';
 import { useModeration } from '../../context/ModerationContext';
 import { mockPlans } from '../../data/mockModeration';
-import { listarEquipe, criarMembroEquipe, ApiError, type StaffMember } from '../../lib/api';
+import {
+  listarEquipe, criarMembroEquipe, listarAssinaturas, registrarPagamento, cancelarAssinatura,
+  ApiError, type StaffMember, type SubscriptionRow,
+} from '../../lib/api';
 
 const NAV = [
   { key: 'painel', label: 'Painel', icon: <LayoutDashboard className="w-4 h-4" /> },
@@ -23,6 +26,18 @@ function fmtData(iso: string) {
   return new Date(iso).toLocaleDateString('pt-BR', { day: '2-digit', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' });
 }
 
+function fmtDataCurta(iso: string) {
+  return new Date(iso).toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit', year: 'numeric' });
+}
+
+function diasRestantes(venceEm: string): number {
+  const hoje = new Date();
+  hoje.setHours(0, 0, 0, 0);
+  const vence = new Date(venceEm);
+  vence.setHours(0, 0, 0, 0);
+  return Math.round((vence.getTime() - hoje.getTime()) / 86400000);
+}
+
 function AdminDashboardContent() {
   const [tab, setTab] = useState('painel');
   const { pendingProfiles, reports, pendingMedia, pendingDocuments, pendingSelfies, auditLog, carregando, erro, refresh } = useModeration();
@@ -32,6 +47,10 @@ function AdminDashboardContent() {
   const [mostrarForm, setMostrarForm] = useState(false);
   const [novoMembro, setNovoMembro] = useState({ name: '', email: '', password: '', role: 'gerente' as 'gerente' | 'master' });
   const [criando, setCriando] = useState(false);
+  const [assinaturas, setAssinaturas] = useState<SubscriptionRow[]>([]);
+  const [carregandoAssinaturas, setCarregandoAssinaturas] = useState(true);
+  const [erroAssinaturas, setErroAssinaturas] = useState('');
+  const [processandoId, setProcessandoId] = useState<number | null>(null);
 
   useEffect(() => {
     refresh();
@@ -47,6 +66,43 @@ function AdminDashboardContent() {
   };
 
   useEffect(carregarEquipe, []);
+
+  const carregarAssinaturas = () => {
+    setCarregandoAssinaturas(true);
+    setErroAssinaturas('');
+    listarAssinaturas()
+      .then(({ assinaturas }) => setAssinaturas(assinaturas))
+      .catch((err) => setErroAssinaturas(err instanceof ApiError ? err.message : 'Não foi possível carregar as assinaturas.'))
+      .finally(() => setCarregandoAssinaturas(false));
+  };
+
+  useEffect(carregarAssinaturas, []);
+
+  const handleRegistrarPagamento = async (userId: number) => {
+    setProcessandoId(userId);
+    setErroAssinaturas('');
+    try {
+      await registrarPagamento(userId);
+      carregarAssinaturas();
+    } catch (err) {
+      setErroAssinaturas(err instanceof ApiError ? err.message : 'Não foi possível registrar o pagamento.');
+    } finally {
+      setProcessandoId(null);
+    }
+  };
+
+  const handleCancelarAssinatura = async (userId: number) => {
+    setProcessandoId(userId);
+    setErroAssinaturas('');
+    try {
+      await cancelarAssinatura(userId);
+      carregarAssinaturas();
+    } catch (err) {
+      setErroAssinaturas(err instanceof ApiError ? err.message : 'Não foi possível cancelar a assinatura.');
+    } finally {
+      setProcessandoId(null);
+    }
+  };
 
   const criarMembro = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -65,6 +121,8 @@ function AdminDashboardContent() {
   };
 
   const receitaEstimada = mockPlans.find((p) => p.id === 'plano-vip');
+  const vipAtivos = assinaturas.filter((a) => a.is_vip === 1).length;
+  const vipVencendoEm7Dias = assinaturas.filter((a) => a.status === 'ativo' && a.vence_em && diasRestantes(a.vence_em) <= 7 && diasRestantes(a.vence_em) >= 0).length;
 
   return (
     <DashboardLayout title="Painel do Admin Master" navItems={NAV} activeKey={tab} onSelect={setTab} manualHref="/manual/administrativo">
@@ -207,26 +265,93 @@ function AdminDashboardContent() {
       )}
 
       {tab === 'financeiro' && (
-        <div className="max-w-3xl space-y-6">
+        <div className="max-w-4xl space-y-6">
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
             <div className="bg-grafite border border-white/10 p-4 space-y-1.5">
-              <span className="text-[11px] text-nevoa uppercase tracking-wider">Assinantes VIP</span>
-              <div className="text-2xl font-display text-ouro">18</div>
-              <span className="text-[11px] text-nevoa">de {pendingProfiles.length} anúncios na fila</span>
+              <span className="text-[11px] text-nevoa uppercase tracking-wider">Assinantes VIP ativos</span>
+              <div className="text-2xl font-display text-ouro">{carregandoAssinaturas ? '...' : vipAtivos}</div>
+              <span className="text-[11px] text-nevoa">de {assinaturas.length} profissionais cadastradas</span>
             </div>
             <div className="bg-grafite border border-white/10 p-4 space-y-1.5">
               <span className="text-[11px] text-nevoa uppercase tracking-wider">Receita mensal estimada</span>
-              <div className="text-2xl font-display text-ouro">R$ 1.602</div>
-              <span className="text-[11px] text-nevoa">18 × {receitaEstimada?.price}</span>
+              <div className="text-2xl font-display text-ouro">{receitaEstimada ? `R$ ${(vipAtivos * Number(receitaEstimada.price.replace(/\D/g, ''))).toLocaleString('pt-BR')}` : '—'}</div>
+              <span className="text-[11px] text-nevoa">{vipAtivos} × {receitaEstimada?.price}</span>
             </div>
-            <div className="bg-grafite border border-white/10 p-4 space-y-1.5">
-              <span className="text-[11px] text-nevoa uppercase tracking-wider">Custo de infraestrutura</span>
-              <div className="text-2xl font-display text-marfim">R$ 180</div>
-              <span className="text-[11px] text-nevoa">VPS + domínio + backup</span>
+            <div className={`border p-4 space-y-1.5 ${vipVencendoEm7Dias > 0 ? 'bg-red-500/10 border-red-500/30' : 'bg-grafite border-white/10'}`}>
+              <span className="text-[11px] text-nevoa uppercase tracking-wider">Vencendo em até 7 dias</span>
+              <div className={`text-2xl font-display ${vipVencendoEm7Dias > 0 ? 'text-red-300' : 'text-marfim'}`}>{carregandoAssinaturas ? '...' : vipVencendoEm7Dias}</div>
+              <span className="text-[11px] text-nevoa">precisa cobrar logo</span>
             </div>
           </div>
+
+          <p className="text-xs text-nevoa">Pagamento é conciliado manualmente via PIX fora do site — registre aqui quando receber, e o selo VIP é removido sozinho se a data de vencimento passar sem renovação.</p>
+
+          {erroAssinaturas && (
+            <div className="flex items-start space-x-2 bg-red-500/10 border border-red-500/30 p-3 text-xs text-red-300">
+              <AlertCircle className="w-4 h-4 shrink-0 mt-0.5" />
+              <span>{erroAssinaturas}</span>
+            </div>
+          )}
+
+          <div className="border border-white/10 divide-y divide-white/10">
+            {!carregandoAssinaturas && assinaturas.length === 0 && (
+              <p className="text-sm text-nevoa p-4">Nenhuma profissional cadastrada ainda.</p>
+            )}
+            {assinaturas.map((a) => {
+              const dias = a.vence_em ? diasRestantes(a.vence_em) : null;
+              const vencendo = dias !== null && dias <= 7 && dias >= 0 && a.status === 'ativo';
+              const vencido = a.status === 'vencido' || (dias !== null && dias < 0 && a.status === 'ativo');
+              return (
+                <div key={a.user_id} className="flex flex-col sm:flex-row sm:items-center gap-3 p-3.5">
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-center gap-2">
+                      <span className="text-sm font-semibold text-marfim">{a.stage_name}</span>
+                      {a.is_vip === 1 ? (
+                        <span className="text-[10px] px-2 py-0.5 rounded-campo bg-ouro/15 border border-ouro/30 text-ouro font-bold uppercase">VIP</span>
+                      ) : (
+                        <span className="text-[10px] px-2 py-0.5 rounded-campo bg-white/5 border border-white/10 text-nevoa uppercase">Sem VIP</span>
+                      )}
+                    </div>
+                    <div className="text-xs text-nevoa">{a.email}</div>
+                    <div className="text-[11px] mt-0.5 flex items-center gap-1.5">
+                      {!a.vence_em && <span className="text-nevoa">Nunca pagou</span>}
+                      {a.vence_em && vencido && (
+                        <span className="text-red-400 font-semibold flex items-center gap-1"><XCircle className="w-3 h-3" />Vencido em {fmtDataCurta(a.vence_em)}</span>
+                      )}
+                      {a.vence_em && !vencido && vencendo && (
+                        <span className="text-amber-400 font-semibold flex items-center gap-1"><Clock className="w-3 h-3" />Vence em {dias} dia(s) — {fmtDataCurta(a.vence_em)}</span>
+                      )}
+                      {a.vence_em && !vencido && !vencendo && a.status === 'ativo' && (
+                        <span className="text-verificado-texto flex items-center gap-1"><CheckCircle2 className="w-3 h-3" />Em dia até {fmtDataCurta(a.vence_em)}</span>
+                      )}
+                      {a.status === 'cancelado' && <span className="text-nevoa">Cancelado</span>}
+                    </div>
+                  </div>
+                  <div className="flex gap-2 shrink-0">
+                    <button
+                      onClick={() => handleRegistrarPagamento(a.user_id)}
+                      disabled={processandoId === a.user_id}
+                      className="flex items-center space-x-1.5 px-3 py-1.5 rounded-campo bg-verificado hover:opacity-90 text-marfim text-xs font-bold transition-opacity disabled:opacity-60"
+                    >
+                      <CheckCircle2 className="w-3.5 h-3.5" /><span>Registrar pagamento</span>
+                    </button>
+                    {a.is_vip === 1 && (
+                      <button
+                        onClick={() => handleCancelarAssinatura(a.user_id)}
+                        disabled={processandoId === a.user_id}
+                        className="flex items-center space-x-1.5 px-3 py-1.5 rounded-campo bg-white/5 border border-white/15 hover:border-red-400/40 text-nevoa hover:text-red-300 text-xs font-bold transition-colors disabled:opacity-60"
+                      >
+                        <XCircle className="w-3.5 h-3.5" /><span>Cancelar VIP</span>
+                      </button>
+                    )}
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+
           <div>
-            <h3 className="text-sm font-semibold text-marfim mb-2">Planos ativos</h3>
+            <h3 className="text-sm font-semibold text-marfim mb-2">Planos de referência</h3>
             <div className="border border-white/10 divide-y divide-white/10">
               {mockPlans.map((p) => (
                 <div key={p.id} className="flex items-center justify-between p-3.5 text-sm">
@@ -236,7 +361,6 @@ function AdminDashboardContent() {
               ))}
             </div>
           </div>
-          <p className="text-xs text-nevoa">Pagamentos são conciliados manualmente via PIX nesta fase — sem gateway automatizado, como descrito no plano estratégico.</p>
         </div>
       )}
 

@@ -88,11 +88,13 @@ profilesRouter.get('/me', autenticar, exigirPapel('profissional'), async (req, r
   const perfil = await db
     .selectFrom('professional_profiles')
     .leftJoin('verifications', 'verifications.user_id', 'professional_profiles.user_id')
+    .leftJoin('subscriptions', 'subscriptions.user_id', 'professional_profiles.user_id')
     .selectAll('professional_profiles')
     .select([
       'verifications.email_confirmado', 'verifications.telefone_confirmado',
       'verifications.documento_status', 'verifications.documento_url',
       'verifications.selfie_status', 'verifications.selfie_url',
+      'subscriptions.status as subscription_status', 'subscriptions.vence_em as subscription_vence_em',
     ])
     .where('professional_profiles.user_id', '=', req.user!.sub)
     .executeTakeFirst();

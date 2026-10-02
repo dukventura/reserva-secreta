@@ -206,6 +206,12 @@ function ProfessionalDashboardContent() {
   const verificacoes = [perfil.email_confirmado === 1, perfil.telefone_confirmado === 1, perfil.documento_status === 'aprovado', perfil.selfie_status === 'aprovado'];
   const percentualVerificado = Math.round((verificacoes.filter(Boolean).length / verificacoes.length) * 100);
 
+  const diasParaVencerVip = perfil.subscription_vence_em
+    ? Math.round((new Date(perfil.subscription_vence_em).setHours(0, 0, 0, 0) - new Date().setHours(0, 0, 0, 0)) / 86400000)
+    : null;
+  const vipVencido = perfil.is_vip === 0 && perfil.subscription_status === 'vencido';
+  const vipVencendoLogo = perfil.is_vip === 1 && diasParaVencerVip !== null && diasParaVencerVip <= 7;
+
   return (
     <DashboardLayout title="Painel da Profissional" navItems={NAV} activeKey={tab} onSelect={setTab} manualHref="/manual/profissional">
 
@@ -234,6 +240,28 @@ function ProfessionalDashboardContent() {
               </div>
             ))}
           </div>
+
+          {vipVencido && (
+            <div className="flex items-start space-x-2.5 bg-red-500/10 border border-red-500/30 p-4">
+              <AlertCircle className="w-5 h-5 text-red-400 shrink-0" />
+              <div>
+                <h3 className="text-sm font-semibold text-marfim">Seu VIP venceu</h3>
+                <p className="text-xs text-nevoa mt-0.5">O selo e os benefícios VIP foram removidos por falta de pagamento. Fale com a nossa equipe pra renovar.</p>
+              </div>
+            </div>
+          )}
+
+          {vipVencendoLogo && (
+            <div className="flex items-start space-x-2.5 bg-amber-500/10 border border-amber-500/30 p-4">
+              <AlertCircle className="w-5 h-5 text-amber-400 shrink-0" />
+              <div>
+                <h3 className="text-sm font-semibold text-marfim">
+                  {diasParaVencerVip !== null && diasParaVencerVip <= 0 ? 'Seu VIP vence hoje' : `Seu VIP vence em ${diasParaVencerVip} dia(s)`}
+                </h3>
+                <p className="text-xs text-nevoa mt-0.5">Renove o pagamento com a nossa equipe pra não perder o selo e a prioridade na listagem.</p>
+              </div>
+            </div>
+          )}
 
           {podeEnviar && (
             <div className="bg-ouro/10 border border-ouro/30 p-5 space-y-3">
