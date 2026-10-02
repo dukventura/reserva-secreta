@@ -49,6 +49,8 @@ interface ProfessionalProfilesTable {
   whatsapp: string;
   status: Generated<ProfileStatus>;
   is_vip: Generated<number>; // MySQL BOOLEAN = TINYINT(1)
+  prioridade: Generated<number>;
+  boost_ate: Date | null;
   cover_image: string | null;
   submitted_at: Date | null;
   created_at: Generated<Date>;
@@ -80,9 +82,35 @@ interface VerificationsTable {
 
 export type SubscriptionStatus = 'ativo' | 'vencido' | 'cancelado';
 
+interface PlansTable {
+  id: Generated<number>;
+  nome: string;
+  preco_centavos: number;
+  duracao_dias: number;
+  max_fotos: number;
+  prioridade: Generated<number>;
+  selo_vip: Generated<number>;
+  ativo: Generated<number>;
+  created_at: Generated<Date>;
+  updated_at: Generated<Date>;
+}
+
+interface PaymentsTable {
+  id: Generated<number>;
+  user_id: number;
+  tipo: 'plano' | 'impulso';
+  plan_id: number | null;
+  valor_centavos: number;
+  dias: number;
+  observacao: string | null;
+  registrado_por: number | null;
+  created_at: Generated<Date>;
+}
+
 interface SubscriptionsTable {
   id: Generated<number>;
   user_id: number;
+  plan_id: number | null;
   status: Generated<SubscriptionStatus>;
   vence_em: Date;
   ultimo_pagamento_em: Date;
@@ -134,6 +162,8 @@ export interface Database {
   cities: CitiesTable;
   rate_limits: RateLimitsTable;
   subscriptions: SubscriptionsTable;
+  plans: PlansTable;
+  payments: PaymentsTable;
 }
 
 const pool = createPool({

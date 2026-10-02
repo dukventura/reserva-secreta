@@ -18,8 +18,6 @@ const TIPOS_PERMITIDOS: Record<string, string> = {
   'image/webp': '.webp',
 };
 
-export const MAX_FOTOS_POR_PERFIL = 10;
-
 export const uploadFoto = multer({
   storage: multer.diskStorage({
     destination: (_req, _file, cb) => cb(null, UPLOAD_DIR),

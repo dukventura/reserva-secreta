@@ -5,10 +5,7 @@ import {
 } from 'lucide-react';
 import { DashboardLayout } from '../../layouts/DashboardLayout';
 import { RequireRole } from '../../components/RequireRole';
-import { mockPlans } from '../../data/mockModeration';
-import { buscarMeuPerfil, atualizarMeuPerfil, enviarPerfilParaAprovacao, enviarFoto, removerFoto, enviarDocumento, enviarSelfie, ApiError, type MyProfile, type AtualizacaoPerfil } from '../../lib/api';
-
-const MAX_FOTOS = 10;
+import { buscarMeuPerfil, listarPlanosPublicos, atualizarMeuPerfil, enviarPerfilParaAprovacao, enviarFoto, removerFoto, enviarDocumento, enviarSelfie, ApiError, type MyProfile, type AtualizacaoPerfil, type Plan } from '../../lib/api';
 
 const NAV = [
   { key: 'painel', label: 'Painel', icon: <LayoutDashboard className="w-4 h-4" /> },
@@ -44,9 +41,14 @@ function ProfessionalDashboardContent() {
   const [removendoFotoId, setRemovendoFotoId] = useState<number | null>(null);
   const [enviandoDocumento, setEnviandoDocumento] = useState(false);
   const [enviandoSelfie, setEnviandoSelfie] = useState(false);
+  const [planos, setPlanos] = useState<Plan[]>([]);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const documentInputRef = useRef<HTMLInputElement>(null);
   const selfieInputRef = useRef<HTMLInputElement>(null);
+
+  useEffect(() => {
+    listarPlanosPublicos().then(({ planos }) => setPlanos(planos)).catch(() => {});
+  }, []);
 
   const carregar = () => {
     setCarregando(true);
@@ -209,8 +211,12 @@ function ProfessionalDashboardContent() {
   const diasParaVencerVip = perfil.subscription_vence_em
     ? Math.round((new Date(perfil.subscription_vence_em).setHours(0, 0, 0, 0) - new Date().setHours(0, 0, 0, 0)) / 86400000)
     : null;
-  const vipVencido = perfil.is_vip === 0 && perfil.subscription_status === 'vencido';
-  const vipVencendoLogo = perfil.is_vip === 1 && diasParaVencerVip !== null && diasParaVencerVip <= 7;
+  const nomePlano = perfil.plano_nome ?? 'plano';
+  const planoAtivo = perfil.subscription_status === 'ativo';
+  const vipVencido = perfil.subscription_status === 'vencido';
+  const vipVencendoLogo = planoAtivo && diasParaVencerVip !== null && diasParaVencerVip <= 7;
+  const fotosEmUso = perfil.gallery.filter((f) => f.status !== 'reprovado').length;
+  const impulsoAte = perfil.boost_ate && new Date(perfil.boost_ate) > new Date() ? new Date(perfil.boost_ate) : null;
 
   return (
     <DashboardLayout title="Painel da Profissional" navItems={NAV} activeKey={tab} onSelect={setTab} manualHref="/manual/profissional">
@@ -245,8 +251,8 @@ function ProfessionalDashboardContent() {
             <div className="flex items-start space-x-2.5 bg-red-500/10 border border-red-500/30 p-4">
               <AlertCircle className="w-5 h-5 text-red-400 shrink-0" />
               <div>
-                <h3 className="text-sm font-semibold text-marfim">Seu VIP venceu</h3>
-                <p className="text-xs text-nevoa mt-0.5">O selo e os benefícios VIP foram removidos por falta de pagamento. Fale com a nossa equipe pra renovar.</p>
+                <h3 className="text-sm font-semibold text-marfim">Seu plano {nomePlano} venceu</h3>
+                <p className="text-xs text-nevoa mt-0.5">Seu anúncio voltou pro plano gratuito (selo, prioridade e fotos extras foram removidos). Fale com a nossa equipe pra renovar.</p>
               </div>
             </div>
           )}
@@ -256,9 +262,9 @@ function ProfessionalDashboardContent() {
               <AlertCircle className="w-5 h-5 text-amber-400 shrink-0" />
               <div>
                 <h3 className="text-sm font-semibold text-marfim">
-                  {diasParaVencerVip !== null && diasParaVencerVip <= 0 ? 'Seu VIP vence hoje' : `Seu VIP vence em ${diasParaVencerVip} dia(s)`}
+                  {diasParaVencerVip !== null && diasParaVencerVip <= 0 ? `Seu plano ${nomePlano} vence hoje` : `Seu plano ${nomePlano} vence em ${diasParaVencerVip} dia(s)`}
                 </h3>
-                <p className="text-xs text-nevoa mt-0.5">Renove o pagamento com a nossa equipe pra não perder o selo e a prioridade na listagem.</p>
+                <p className="text-xs text-nevoa mt-0.5">Renove o pagamento com a nossa equipe pra não perder os benefícios do plano.</p>
               </div>
             </div>
           )}
@@ -433,7 +439,7 @@ function ProfessionalDashboardContent() {
                 </button>
               </div>
             ))}
-            {perfil.gallery.length < MAX_FOTOS && (
+            {fotosEmUso < perfil.max_fotos && (
               <button
                 type="button"
                 onClick={() => fileInputRef.current?.click()}
@@ -453,7 +459,7 @@ function ProfessionalDashboardContent() {
             className="hidden"
           />
           <p className="text-xs text-nevoa">
-            Até {MAX_FOTOS} fotos (JPG, PNG ou WEBP, máx. 5MB cada). Fotos novas entram em análise antes de aparecer no seu anúncio público.
+            {fotosEmUso} de {perfil.max_fotos} fotos usadas{planoAtivo ? ` no plano ${nomePlano}` : ' no plano gratuito'} (JPG, PNG ou WEBP, máx. 5MB cada). Fotos novas entram em análise antes de aparecer no seu anúncio público.
           </p>
           {perfil.gallery.length === 0 && (
             <p className="text-xs text-nevoa">Nenhuma foto enviada ainda.</p>
@@ -563,20 +569,42 @@ function ProfessionalDashboardContent() {
 
       {tab === 'plano' && (
         <div className="space-y-4 max-w-3xl">
-          <p className="text-xs text-nevoa">Assinatura de planos ainda não é automatizada — pagamentos são combinados diretamente com nossa equipe.</p>
-          <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-            {mockPlans.map((plano) => (
-              <div key={plano.id} className="p-5 space-y-3 border border-white/10 bg-grafite">
-                <div className="text-sm font-semibold text-marfim">{plano.name}</div>
-                <div className="text-2xl font-display text-ouro">{plano.price}<span className="text-xs text-nevoa ml-1">{plano.period}</span></div>
-                <ul className="space-y-1.5 text-xs text-nevoa">
-                  {plano.features.map((f) => (
-                    <li key={f} className="flex items-start space-x-1.5"><Check className="w-3.5 h-3.5 text-verificado-texto shrink-0 mt-0.5" /><span>{f}</span></li>
-                  ))}
-                </ul>
-              </div>
-            ))}
+          <div className="bg-grafite border border-white/10 p-4 space-y-1">
+            <span className="text-[11px] text-nevoa uppercase tracking-wider">Seu plano atual</span>
+            <div className="text-lg font-display text-marfim">{planoAtivo ? perfil.plano_nome : 'Gratuito'}</div>
+            <div className="text-xs text-nevoa">
+              {planoAtivo && perfil.subscription_vence_em
+                ? `Válido até ${new Date(perfil.subscription_vence_em).toLocaleDateString('pt-BR')} · até ${perfil.max_fotos} fotos`
+                : `Até ${perfil.max_fotos} fotos, sem prioridade na listagem`}
+            </div>
+            {impulsoAte && (
+              <div className="text-xs text-amber-300 font-semibold">Impulso ativo até {impulsoAte.toLocaleString('pt-BR', { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' })} — seu perfil está no topo da cidade.</div>
+            )}
           </div>
+          <p className="text-xs text-nevoa">O pagamento é combinado diretamente com a nossa equipe via PIX. Assim que confirmado, o plano é ativado no seu anúncio.</p>
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+            {planos.map((plano) => {
+              const atual = planoAtivo && perfil.plano_nome === plano.nome;
+              return (
+                <div key={plano.id} className={`p-5 space-y-3 border ${atual ? 'border-ouro bg-ouro/5' : 'border-white/10 bg-grafite'}`}>
+                  <div className="flex items-center justify-between">
+                    <div className="text-sm font-semibold text-marfim">{plano.nome}</div>
+                    {atual && <span className="text-[10px] px-2 py-0.5 rounded-campo bg-ouro text-black font-bold uppercase">Atual</span>}
+                  </div>
+                  <div className="text-2xl font-display text-ouro">
+                    {(plano.preco_centavos / 100).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}
+                    <span className="text-xs text-nevoa ml-1">/{plano.duracao_dias} dias</span>
+                  </div>
+                  <ul className="space-y-1.5 text-xs text-nevoa">
+                    <li className="flex items-start space-x-1.5"><Check className="w-3.5 h-3.5 text-verificado-texto shrink-0 mt-0.5" /><span>Até {plano.max_fotos} fotos</span></li>
+                    {plano.prioridade > 0 && <li className="flex items-start space-x-1.5"><Check className="w-3.5 h-3.5 text-verificado-texto shrink-0 mt-0.5" /><span>Prioridade na listagem da cidade</span></li>}
+                    {plano.selo_vip === 1 && <li className="flex items-start space-x-1.5"><Check className="w-3.5 h-3.5 text-verificado-texto shrink-0 mt-0.5" /><span>Selo VIP no anúncio</span></li>}
+                  </ul>
+                </div>
+              );
+            })}
+          </div>
+          <p className="text-xs text-nevoa">Também existe o <strong className="text-marfim">impulso avulso</strong>: seu perfil vai pro topo da cidade por alguns dias, independente do plano. Consulte valores com a equipe.</p>
         </div>
       )}
     </DashboardLayout>

@@ -1,0 +1,295 @@
+import { Router } from 'express';
+import { z } from 'zod';
+import { sql } from 'kysely';
+import { db } from '../lib/db';
+import { autenticar, exigirPapel } from '../middleware/auth';
+import { registrarAuditoria } from '../lib/audit';
+
+// Catalogo publico (so planos ativos) - a profissional ve no proprio
+// painel o que cada plano oferece.
+export const plansPublicRouter = Router();
+
+plansPublicRouter.get('/', async (_req, res) => {
+  const planos = await db
+    .selectFrom('plans')
+    .select(['id', 'nome', 'preco_centavos', 'duracao_dias', 'max_fotos', 'prioridade', 'selo_vip'])
+    .where('ativo', '=', 1)
+    .orderBy('preco_centavos', 'asc')
+    .execute();
+  res.json({ planos });
+});
+
+// Pagamento ainda e' conciliado fora do site (PIX manual) - estas rotas
+// registram o que ja foi recebido. Tudo restrito ao Admin Master.
+export const financeRouter = Router();
+financeRouter.use(autenticar, exigirPapel('master'));
+
+const planoSchema = z.object({
+  nome: z.string().trim().min(2).max(60),
+  preco_centavos: z.number().int().min(0),
+  duracao_dias: z.number().int().min(1).max(365),
+  max_fotos: z.number().int().min(1).max(50),
+  prioridade: z.number().int().min(0).max(100),
+  selo_vip: z.boolean(),
+});
+
+financeRouter.get('/plans', async (_req, res) => {
+  const planos = await db.selectFrom('plans').selectAll().orderBy('preco_centavos', 'asc').execute();
+  res.json({ planos });
+});
+
+financeRouter.post('/plans', async (req, res) => {
+  const parsed = planoSchema.safeParse(req.body);
+  if (!parsed.success) {
+    res.status(400).json({ erro: 'Dados do plano inválidos.', detalhes: parsed.error.flatten() });
+    return;
+  }
+  const d = parsed.data;
+  await db.insertInto('plans').values({ ...d, selo_vip: d.selo_vip ? 1 : 0 }).execute();
+  await registrarAuditoria(req.user!.sub, 'Criou plano', d.nome);
+  res.status(201).json({ ok: true });
+});
+
+financeRouter.patch('/plans/:id', async (req, res) => {
+  const parsed = planoSchema.extend({ ativo: z.boolean() }).partial().safeParse(req.body);
+  if (!parsed.success) {
+    res.status(400).json({ erro: 'Dados do plano inválidos.', detalhes: parsed.error.flatten() });
+    return;
+  }
+  const id = Number(req.params.id);
+  const plano = await db.selectFrom('plans').select('nome').where('id', '=', id).executeTakeFirst();
+  if (!plano) {
+    res.status(404).json({ erro: 'Plano não encontrado.' });
+    return;
+  }
+  const { selo_vip, ativo, ...resto } = parsed.data;
+  // Mudar o plano nao altera quem ja assinou ate a proxima ativacao -
+  // o selo/prioridade ficam gravados no perfil no momento do pagamento.
+  await db
+    .updateTable('plans')
+    .set({
+      ...resto,
+      ...(selo_vip !== undefined && { selo_vip: selo_vip ? 1 : 0 }),
+      ...(ativo !== undefined && { ativo: ativo ? 1 : 0 }),
+    })
+    .where('id', '=', id)
+    .execute();
+  await registrarAuditoria(
+    req.user!.sub,
+    ativo === false ? 'Desativou plano' : ativo === true ? 'Reativou plano' : 'Editou plano',
+    resto.nome ?? plano.nome,
+  );
+  res.json({ ok: true });
+});
+
+financeRouter.get('/subscriptions', async (_req, res) => {
+  const assinaturas = await db
+    .selectFrom('professional_profiles')
+    .innerJoin('users', 'users.id', 'professional_profiles.user_id')
+    .leftJoin('subscriptions', 'subscriptions.user_id', 'professional_profiles.user_id')
+    .leftJoin('plans', 'plans.id', 'subscriptions.plan_id')
+    .select([
+      'professional_profiles.user_id', 'professional_profiles.stage_name', 'professional_profiles.is_vip',
+      'professional_profiles.boost_ate', 'users.email',
+      'subscriptions.status', 'subscriptions.vence_em', 'subscriptions.ultimo_pagamento_em', 'subscriptions.plan_id',
+      'plans.nome as plano_nome',
+    ])
+    .orderBy('professional_profiles.stage_name', 'asc')
+    .execute();
+  res.json({ assinaturas });
+});
+
+function somarDias(base: Date, dias: number): Date {
+  const d = new Date(base);
+  d.setDate(d.getDate() + dias);
+  return d;
+}
+
+function inicioDoDia(d: Date): Date {
+  const c = new Date(d);
+  c.setHours(0, 0, 0, 0);
+  return c;
+}
+
+const ativarSchema = z.object({
+  plan_id: z.number().int(),
+  dias: z.number().int().min(1).max(365).optional(),
+  valor_centavos: z.number().int().min(0).optional(),
+  observacao: z.string().trim().max(500).optional(),
+});
+
+// Serve pra ativar, renovar, trocar de plano e reativar. Renovacao do
+// mesmo plano ainda em dia soma ao vencimento atual (ninguem perde dia
+// pago); qualquer outro caso comeca a contar de hoje.
+financeRouter.post('/subscriptions/:userId/ativar', async (req, res) => {
+  const parsed = ativarSchema.safeParse(req.body);
+  if (!parsed.success) {
+    res.status(400).json({ erro: 'Dados inválidos.' });
+    return;
+  }
+  const userId = Number(req.params.userId);
+  const perfil = await db.selectFrom('professional_profiles').select('stage_name').where('user_id', '=', userId).executeTakeFirst();
+  if (!perfil) {
+    res.status(404).json({ erro: 'Profissional não encontrada.' });
+    return;
+  }
+  const plano = await db.selectFrom('plans').selectAll().where('id', '=', parsed.data.plan_id).executeTakeFirst();
+  if (!plano || !plano.ativo) {
+    res.status(400).json({ erro: 'Plano inexistente ou desativado.' });
+    return;
+  }
+
+  const dias = parsed.data.dias ?? plano.duracao_dias;
+  const valor = parsed.data.valor_centavos ?? plano.preco_centavos;
+  const hoje = inicioDoDia(new Date());
+
+  const atual = await db.selectFrom('subscriptions').selectAll().where('user_id', '=', userId).executeTakeFirst();
+  const renovacao = atual?.status === 'ativo' && atual.plan_id === plano.id && inicioDoDia(atual.vence_em) >= hoje;
+  const base = renovacao ? inicioDoDia(atual!.vence_em) : hoje;
+  const venceEm = somarDias(base, dias);
+
+  await db.transaction().execute(async (trx) => {
+    await trx
+      .insertInto('subscriptions')
+      .values({ user_id: userId, plan_id: plano.id, status: 'ativo', vence_em: venceEm, ultimo_pagamento_em: hoje, registrado_por: req.user!.sub })
+      .onDuplicateKeyUpdate({ plan_id: plano.id, status: 'ativo', vence_em: venceEm, ultimo_pagamento_em: hoje, registrado_por: req.user!.sub })
+      .execute();
+    await trx
+      .updateTable('professional_profiles')
+      .set({ is_vip: plano.selo_vip, prioridade: plano.prioridade })
+      .where('user_id', '=', userId)
+      .execute();
+    await trx
+      .insertInto('payments')
+      .values({
+        user_id: userId, tipo: 'plano', plan_id: plano.id, valor_centavos: valor, dias,
+        observacao: parsed.data.observacao || null, registrado_por: req.user!.sub,
+      })
+      .execute();
+  });
+
+  const acao = renovacao ? 'Renovou' : atual ? 'Ativou/reativou' : 'Ativou';
+  await registrarAuditoria(req.user!.sub, `${acao} plano ${plano.nome} (${dias} dias)`, perfil.stage_name);
+  res.json({ ok: true, vence_em: venceEm.toISOString().slice(0, 10), renovacao });
+});
+
+financeRouter.post('/subscriptions/:userId/cancelar', async (req, res) => {
+  const userId = Number(req.params.userId);
+  const perfil = await db.selectFrom('professional_profiles').select('stage_name').where('user_id', '=', userId).executeTakeFirst();
+  if (!perfil) {
+    res.status(404).json({ erro: 'Profissional não encontrada.' });
+    return;
+  }
+
+  await db.transaction().execute(async (trx) => {
+    await trx.updateTable('subscriptions').set({ status: 'cancelado' }).where('user_id', '=', userId).execute();
+    await trx.updateTable('professional_profiles').set({ is_vip: 0, prioridade: 0 }).where('user_id', '=', userId).execute();
+  });
+
+  await registrarAuditoria(req.user!.sub, 'Cancelou plano', perfil.stage_name);
+  res.json({ ok: true });
+});
+
+const impulsoSchema = z.object({
+  dias: z.number().int().min(1).max(90),
+  valor_centavos: z.number().int().min(0),
+  observacao: z.string().trim().max(500).optional(),
+});
+
+// Impulso e' independente do plano: soma dias a partir do fim do
+// impulso atual (se ainda vigente) ou de agora.
+financeRouter.post('/subscriptions/:userId/impulso', async (req, res) => {
+  const parsed = impulsoSchema.safeParse(req.body);
+  if (!parsed.success) {
+    res.status(400).json({ erro: 'Dados inválidos.' });
+    return;
+  }
+  const userId = Number(req.params.userId);
+  const perfil = await db.selectFrom('professional_profiles').select(['stage_name', 'boost_ate']).where('user_id', '=', userId).executeTakeFirst();
+  if (!perfil) {
+    res.status(404).json({ erro: 'Profissional não encontrada.' });
+    return;
+  }
+
+  const agora = new Date();
+  const base = perfil.boost_ate && perfil.boost_ate > agora ? perfil.boost_ate : agora;
+  const boostAte = somarDias(base, parsed.data.dias);
+
+  await db.transaction().execute(async (trx) => {
+    await trx.updateTable('professional_profiles').set({ boost_ate: boostAte }).where('user_id', '=', userId).execute();
+    await trx
+      .insertInto('payments')
+      .values({
+        user_id: userId, tipo: 'impulso', plan_id: null, valor_centavos: parsed.data.valor_centavos, dias: parsed.data.dias,
+        observacao: parsed.data.observacao || null, registrado_por: req.user!.sub,
+      })
+      .execute();
+  });
+
+  await registrarAuditoria(req.user!.sub, `Ativou impulso (${parsed.data.dias} dias)`, perfil.stage_name);
+  res.json({ ok: true, boost_ate: boostAte.toISOString() });
+});
+
+financeRouter.post('/subscriptions/:userId/impulso/cancelar', async (req, res) => {
+  const userId = Number(req.params.userId);
+  const perfil = await db.selectFrom('professional_profiles').select('stage_name').where('user_id', '=', userId).executeTakeFirst();
+  if (!perfil) {
+    res.status(404).json({ erro: 'Profissional não encontrada.' });
+    return;
+  }
+  await db.updateTable('professional_profiles').set({ boost_ate: null }).where('user_id', '=', userId).execute();
+  await registrarAuditoria(req.user!.sub, 'Encerrou impulso', perfil.stage_name);
+  res.json({ ok: true });
+});
+
+financeRouter.get('/payments', async (req, res) => {
+  let query = db
+    .selectFrom('payments')
+    .innerJoin('users as u', 'u.id', 'payments.user_id')
+    .leftJoin('professional_profiles', 'professional_profiles.user_id', 'payments.user_id')
+    .leftJoin('plans', 'plans.id', 'payments.plan_id')
+    .leftJoin('users as reg', 'reg.id', 'payments.registrado_por')
+    .select([
+      'payments.id', 'payments.user_id', 'payments.tipo', 'payments.valor_centavos', 'payments.dias',
+      'payments.observacao', 'payments.created_at',
+      'professional_profiles.stage_name', 'u.email', 'plans.nome as plano_nome', 'reg.name as registrado_por_nome',
+    ])
+    .orderBy('payments.created_at', 'desc')
+    .limit(300);
+
+  const userId = Number(req.query.userId);
+  if (userId) query = query.where('payments.user_id', '=', userId);
+
+  const pagamentos = await query.execute();
+  res.json({ pagamentos });
+});
+
+financeRouter.get('/summary', async (_req, res) => {
+  const receita = await db
+    .selectFrom('payments')
+    .select(sql<number>`COALESCE(SUM(valor_centavos), 0)`.as('total'))
+    .where(sql<boolean>`YEAR(created_at) = YEAR(CURDATE()) AND MONTH(created_at) = MONTH(CURDATE())`)
+    .executeTakeFirstOrThrow();
+  const ativos = await db
+    .selectFrom('subscriptions')
+    .select(db.fn.countAll<number>().as('c'))
+    .where('status', '=', 'ativo')
+    .executeTakeFirstOrThrow();
+  const vencendo = await db
+    .selectFrom('subscriptions')
+    .select(db.fn.countAll<number>().as('c'))
+    .where('status', '=', 'ativo')
+    .where(sql<boolean>`vence_em BETWEEN CURDATE() AND DATE_ADD(CURDATE(), INTERVAL 7 DAY)`)
+    .executeTakeFirstOrThrow();
+  const impulsos = await db
+    .selectFrom('professional_profiles')
+    .select(db.fn.countAll<number>().as('c'))
+    .where(sql<boolean>`boost_ate > NOW()`)
+    .executeTakeFirstOrThrow();
+  res.json({
+    receita_mes_centavos: Number(receita.total),
+    assinantes_ativos: Number(ativos.c),
+    vencendo_7_dias: Number(vencendo.c),
+    impulsos_ativos: Number(impulsos.c),
+  });
+});

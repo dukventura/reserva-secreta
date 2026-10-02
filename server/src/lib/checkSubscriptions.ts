@@ -32,7 +32,7 @@ async function main() {
       `UPDATE subscriptions SET status = 'vencido' WHERE status = 'ativo' AND vence_em < CURDATE()`,
     );
     await conn.query(
-      `UPDATE professional_profiles SET is_vip = 0 WHERE user_id IN (${userIds.map(() => '?').join(',')})`,
+      `UPDATE professional_profiles SET is_vip = 0, prioridade = 0 WHERE user_id IN (${userIds.map(() => '?').join(',')})`,
       userIds,
     );
     console.log(`${userIds.length} assinatura(s) vencida(s) hoje, VIP removido: [${userIds.join(', ')}]`);

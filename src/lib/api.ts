@@ -161,6 +161,9 @@ export interface MyProfile {
   selfie_enviada: boolean;
   subscription_status: 'ativo' | 'vencido' | 'cancelado' | null;
   subscription_vence_em: string | null;
+  plano_nome: string | null;
+  max_fotos: number;
+  boost_ate: string | null;
   gallery: { id: number; url: string; status: 'pendente' | 'aprovado' | 'reprovado' }[];
 }
 
@@ -459,30 +462,110 @@ export function listarLogAuditoria() {
   return request<{ registros: AuditLogEntry[] }>('/api/moderation/audit-log', { auth: true });
 }
 
+export interface Plan {
+  id: number;
+  nome: string;
+  preco_centavos: number;
+  duracao_dias: number;
+  max_fotos: number;
+  prioridade: number;
+  selo_vip: number;
+  ativo?: number;
+}
+
+export type PlanInput = {
+  nome: string;
+  preco_centavos: number;
+  duracao_dias: number;
+  max_fotos: number;
+  prioridade: number;
+  selo_vip: boolean;
+};
+
 export interface SubscriptionRow {
   user_id: number;
   stage_name: string;
   is_vip: number;
+  boost_ate: string | null;
   email: string;
   status: 'ativo' | 'vencido' | 'cancelado' | null;
   vence_em: string | null;
   ultimo_pagamento_em: string | null;
+  plan_id: number | null;
+  plano_nome: string | null;
+}
+
+export interface PaymentRow {
+  id: number;
+  user_id: number;
+  tipo: 'plano' | 'impulso';
+  valor_centavos: number;
+  dias: number;
+  observacao: string | null;
+  created_at: string;
+  stage_name: string | null;
+  email: string;
+  plano_nome: string | null;
+  registrado_por_nome: string | null;
+}
+
+export interface FinanceSummary {
+  receita_mes_centavos: number;
+  assinantes_ativos: number;
+  vencendo_7_dias: number;
+  impulsos_ativos: number;
+}
+
+export function listarPlanosPublicos() {
+  return request<{ planos: Plan[] }>('/api/plans');
+}
+
+export function listarPlanos() {
+  return request<{ planos: Plan[] }>('/api/finance/plans', { auth: true });
+}
+
+export function criarPlano(dados: PlanInput) {
+  return request<{ ok: true }>('/api/finance/plans', { method: 'POST', body: dados, auth: true });
+}
+
+export function editarPlano(id: number, dados: Partial<PlanInput> & { ativo?: boolean }) {
+  return request<{ ok: true }>(`/api/finance/plans/${id}`, { method: 'PATCH', body: dados, auth: true });
 }
 
 export function listarAssinaturas() {
-  return request<{ assinaturas: SubscriptionRow[] }>('/api/moderation/subscriptions', { auth: true });
+  return request<{ assinaturas: SubscriptionRow[] }>('/api/finance/subscriptions', { auth: true });
 }
 
-export function registrarPagamento(userId: number, dias?: number) {
-  return request<{ ok: true; vence_em: string }>(`/api/moderation/subscriptions/${userId}/pagamento`, {
+export function ativarPlano(userId: number, dados: { plan_id: number; dias?: number; valor_centavos?: number; observacao?: string }) {
+  return request<{ ok: true; vence_em: string; renovacao: boolean }>(`/api/finance/subscriptions/${userId}/ativar`, {
     method: 'POST',
-    body: dias ? { dias } : {},
+    body: dados,
     auth: true,
   });
 }
 
 export function cancelarAssinatura(userId: number) {
-  return request<{ ok: true }>(`/api/moderation/subscriptions/${userId}/cancelar`, { method: 'POST', auth: true });
+  return request<{ ok: true }>(`/api/finance/subscriptions/${userId}/cancelar`, { method: 'POST', auth: true });
+}
+
+export function ativarImpulso(userId: number, dados: { dias: number; valor_centavos: number; observacao?: string }) {
+  return request<{ ok: true; boost_ate: string }>(`/api/finance/subscriptions/${userId}/impulso`, {
+    method: 'POST',
+    body: dados,
+    auth: true,
+  });
+}
+
+export function encerrarImpulso(userId: number) {
+  return request<{ ok: true }>(`/api/finance/subscriptions/${userId}/impulso/cancelar`, { method: 'POST', auth: true });
+}
+
+export function listarPagamentos(userId?: number) {
+  return request<{ pagamentos: PaymentRow[] }>(`/api/finance/payments${userId ? `?userId=${userId}` : ''}`, { auth: true });
+}
+
+export function buscarResumoFinanceiro() {
+  return request<FinanceSummary>('/api/finance/summary', { auth: true });
 }
 
 // ---- denuncias publicas ----

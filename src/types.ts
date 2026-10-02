@@ -14,12 +14,3 @@ export interface DemoSession {
   role: UserRole;
   name: string;
 }
-
-export interface PlanOption {
-  id: string;
-  name: string;
-  price: string;
-  period: string;
-  features: string[];
-  highlighted?: boolean;
-}

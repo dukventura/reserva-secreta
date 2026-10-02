@@ -1,9 +1,11 @@
 import { Router } from 'express';
 import { z } from 'zod';
 import multer from 'multer';
+import { sql } from 'kysely';
 import { db } from '../lib/db';
 import { autenticar, exigirPapel } from '../middleware/auth';
-import { uploadFoto, urlPublicaUpload, removerArquivoPelaUrl, MAX_FOTOS_POR_PERFIL } from '../lib/uploads';
+import { uploadFoto, urlPublicaUpload, removerArquivoPelaUrl } from '../lib/uploads';
+import { limiteFotos } from '../lib/plans';
 import { uploadDocumento, removerDocumento } from '../lib/documentUploads';
 import { uploadSelfie, removerSelfie } from '../lib/selfieUploads';
 
@@ -78,7 +80,8 @@ profilesRouter.get('/', async (req, res) => {
     query = query.where('professional_profiles.category', '=', parsed.data);
   }
   const linhas = await query
-    .orderBy('professional_profiles.is_vip', 'desc')
+    .orderBy(sql`COALESCE(professional_profiles.boost_ate > NOW(), 0)`, 'desc')
+    .orderBy('professional_profiles.prioridade', 'desc')
     .orderBy('professional_profiles.created_at', 'desc')
     .execute();
   res.json({ perfis: linhas.map(paraPerfilPublico) });
@@ -89,12 +92,14 @@ profilesRouter.get('/me', autenticar, exigirPapel('profissional'), async (req, r
     .selectFrom('professional_profiles')
     .leftJoin('verifications', 'verifications.user_id', 'professional_profiles.user_id')
     .leftJoin('subscriptions', 'subscriptions.user_id', 'professional_profiles.user_id')
+    .leftJoin('plans', 'plans.id', 'subscriptions.plan_id')
     .selectAll('professional_profiles')
     .select([
       'verifications.email_confirmado', 'verifications.telefone_confirmado',
       'verifications.documento_status', 'verifications.documento_url',
       'verifications.selfie_status', 'verifications.selfie_url',
       'subscriptions.status as subscription_status', 'subscriptions.vence_em as subscription_vence_em',
+      'plans.nome as plano_nome',
     ])
     .where('professional_profiles.user_id', '=', req.user!.sub)
     .executeTakeFirst();
@@ -125,6 +130,7 @@ profilesRouter.get('/me', autenticar, exigirPapel('profissional'), async (req, r
       // comeca em 'pendente' por padrao pra todo mundo".
       documento_enviado: documento_url !== null,
       selfie_enviada: selfie_url !== null,
+      max_fotos: await limiteFotos(req.user!.sub),
     },
   });
 });
@@ -228,10 +234,12 @@ profilesRouter.post('/me/media', autenticar, exigirPapel('profissional'), (req, 
       .selectFrom('media')
       .select(db.fn.countAll<number>().as('count'))
       .where('profile_id', '=', perfil.id)
+      .where('status', '!=', 'reprovado')
       .executeTakeFirstOrThrow();
-    if (Number(count) >= MAX_FOTOS_POR_PERFIL) {
+    const limite = await limiteFotos(req.user!.sub);
+    if (Number(count) >= limite) {
       removerArquivoPelaUrl(req.file.filename);
-      res.status(400).json({ erro: `Limite de ${MAX_FOTOS_POR_PERFIL} fotos por perfil atingido.` });
+      res.status(400).json({ erro: `Seu plano permite até ${limite} fotos. Remova uma foto ou mude de plano pra enviar mais.` });
       return;
     }
 
