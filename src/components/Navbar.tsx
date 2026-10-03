@@ -1,6 +1,6 @@
-import React, { useState } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import { Link, NavLink } from 'react-router-dom';
-import { PlusCircle, ShieldAlert, Menu, X, UserCircle2, LayoutDashboard, UserPlus } from 'lucide-react';
+import { PlusCircle, ShieldAlert, Menu, X, UserCircle2, LayoutDashboard, UserPlus, ChevronDown } from 'lucide-react';
 import { Monograma } from './Logo';
 import { useSession } from '../context/SessionContext';
 
@@ -13,7 +13,19 @@ const PAINEL_POR_PAPEL: Record<string, string> = {
 
 export const Navbar: React.FC = () => {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+  const [cadastroMenuOpen, setCadastroMenuOpen] = useState(false);
+  const cadastroMenuRef = useRef<HTMLDivElement>(null);
   const { session, sair } = useSession();
+
+  useEffect(() => {
+    function handleClickOutside(event: MouseEvent) {
+      if (cadastroMenuRef.current && !cadastroMenuRef.current.contains(event.target as Node)) {
+        setCadastroMenuOpen(false);
+      }
+    }
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, []);
 
   return (
     <header className="sticky top-0 z-40 w-full bg-[#18080C]/95 backdrop-blur-xl border-b border-ouro/25 transition-all duration-300">
@@ -41,23 +53,38 @@ export const Navbar: React.FC = () => {
             </div>
 
             {!session && (
-              <>
-                <NavLink
-                  to="/cadastro"
+              <div className="relative" ref={cadastroMenuRef}>
+                <button
+                  type="button"
+                  onClick={() => setCadastroMenuOpen((v) => !v)}
                   className="flex items-center space-x-1.5 px-3.5 py-2 rounded-lg bg-gradient-to-r from-ouro to-[#B89243] text-black font-extrabold text-xs uppercase tracking-wide hover:brightness-110 transition-all shadow-md active:scale-95"
                 >
                   <UserPlus className="w-4 h-4 text-black" />
-                  <span>Criar Conta Cliente</span>
-                </NavLink>
+                  <span>Cadastro</span>
+                  <ChevronDown className={`w-3.5 h-3.5 text-black transition-transform ${cadastroMenuOpen ? 'rotate-180' : ''}`} />
+                </button>
 
-                <NavLink
-                  to="/anunciar"
-                  className="flex items-center space-x-1.5 px-3.5 py-2 rounded-lg bg-grafite border border-ouro/40 text-white hover:bg-ouro/15 hover:border-ouro font-bold text-xs uppercase tracking-wide transition-all active:scale-95"
-                >
-                  <PlusCircle className="w-4 h-4 text-ouro" />
-                  <span>Anunciar</span>
-                </NavLink>
-              </>
+                {cadastroMenuOpen && (
+                  <div className="absolute right-0 top-full mt-2 w-56 bg-grafite border border-ouro/30 rounded-lg shadow-2xl overflow-hidden z-50">
+                    <NavLink
+                      to="/cadastro"
+                      onClick={() => setCadastroMenuOpen(false)}
+                      className="flex items-center space-x-2.5 px-4 py-3 text-sm text-white hover:bg-ouro/15 transition-colors border-b border-white/5"
+                    >
+                      <UserPlus className="w-4 h-4 text-ouro shrink-0" />
+                      <span>Sou Cliente — Criar conta</span>
+                    </NavLink>
+                    <NavLink
+                      to="/anunciar"
+                      onClick={() => setCadastroMenuOpen(false)}
+                      className="flex items-center space-x-2.5 px-4 py-3 text-sm text-white hover:bg-ouro/15 transition-colors"
+                    >
+                      <PlusCircle className="w-4 h-4 text-ouro shrink-0" />
+                      <span>Sou Acompanhante — Anunciar</span>
+                    </NavLink>
+                  </div>
+                )}
+              </div>
             )}
 
             {session ? (
@@ -79,25 +106,17 @@ export const Navbar: React.FC = () => {
             ) : (
               <Link
                 to="/entrar"
-                className="flex items-center space-x-1.5 px-3 py-2 rounded-lg bg-white/10 border border-white/20 hover:border-ouro/60 text-white text-xs font-bold transition-colors"
+                title="Entrar na minha conta"
+                aria-label="Entrar na minha conta"
+                className="flex items-center justify-center w-9 h-9 rounded-lg bg-white/10 border border-white/20 hover:border-ouro/60 text-white transition-colors"
               >
-                <UserCircle2 className="w-4 h-4 text-ouro" />
-                <span>Entrar</span>
+                <UserCircle2 className="w-5 h-5 text-ouro" />
               </Link>
             )}
           </div>
 
           {/* Menu de Ação Mobile */}
           <div className="flex items-center space-x-2 md:hidden">
-            {!session && (
-              <Link
-                to="/cadastro"
-                className="px-3 py-1.5 rounded-lg bg-ouro text-black font-extrabold text-xs flex items-center space-x-1 shadow-md"
-              >
-                <UserPlus className="w-3.5 h-3.5" />
-                <span>Cadastrar</span>
-              </Link>
-            )}
             <button
               onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
               className="p-2 rounded-lg bg-white/10 border border-white/20 text-white hover:bg-white/20"
