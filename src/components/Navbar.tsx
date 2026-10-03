@@ -188,10 +188,9 @@ export const Navbar: React.FC = () => {
               <Link
                 to="/entrar"
                 onClick={() => setMobileMenuOpen(false)}
-                className="w-full flex items-center justify-center space-x-1.5 py-2.5 rounded-lg bg-white/10 border border-white/20 text-white font-semibold text-sm"
+                className="block w-full text-center py-1.5 text-[11px] text-gray-500 hover:text-gray-300 transition-colors"
               >
-                <UserCircle2 className="w-4 h-4 text-ouro" />
-                <span>Entrar na Minha Conta</span>
+                entrar
               </Link>
             )}
           </div>
