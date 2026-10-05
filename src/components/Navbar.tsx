@@ -1,7 +1,7 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { Link, NavLink } from 'react-router-dom';
 import { PlusCircle, ShieldAlert, Menu, X, UserCircle2, LayoutDashboard, UserPlus, ChevronDown } from 'lucide-react';
-import { Monograma } from './Logo';
+import { Logotipo } from './Logo';
 import { useSession } from '../context/SessionContext';
 
 const PAINEL_POR_PAPEL: Record<string, string> = {
@@ -32,17 +32,10 @@ export const Navbar: React.FC = () => {
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="flex items-center justify-between h-16 sm:h-20">
 
-          {/* Logo Marca */}
-          <Link to="/" className="flex items-center space-x-3 group" onClick={() => setMobileMenuOpen(false)}>
-            <Monograma size={40} className="shrink-0" />
-            <div className="flex flex-col">
-              <span className="text-xl sm:text-2xl font-display font-semibold text-white leading-tight">
-                Reserva <span className="italic text-ouro">Secreta</span>
-              </span>
-              <span className="text-[10px] sm:text-xs text-gray-300 tracking-[0.16em] uppercase">
-                Acompanhantes VIP do Sul de Minas
-              </span>
-            </div>
+          {/* Logo Marca - o arquivo da logo ja traz "Reserva Secreta" e
+              "Guia Premium" desenhados, nao recriamos esse texto aqui. */}
+          <Link to="/" className="flex items-center group" onClick={() => setMobileMenuOpen(false)}>
+            <Logotipo size={44} className="shrink-0" />
           </Link>
 
           {/* Navegação Desktop */}

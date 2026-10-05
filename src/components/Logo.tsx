@@ -1,9 +1,15 @@
 import React from 'react';
 
-// Icone da logo nova (chave ornamentada) - PNG com fundo transparente
-// de verdade, recortado do lockup completo em public/brand/.
+// Assets da logo nova (chave ornamentada) - PNG com fundo transparente
+// de verdade. O lockup completo ja traz "Reserva Secreta" + "Guia
+// Premium" desenhados dentro do proprio arquivo - nunca recriar esse
+// texto em HTML do lado, ou fica duplicado/dessincronizado do que a
+// imagem realmente diz.
 const ICONE_CHAVE = '/brand/icone-chave.png';
-const PROPORCAO_ICONE = 192 / 300; // largura/altura do recorte original
+const PROPORCAO_ICONE = 192 / 300; // largura/altura do recorte so' do icone
+
+const LOGO_COMPLETA = '/brand/logo-completa.png';
+const PROPORCAO_COMPLETA = 900 / 392; // largura/altura do lockup inteiro
 
 interface MonogramaProps {
   /** Altura em px - a largura segue a proporcao natural do icone. */
@@ -22,45 +28,20 @@ export const Monograma: React.FC<MonogramaProps> = ({ size = 44, className = '' 
 );
 
 interface LogotipoProps {
-  /** Linha em caixa alta sob o fio. Omitida quando ausente. */
-  assinatura?: string;
+  /** Altura em px - a largura segue a proporcao natural do lockup. */
+  size?: number;
   className?: string;
 }
 
-export const Logotipo: React.FC<LogotipoProps> = ({ assinatura, className = '' }) => (
-  <svg
-    viewBox={assinatura ? '0 0 680 180' : '0 0 680 140'}
+// Icone + "Reserva Secreta" + "Guia Premium", tudo num unico arquivo -
+// usar aqui em vez de Monograma sempre que o espaco permitir o lockup
+// horizontal inteiro (navbar, sidebar dos paineis).
+export const Logotipo: React.FC<LogotipoProps> = ({ size = 48, className = '' }) => (
+  <img
+    src={LOGO_COMPLETA}
+    alt="Reserva Secreta — Guia Premium"
+    width={Math.round(size * PROPORCAO_COMPLETA)}
+    height={size}
     className={className}
-    role="img"
-    aria-label="Reserva Secreta"
-  >
-    <text x="40" y="104" fontFamily="'Bodoni Moda', Georgia, serif" fontSize="64" fill="#F4F1EA" letterSpacing="1">
-      Reserva
-    </text>
-    <text
-      x="330"
-      y="104"
-      fontFamily="'Bodoni Moda', Georgia, serif"
-      fontSize="64"
-      fontStyle="italic"
-      fill="#C6A15B"
-      letterSpacing="1"
-    >
-      Secreta
-    </text>
-    <rect x="40" y="124" width="600" height="1" fill="#C6A15B" opacity="0.55" />
-    {assinatura && (
-      <text
-        x="40"
-        y="152"
-        fontFamily="'Jost', system-ui, sans-serif"
-        fontSize="13"
-        letterSpacing="6.5"
-        fill="#F4F1EA"
-        opacity="0.75"
-      >
-        {assinatura}
-      </text>
-    )}
-  </svg>
+  />
 );

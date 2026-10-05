@@ -1,7 +1,7 @@
 import React from 'react';
 import { Link } from 'react-router-dom';
 import { LogOut, ExternalLink, BookOpen } from 'lucide-react';
-import { Monograma } from '../components/Logo';
+import { Logotipo } from '../components/Logo';
 import { useSession } from '../context/SessionContext';
 import type { UserRole } from '../types';
 
@@ -38,12 +38,9 @@ export const DashboardLayout: React.FC<DashboardLayoutProps> = ({ title, navItem
     <div className="min-h-screen bg-onix text-marfim flex flex-col sm:flex-row font-sans">
       {/* Sidebar */}
       <aside className="sm:w-64 shrink-0 border-b sm:border-b-0 sm:border-r border-white/10 bg-grafite flex flex-col">
-        <Link to="/" className="flex items-center space-x-2.5 px-5 py-5 border-b border-white/10">
-          <Monograma size={32} />
-          <div className="flex flex-col leading-tight">
-            <span className="text-sm font-display text-marfim">Reserva <span className="italic text-ouro">Secreta</span></span>
-            <span className="text-[10px] text-nevoa uppercase tracking-wider">{title}</span>
-          </div>
+        <Link to="/" className="flex flex-col gap-1.5 px-5 py-5 border-b border-white/10">
+          <Logotipo size={28} />
+          <span className="text-[10px] text-nevoa uppercase tracking-wider">{title}</span>
         </Link>
 
         <nav className="flex-1 p-3 flex sm:flex-col gap-1 overflow-x-auto">

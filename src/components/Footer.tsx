@@ -1,6 +1,6 @@
 import React from 'react';
 import { ShieldAlert, Lock } from 'lucide-react';
-import { Monograma } from './Logo';
+import { Logotipo } from './Logo';
 
 export const Footer: React.FC = () => {
   return (
@@ -12,12 +12,7 @@ export const Footer: React.FC = () => {
           
           {/* Logo & Tagline */}
           <div className="md:col-span-6 space-y-2">
-            <div className="flex items-center space-x-2">
-              <Monograma size={32} />
-              <span className="text-xl font-display font-normal text-marfim">
-                Reserva <span className="italic text-ouro">Secreta</span>
-              </span>
-            </div>
+            <Logotipo size={36} />
             <p className="text-xs text-nevoa max-w-md">
               O catálogo mais exclusivo e discreto de acompanhantes VIP do Sul de Minas.
             </p>
