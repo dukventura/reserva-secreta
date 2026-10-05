@@ -131,6 +131,13 @@ interface PlanRequestsTable {
   resolved_by: number | null;
 }
 
+interface FavoritesTable {
+  id: Generated<number>;
+  user_id: number;
+  profile_id: number;
+  created_at: Generated<Date>;
+}
+
 interface ReportsTable {
   id: Generated<number>;
   target_profile_id: number;
@@ -177,6 +184,7 @@ export interface Database {
   plans: PlansTable;
   payments: PaymentsTable;
   plan_requests: PlanRequestsTable;
+  favorites: FavoritesTable;
 }
 
 const pool = createPool({

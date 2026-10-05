@@ -19,6 +19,7 @@ import {
   UserX,
 } from 'lucide-react';
 import { buscarPerfilPorSlug, ApiError, type PublicProfileDetail } from '../lib/api';
+import { FavoriteButton } from '../components/FavoriteButton';
 
 export const ProfilePage: React.FC = () => {
   const { slug } = useParams<{ slug: string }>();
@@ -128,6 +129,10 @@ export const ProfilePage: React.FC = () => {
                 </button>
               </>
             )}
+
+            <div className="absolute top-4 right-4 z-10">
+              <FavoriteButton slug={profile.slug} />
+            </div>
 
             {/* Badges Flutuantes */}
             <div className="absolute top-4 left-4 flex flex-col space-y-2 z-10">

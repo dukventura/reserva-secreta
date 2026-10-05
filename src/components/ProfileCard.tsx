@@ -2,6 +2,7 @@ import React from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { MapPin, Crown, ShieldCheck, MessageCircle, Eye } from 'lucide-react';
 import type { PublicProfile } from '../lib/api';
+import { FavoriteButton } from './FavoriteButton';
 
 interface ProfileCardProps {
   profile: PublicProfile;
@@ -64,11 +65,12 @@ export const ProfileCard: React.FC<ProfileCardProps> = ({ profile }) => {
           )}
         </div>
 
-        {/* Categoria */}
-        <div className="absolute top-3 right-3 z-10">
+        {/* Categoria + Favoritar */}
+        <div className="absolute top-3 right-3 z-10 flex items-center space-x-1.5">
           <div className="px-2.5 py-0.5 rounded-md bg-white/10 border border-white/20 text-white text-[10px] font-bold backdrop-blur-md uppercase tracking-wider">
             {profile.category}
           </div>
+          <FavoriteButton slug={profile.slug} />
         </div>
 
         {/* Tag de Valor Flutuante */}

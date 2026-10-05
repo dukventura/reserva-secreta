@@ -7,6 +7,7 @@ import { moderationRouter } from './routes/moderation';
 import { reportsRouter } from './routes/reports';
 import { citiesRouter } from './routes/cities';
 import { financeRouter, plansPublicRouter } from './routes/finance';
+import { clientRouter } from './routes/client';
 import { UPLOAD_DIR } from './lib/uploads';
 
 const app = express();
@@ -33,6 +34,7 @@ app.use('/api/reports', reportsRouter);
 app.use('/api/cities', citiesRouter);
 app.use('/api/plans', plansPublicRouter);
 app.use('/api/finance', financeRouter);
+app.use('/api/client', clientRouter);
 
 // eslint-disable-next-line @typescript-eslint/no-unused-vars
 app.use((err: unknown, _req: express.Request, res: express.Response, _next: express.NextFunction) => {

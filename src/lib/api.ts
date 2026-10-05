@@ -603,5 +603,40 @@ export function recusarPedidoPlano(id: number) {
 // ---- denuncias publicas ----
 
 export function enviarDenuncia(dados: { targetSlug: string; reason: string; details: string }) {
-  return request<{ ok: true }>('/api/reports', { method: 'POST', body: dados });
+  // auth:true so' anexa o token se existir sessao - a rota aceita sem
+  // login tambem (denuncia anonima continua possivel), mas quando a
+  // pessoa esta logada, a denuncia fica vinculada pra aparecer em
+  // "Minhas Denuncias" no painel do cliente.
+  return request<{ ok: true }>('/api/reports', { method: 'POST', body: dados, auth: true });
+}
+
+// ---- conta do cliente (contratante) ----
+
+export interface ClientReport {
+  id: number;
+  reason: string;
+  status: 'pendente' | 'aprovado' | 'reprovado';
+  created_at: string;
+  target_name: string;
+  target_slug: string;
+}
+
+export function atualizarMinhaConta(dados: { name?: string; senha_atual?: string; nova_senha?: string }) {
+  return request<{ ok: true }>('/api/client/me', { method: 'PATCH', body: dados, auth: true });
+}
+
+export function listarFavoritos() {
+  return request<{ favoritos: PublicProfile[] }>('/api/client/favorites', { auth: true });
+}
+
+export function favoritarPerfil(slug: string) {
+  return request<{ ok: true }>(`/api/client/favorites/${slug}`, { method: 'POST', auth: true });
+}
+
+export function desfavoritarPerfil(slug: string) {
+  return request<{ ok: true }>(`/api/client/favorites/${slug}`, { method: 'DELETE', auth: true });
+}
+
+export function listarMinhasDenuncias() {
+  return request<{ denuncias: ClientReport[] }>('/api/client/reports', { auth: true });
 }

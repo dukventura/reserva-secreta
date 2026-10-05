@@ -8,7 +8,7 @@ const PAINEL_POR_PAPEL: Record<string, string> = {
   master: '/painel/admin',
   gerente: '/painel/gerente',
   profissional: '/painel/profissional',
-  contratante: '/',
+  contratante: '/minha-conta',
 };
 
 export const Navbar: React.FC = () => {
