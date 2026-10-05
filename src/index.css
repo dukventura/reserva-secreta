@@ -1,12 +1,14 @@
 @import "tailwindcss";
 
-/* Tokens do manual de identidade visual v1.0.
-   Paleta curta de proposito: onix domina ~80% da composicao, os neutros
-   carregam o texto e o ouro ocupa no maximo 10% da area. */
+/* Tokens do manual de identidade visual v1.0 (ReservaSecreta_MANUAL DE
+   IDENTIDADE VISUAL.pdf). Paleta curta de proposito: onix domina ~80%
+   da composicao, os neutros carregam o texto e o ouro ocupa no maximo
+   10% da area. */
 @theme {
   --color-onix: #16070b;      /* fundo vinho profundo elegante */
   --color-grafite: #270e15;   /* cartões e superfícies vinho escuro */
-  --color-ouro: #d4af37;      /* acao, destaque, botões e detalhes nobres */
+  --color-ouro: #C49E53;      /* dourado principal do manual - acao, destaque, botões */
+  --color-bronze: #AD7C41;    /* dourado escuro do manual - stop de gradiente, hover, sombra */
   --color-champanhe: #f5e6c8; /* hover e texto sobre ouro escuro */
   --color-marfim: #ffffff;    /* texto principal em BRANCO PURO para legibilidade máxima */
   --color-nevoa: #d1d5db;     /* texto secundario em cinza claro para alto contraste */
@@ -19,9 +21,12 @@
   --color-verificado: #1f9d4b;
   --color-verificado-texto: #86efac;
 
-  /* Tipografia: Plus Jakarta Sans para leitura sem puxadinhos + Bodoni para assinaturas */
+  /* Tipografia do manual: familia Montserrat para leitura. "Lavolta
+     Swash" (script dos titulos/logo no manual) pendente - licenca e'
+     paga e nao esta no Google Fonts, aguardando confirmacao/arquivo
+     antes de embutir. Bodoni Moda segue como display provisorio. */
   --font-display: 'Bodoni Moda', Georgia, serif;
-  --font-sans: 'Plus Jakarta Sans', system-ui, sans-serif;
+  --font-sans: 'Montserrat', system-ui, sans-serif;
   --font-mono: 'IBM Plex Mono', ui-monospace, monospace;
 
   /* Geometria refinada com bordas levemente arredondadas */

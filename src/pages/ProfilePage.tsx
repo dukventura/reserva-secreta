@@ -50,7 +50,7 @@ export const ProfilePage: React.FC = () => {
         <UserX className="w-12 h-12 text-ouro mx-auto" />
         <h1 className="text-2xl font-display text-white">Perfil não encontrado</h1>
         <p className="text-sm text-gray-300">Este anúncio pode ter sido removido ou o link está incorreto.</p>
-        <Link to="/" className="inline-block px-6 py-3 rounded-lg bg-ouro hover:bg-[#B89243] text-black font-bold text-sm transition-colors shadow-lg">
+        <Link to="/" className="inline-block px-6 py-3 rounded-lg bg-ouro hover:bg-bronze text-black font-bold text-sm transition-colors shadow-lg">
           Voltar para o catálogo
         </Link>
       </div>

@@ -30,27 +30,29 @@ export const Navbar: React.FC = () => {
   return (
     <header className="sticky top-0 z-40 w-full bg-[#18080C]/95 backdrop-blur-xl border-b border-ouro/25 transition-all duration-300">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-        <div className="flex items-center justify-between h-16 sm:h-20">
+        <div className="relative flex items-center justify-between h-16 sm:h-20">
 
           {/* Logo Marca - o arquivo da logo ja traz "Reserva Secreta" e
-              "Guia Premium" desenhados, nao recriamos esse texto aqui. */}
-          <Link to="/" className="flex items-center group" onClick={() => setMobileMenuOpen(false)}>
-            <Logotipo size={44} className="shrink-0" />
+              "Guia Premium" desenhados, nao recriamos esse texto aqui.
+              No desktop fica maior e centralizada de verdade (absoluta
+              sobre o header); no mobile segue no fluxo normal, a esquerda. */}
+          <Link
+            to="/"
+            className="flex items-center group md:absolute md:left-1/2 md:-translate-x-1/2"
+            onClick={() => setMobileMenuOpen(false)}
+          >
+            <Logotipo size={40} className="shrink-0 md:hidden" />
+            <Logotipo size={60} className="shrink-0 hidden md:block" />
           </Link>
 
           {/* Navegação Desktop */}
-          <div className="hidden md:flex items-center space-x-3">
-            <div className="flex items-center space-x-2 px-3 py-1.5 rounded-lg bg-ouro/15 border border-ouro/30 text-white text-xs font-semibold">
-              <ShieldAlert className="w-3.5 h-3.5 text-ouro" />
-              <span>Perfis 100% Verificados</span>
-            </div>
-
+          <div className="hidden md:flex items-center space-x-3 ml-auto">
             {!session && (
               <div className="relative" ref={cadastroMenuRef}>
                 <button
                   type="button"
                   onClick={() => setCadastroMenuOpen((v) => !v)}
-                  className="flex items-center space-x-1.5 px-3.5 py-2 rounded-lg bg-gradient-to-r from-ouro to-[#B89243] text-black font-extrabold text-xs uppercase tracking-wide hover:brightness-110 transition-all shadow-md active:scale-95"
+                  className="flex items-center space-x-1.5 px-3.5 py-2 rounded-lg bg-gradient-to-r from-ouro to-bronze text-black font-extrabold text-xs uppercase tracking-wide hover:brightness-110 transition-all shadow-md active:scale-95"
                 >
                   <UserPlus className="w-4 h-4 text-black" />
                   <span>Cadastro</span>
@@ -135,7 +137,7 @@ export const Navbar: React.FC = () => {
                 <Link
                   to="/cadastro"
                   onClick={() => setMobileMenuOpen(false)}
-                  className="w-full flex items-center justify-center space-x-2 py-3 rounded-lg bg-gradient-to-r from-ouro to-[#B89243] text-black font-extrabold text-sm shadow-lg"
+                  className="w-full flex items-center justify-center space-x-2 py-3 rounded-lg bg-gradient-to-r from-ouro to-bronze text-black font-extrabold text-sm shadow-lg"
                 >
                   <UserPlus className="w-4 h-4" />
                   <span>Sou Cliente — Criar Conta Grátis</span>

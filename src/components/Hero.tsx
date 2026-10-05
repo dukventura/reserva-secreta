@@ -49,23 +49,17 @@ export const Hero: React.FC<HeroProps> = ({ filters, onFilterChange, totalProfil
         
         {/* Top Header Badge & Text */}
         <div className="text-center max-w-3xl mx-auto space-y-6">
-          
-          {/* Badge de Destaque */}
-          <div className="inline-flex items-center space-x-2 px-4 py-2 rounded-full bg-ouro/15 border border-ouro/40 backdrop-blur-md shadow-lg shadow-black/40">
-            <Sparkles className="w-4 h-4 text-ouro animate-pulse" />
-            <span className="text-xs sm:text-sm font-semibold text-white tracking-wide uppercase">
-              O Guia Mais Exclusivo do Sul de Minas
-            </span>
-          </div>
 
-          {/* Headline Principal */}
+          {/* Headline Principal - a propria headline ja diz "o guia mais
+              exclusivo", entao nao repetimos a mesma frase num badge
+              separado acima dela. */}
           <h1 className="text-3xl sm:text-5xl lg:text-6xl font-display font-normal text-white tracking-tight leading-tight">
-            As melhores acompanhantes <br className="hidden sm:inline" />
-            <span className="text-ouro font-serif">da região</span>
+            O guia mais exclusivo <br className="hidden sm:inline" />
+            do <span className="text-ouro font-serif">Sul de Minas</span>
           </h1>
 
           <p className="text-base sm:text-xl text-gray-200 max-w-2xl mx-auto font-normal leading-relaxed">
-            Acompanhantes VIP de alto nível no <strong className="text-ouro font-semibold">Sul de Minas</strong>. Perfis 100% verificados com contato direto.
+            Experiências únicas com acompanhantes de alto padrão no <strong className="text-ouro font-semibold">Sul de Minas</strong>. Perfis 100% verificados, com contato direto e total discrição.
           </p>
 
           {/* Badges de Confiança */}
@@ -278,9 +272,9 @@ export const Hero: React.FC<HeroProps> = ({ filters, onFilterChange, totalProfil
 
             <Link
               to="/cadastro"
-              className="w-full flex items-center justify-center space-x-2.5 px-6 py-3.5 rounded-lg bg-gradient-to-r from-ouro to-[#B89243] text-black font-bold text-base hover:brightness-110 transition-all shadow-xl shadow-ouro/20 border border-ouro active:scale-98"
+              className="w-full inline-flex items-center justify-center space-x-2.5 px-6 py-3.5 rounded-lg bg-transparent border-2 border-ouro text-white font-bold text-base uppercase tracking-wide hover:bg-ouro/15 transition-all shadow-lg active:scale-98"
             >
-              <UserPlus className="w-5 h-5 text-black" />
+              <UserPlus className="w-5 h-5 text-ouro" />
               <span>Sou Cliente — Criar Conta</span>
             </Link>
 
@@ -295,27 +289,27 @@ export const Hero: React.FC<HeroProps> = ({ filters, onFilterChange, totalProfil
                 <Crown className="w-6 h-6 text-ouro" />
               </div>
               <h2 className="text-xl sm:text-2xl font-display font-semibold text-white leading-snug">
-                É acompanhante? <span className="text-ouro">Anuncie aqui.</span>
+                É acompanhante? <span className="text-ouro">Anuncie no Reserva Secreta.</span>
               </h2>
               <ul className="space-y-2.5 text-sm text-gray-200">
                 <li className="flex items-start space-x-2">
                   <CheckCircle2 className="w-4 h-4 text-verificado-texto shrink-0 mt-0.5" />
-                  <span>Contato direto pelo WhatsApp, sem intermediários</span>
+                  <span><strong className="text-white">Atendimento Direto:</strong> receba contatos direto no seu WhatsApp, sem intermediários.</span>
                 </li>
                 <li className="flex items-start space-x-2">
                   <ShieldCheck className="w-4 h-4 text-verificado-texto shrink-0 mt-0.5" />
-                  <span>Selo de perfil verificado gera mais confiança</span>
+                  <span><strong className="text-white">Selo Verificado:</strong> garanta mais credibilidade e destaque para o seu perfil.</span>
                 </li>
                 <li className="flex items-start space-x-2">
                   <HeartHandshake className="w-4 h-4 text-verificado-texto shrink-0 mt-0.5" />
-                  <span>Você controla sua agenda e seu anúncio</span>
+                  <span><strong className="text-white">Autonomia Total:</strong> você no comando da sua agenda, fotos e informações.</span>
                 </li>
               </ul>
             </div>
 
             <Link
               to="/anunciar"
-              className="w-full inline-flex items-center justify-center space-x-2.5 px-6 py-3.5 rounded-lg bg-transparent border-2 border-ouro text-white font-bold text-base hover:bg-ouro/15 transition-all shadow-lg active:scale-98"
+              className="w-full inline-flex items-center justify-center space-x-2.5 px-6 py-3.5 rounded-lg bg-transparent border-2 border-ouro text-white font-bold text-base uppercase tracking-wide hover:bg-ouro/15 transition-all shadow-lg active:scale-98"
             >
               <Crown className="w-5 h-5 text-ouro" />
               <span>Quero Anunciar</span>

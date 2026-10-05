@@ -103,7 +103,7 @@ export const ClientSignupPage: React.FC = () => {
           <button
             type="submit"
             disabled={enviando}
-            className="w-full py-4 rounded-xl bg-gradient-to-r from-ouro to-[#B89243] text-black font-extrabold text-base hover:brightness-110 transition-all shadow-xl shadow-ouro/20 flex items-center justify-center space-x-2 active:scale-98 disabled:opacity-60"
+            className="w-full py-4 rounded-xl bg-gradient-to-r from-ouro to-bronze text-black font-extrabold text-base hover:brightness-110 transition-all shadow-xl shadow-ouro/20 flex items-center justify-center space-x-2 active:scale-98 disabled:opacity-60"
           >
             <span>{enviando ? 'Criando conta...' : 'Criar minha conta'}</span>
             {!enviando && <ArrowRight className="w-5 h-5 text-black" />}
