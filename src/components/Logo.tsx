@@ -1,49 +1,25 @@
 import React from 'react';
 
-/* A marca do manual de identidade v1.0.
-   Os SVGs originais usam Bodoni Moda viva, entao precisam ser inline:
-   um <img src="logo.svg"> renderiza em contexto isolado, sem acesso as
-   fontes carregadas pela pagina, e o logotipo cairia para Times. */
+// Icone da logo nova (chave ornamentada) - PNG com fundo transparente
+// de verdade, recortado do lockup completo em public/brand/.
+const ICONE_CHAVE = '/brand/icone-chave.png';
+const PROPORCAO_ICONE = 192 / 300; // largura/altura do recorte original
 
 interface MonogramaProps {
-  /** Lado do quadrado em px. Abaixo de 48 o manual manda inverter. */
+  /** Altura em px - a largura segue a proporcao natural do icone. */
   size?: number;
   className?: string;
 }
 
-export const Monograma: React.FC<MonogramaProps> = ({ size = 44, className = '' }) => {
-  // "Abaixo de 48 px o monograma inverte para ouro solido com letras em
-  // onix - o fio de 1 px desaparece na renderizacao."
-  const compacto = size < 48;
-  const fundo = compacto ? '#C6A15B' : '#0B0B0C';
-  const letras = compacto ? '#0B0B0C' : '#C6A15B';
-
-  return (
-    <svg
-      viewBox="0 0 240 240"
-      width={size}
-      height={size}
-      className={className}
-      role="img"
-      aria-label="Reserva Secreta"
-    >
-      <rect width="240" height="240" fill={fundo} />
-      {!compacto && (
-        <rect x="20.5" y="20.5" width="199" height="199" fill="none" stroke="#C6A15B" strokeWidth="1" />
-      )}
-      <text
-        x="120"
-        y="146"
-        textAnchor="middle"
-        fontFamily="'Bodoni Moda', Georgia, serif"
-        fontSize="92"
-        fill={letras}
-      >
-        RS
-      </text>
-    </svg>
-  );
-};
+export const Monograma: React.FC<MonogramaProps> = ({ size = 44, className = '' }) => (
+  <img
+    src={ICONE_CHAVE}
+    alt="Reserva Secreta"
+    width={Math.round(size * PROPORCAO_ICONE)}
+    height={size}
+    className={className}
+  />
+);
 
 interface LogotipoProps {
   /** Linha em caixa alta sob o fio. Omitida quando ausente. */
