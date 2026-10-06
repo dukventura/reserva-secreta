@@ -61,9 +61,9 @@ export const Hero: React.FC<HeroProps> = ({ filters, onFilterChange, totalProfil
             do Sul de Minas
           </h1>
 
-          <img src="/brand/arabesco-divisor.png" alt="" className="h-5 sm:h-6 mx-auto opacity-90" />
+          <img src="/brand/arabesco-divisor.png" alt="" className="h-3.5 sm:h-4 mx-auto opacity-90" />
 
-          <p className="text-xs sm:text-sm text-champanhe/90 max-w-2xl mx-auto font-medium leading-relaxed uppercase tracking-wider">
+          <p className="text-[11px] sm:text-xs text-champanhe/90 max-w-2xl mx-auto font-medium leading-relaxed uppercase tracking-wider">
             Experiências únicas com acompanhantes de <strong className="text-white font-bold">alto padrão</strong> no Sul de Minas. <strong className="text-white font-bold">Perfis 100% verificados</strong>, com contato direto e <strong className="text-white font-bold">total discrição</strong>.
           </p>
 
