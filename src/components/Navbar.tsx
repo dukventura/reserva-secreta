@@ -30,7 +30,7 @@ export const Navbar: React.FC = () => {
   return (
     <header className="sticky top-0 z-40 w-full bg-onix/95 backdrop-blur-xl border-b border-ouro/25 transition-all duration-300">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-        <div className="relative flex items-center justify-between h-16 sm:h-20">
+        <div className="relative flex items-center justify-between h-20 sm:h-28">
 
           {/* Logo Marca - o arquivo da logo ja traz "Reserva Secreta" e
               "Guia Premium" desenhados, nao recriamos esse texto aqui.
@@ -41,8 +41,8 @@ export const Navbar: React.FC = () => {
             className="flex items-center group md:absolute md:left-1/2 md:-translate-x-1/2"
             onClick={() => setMobileMenuOpen(false)}
           >
-            <Logotipo size={40} className="shrink-0 md:hidden" />
-            <Logotipo size={60} className="shrink-0 hidden md:block" />
+            <Logotipo size={48} className="shrink-0 md:hidden" />
+            <Logotipo size={84} className="shrink-0 hidden md:block" />
           </Link>
 
           {/* Navegação Desktop */}
