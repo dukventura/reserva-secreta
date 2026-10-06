@@ -28,7 +28,7 @@ export const Navbar: React.FC = () => {
   }, []);
 
   return (
-    <header className="sticky top-0 z-40 w-full bg-[#18080C]/95 backdrop-blur-xl border-b border-ouro/25 transition-all duration-300">
+    <header className="sticky top-0 z-40 w-full bg-onix/95 backdrop-blur-xl border-b border-ouro/25 transition-all duration-300">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="relative flex items-center justify-between h-16 sm:h-20">
 
@@ -125,7 +125,7 @@ export const Navbar: React.FC = () => {
 
       {/* Drawer Mobile Menu */}
       {mobileMenuOpen && (
-        <div className="md:hidden border-b border-white/15 bg-[#18080C] px-4 pt-4 pb-6 space-y-4 animate-in slide-in-from-top-2 duration-200">
+        <div className="md:hidden border-b border-white/15 bg-onix px-4 pt-4 pb-6 space-y-4 animate-in slide-in-from-top-2 duration-200">
           <div className="flex items-center space-x-2 p-3 rounded-lg bg-ouro/15 border border-ouro/30 text-white text-xs font-semibold">
             <ShieldAlert className="w-4 h-4 shrink-0 text-ouro" />
             <span>Guia exclusivo e discreto para maiores de 18 anos.</span>

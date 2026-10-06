@@ -4,9 +4,19 @@
    IDENTIDADE VISUAL.pdf). Paleta curta de proposito: onix domina ~80%
    da composicao, os neutros carregam o texto e o ouro ocupa no maximo
    10% da area. */
+/* Lavolta Swash - fonte script do manual, hospedada localmente (nao
+   esta no Google Fonts; licenca comercial confirmada pelo cliente). */
+@font-face {
+  font-family: 'Lavolta Swash';
+  src: url('/fonts/LavoltaSwash-Regular.otf') format('opentype');
+  font-weight: 400;
+  font-style: normal;
+  font-display: swap;
+}
+
 @theme {
-  --color-onix: #16070b;      /* fundo vinho profundo elegante */
-  --color-grafite: #270e15;   /* cartões e superfícies vinho escuro */
+  --color-onix: #000000;      /* preto puro do manual - fundo principal */
+  --color-grafite: #0f0a0b;   /* quase-preto, so' o suficiente pra separar cartões do fundo */
   --color-ouro: #C49E53;      /* dourado principal do manual - acao, destaque, botões */
   --color-bronze: #AD7C41;    /* dourado escuro do manual - stop de gradiente, hover, sombra */
   --color-champanhe: #f5e6c8; /* hover e texto sobre ouro escuro */
@@ -21,11 +31,12 @@
   --color-verificado: #1f9d4b;
   --color-verificado-texto: #86efac;
 
-  /* Tipografia do manual: familia Montserrat para leitura. "Lavolta
-     Swash" (script dos titulos/logo no manual) pendente - licenca e'
-     paga e nao esta no Google Fonts, aguardando confirmacao/arquivo
-     antes de embutir. Bodoni Moda segue como display provisorio. */
+  /* Tipografia do manual: Montserrat pro corpo de texto, Lavolta Swash
+     pros titulos/assinaturas em destaque (mesmo uso da logo: nome
+     proprio em script, resto em caixa alta normal). Bodoni Moda segue
+     como fallback pra onde a Lavolta ainda nao foi aplicada. */
   --font-display: 'Bodoni Moda', Georgia, serif;
+  --font-script: 'Lavolta Swash', 'Bodoni Moda', cursive;
   --font-sans: 'Montserrat', system-ui, sans-serif;
   --font-mono: 'IBM Plex Mono', ui-monospace, monospace;
 

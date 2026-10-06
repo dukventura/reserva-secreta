@@ -1,8 +1,10 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { Link } from 'react-router-dom';
-import { Search, MapPin, Sparkles, Filter, CheckCircle2, ShieldCheck, HeartHandshake, UserPlus, Crown, ChevronDown } from 'lucide-react';
+import { Search, MapPin, Sparkles, Filter, ShieldCheck, HeartHandshake, UserPlus, Crown, ChevronDown } from 'lucide-react';
 import type { City, Category, FilterState } from '../types';
 import { CIDADES, slugDaCidade } from '../data/cities';
+import { Monograma } from './Logo';
+import { WhatsAppIcon } from './WhatsAppIcon';
 
 interface HeroProps {
   filters: FilterState;
@@ -41,39 +43,42 @@ export const Hero: React.FC<HeroProps> = ({ filters, onFilterChange, totalProfil
   };
 
   return (
-    <section className="relative overflow-hidden pt-8 pb-14 sm:pt-16 sm:pb-20 bg-gradient-to-b from-[#1E080D] via-[#16070B] to-[#120508]">
+    <section className="relative overflow-hidden pt-8 pb-14 sm:pt-16 sm:pb-20 bg-onix">
       {/* Glow de iluminação de fundo */}
       <div className="absolute top-0 left-1/2 -translate-x-1/2 w-full max-w-7xl h-96 bg-ouro/10 blur-3xl pointer-events-none rounded-full" />
 
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 relative z-10">
-        
+
         {/* Top Header Badge & Text */}
-        <div className="text-center max-w-3xl mx-auto space-y-6">
+        <div className="text-center max-w-3xl mx-auto space-y-5">
 
           {/* Headline Principal - a propria headline ja diz "o guia mais
               exclusivo", entao nao repetimos a mesma frase num badge
               separado acima dela. */}
           <h1 className="text-3xl sm:text-5xl lg:text-6xl font-display font-normal text-white tracking-tight leading-tight">
-            O guia mais exclusivo <br className="hidden sm:inline" />
-            do <span className="text-ouro font-serif">Sul de Minas</span>
+            O guia mais <span className="text-ouro">exclusivo</span>{' '}
+            <br className="hidden sm:inline" />
+            do Sul de Minas
           </h1>
 
-          <p className="text-base sm:text-xl text-gray-200 max-w-2xl mx-auto font-normal leading-relaxed">
-            Experiências únicas com acompanhantes de alto padrão no <strong className="text-ouro font-semibold">Sul de Minas</strong>. Perfis 100% verificados, com contato direto e total discrição.
+          <img src="/brand/arabesco-divisor.png" alt="" className="h-5 sm:h-6 mx-auto opacity-90" />
+
+          <p className="text-xs sm:text-sm text-champanhe/90 max-w-2xl mx-auto font-medium leading-relaxed uppercase tracking-wider">
+            Experiências únicas com acompanhantes de <strong className="text-white font-bold">alto padrão</strong> no Sul de Minas. <strong className="text-white font-bold">Perfis 100% verificados</strong>, com contato direto e <strong className="text-white font-bold">total discrição</strong>.
           </p>
 
           {/* Badges de Confiança */}
-          <div className="pt-2 flex flex-wrap items-center justify-center gap-3 sm:gap-6 text-xs sm:text-sm text-gray-300">
-            <div className="flex items-center space-x-2 bg-white/5 px-3.5 py-2 rounded-lg border border-white/10 backdrop-blur-sm">
+          <div className="pt-2 flex flex-wrap items-center justify-center gap-3 sm:gap-6 text-[11px] sm:text-xs font-semibold uppercase tracking-wide text-gray-300">
+            <div className="flex items-center space-x-2 bg-white/5 px-3.5 py-2 rounded-lg border border-ouro/20 backdrop-blur-sm">
               <ShieldCheck className="w-4 h-4 text-ouro" />
               <span>Fotos Reais Verificadas</span>
             </div>
-            <div className="flex items-center space-x-2 bg-white/5 px-3.5 py-2 rounded-lg border border-white/10 backdrop-blur-sm">
+            <div className="flex items-center space-x-2 bg-white/5 px-3.5 py-2 rounded-lg border border-ouro/20 backdrop-blur-sm">
               <HeartHandshake className="w-4 h-4 text-ouro" />
-              <span>Discrição & Sigilo Absoluto</span>
+              <span>Discrição Absoluta</span>
             </div>
-            <div className="flex items-center space-x-2 bg-white/5 px-3.5 py-2 rounded-lg border border-white/10 backdrop-blur-sm">
-              <CheckCircle2 className="w-4 h-4 text-verificado-texto" />
+            <div className="flex items-center space-x-2 bg-white/5 px-3.5 py-2 rounded-lg border border-ouro/20 backdrop-blur-sm">
+              <WhatsAppIcon className="w-4 h-4 text-ouro" />
               <span>WhatsApp Direto</span>
             </div>
           </div>
@@ -84,7 +89,7 @@ export const Hero: React.FC<HeroProps> = ({ filters, onFilterChange, totalProfil
 
         {/* 🔍 PAINEL DE FILTRO E BUSCA COM AUTOCOMPLETE DE CIDADES (Cliente) */}
         <div className="lg:col-span-3">
-          <div className="glass-panel h-full p-5 sm:p-7 rounded-xl border border-ouro/30 shadow-2xl shadow-black/80 space-y-5 bg-[#250D15]/90">
+          <div className="h-full p-5 sm:p-7 rounded-xl border border-ouro/30 shadow-2xl shadow-black/80 space-y-5 bg-grafite">
 
             <div className="flex items-center justify-between border-b border-white/15 pb-4">
               <div className="flex items-center space-x-2.5 text-white font-semibold text-base">
@@ -272,9 +277,9 @@ export const Hero: React.FC<HeroProps> = ({ filters, onFilterChange, totalProfil
 
             <Link
               to="/cadastro"
-              className="w-full inline-flex items-center justify-center space-x-2.5 px-6 py-3.5 rounded-lg bg-transparent border-2 border-ouro text-white font-bold text-base uppercase tracking-wide hover:bg-ouro/15 transition-all shadow-lg active:scale-98"
+              className="w-full inline-flex items-center justify-center space-x-2.5 px-6 py-3.5 rounded-lg bg-ouro text-black font-bold text-base uppercase tracking-wide hover:brightness-110 transition-all shadow-lg active:scale-98"
             >
-              <UserPlus className="w-5 h-5 text-ouro" />
+              <UserPlus className="w-5 h-5 text-black" />
               <span>Sou Cliente — Criar Conta</span>
             </Link>
 
@@ -283,35 +288,40 @@ export const Hero: React.FC<HeroProps> = ({ filters, onFilterChange, totalProfil
 
         {/* 👑 PAINEL DA ACOMPANHANTE */}
         <div className="lg:col-span-2">
-          <div className="h-full flex flex-col justify-between p-6 sm:p-7 rounded-xl border-2 border-ouro/50 bg-gradient-to-b from-grafite to-[#1E080D] shadow-2xl shadow-black/80 space-y-6">
+          <div className="h-full flex flex-col justify-between p-6 sm:p-7 rounded-xl border-2 border-ouro/50 bg-grafite shadow-2xl shadow-black/80 space-y-6">
             <div className="space-y-4">
-              <div className="w-12 h-12 rounded-full bg-ouro/15 border border-ouro/40 flex items-center justify-center">
-                <Crown className="w-6 h-6 text-ouro" />
-              </div>
-              <h2 className="text-xl sm:text-2xl font-display font-semibold text-white leading-snug">
-                É acompanhante? <span className="text-ouro">Anuncie no Reserva Secreta.</span>
+              <Monograma size={56} />
+              <h2 className="text-xl sm:text-2xl font-display font-normal text-white leading-snug">
+                É acompanhante?<br />
+                <span className="text-ouro/80">Anuncie no Reserva Secreta.</span>
               </h2>
-              <ul className="space-y-2.5 text-sm text-gray-200">
-                <li className="flex items-start space-x-2">
-                  <CheckCircle2 className="w-4 h-4 text-verificado-texto shrink-0 mt-0.5" />
-                  <span><strong className="text-white">Atendimento Direto:</strong> receba contatos direto no seu WhatsApp, sem intermediários.</span>
+              <ul className="space-y-3 text-sm text-gray-200">
+                <li className="flex items-start space-x-3">
+                  <span className="shrink-0 w-8 h-8 rounded-lg border border-ouro/40 flex items-center justify-center">
+                    <WhatsAppIcon className="w-4 h-4 text-ouro" />
+                  </span>
+                  <span className="pt-1.5"><strong className="text-white">Atendimento Direto:</strong> receba contatos direto no seu WhatsApp, sem intermediários.</span>
                 </li>
-                <li className="flex items-start space-x-2">
-                  <ShieldCheck className="w-4 h-4 text-verificado-texto shrink-0 mt-0.5" />
-                  <span><strong className="text-white">Selo Verificado:</strong> garanta mais credibilidade e destaque para o seu perfil.</span>
+                <li className="flex items-start space-x-3">
+                  <span className="shrink-0 w-8 h-8 rounded-lg border border-ouro/40 flex items-center justify-center">
+                    <ShieldCheck className="w-4 h-4 text-ouro" />
+                  </span>
+                  <span className="pt-1.5"><strong className="text-white">Selo Verificado:</strong> garanta mais credibilidade e destaque para o seu perfil.</span>
                 </li>
-                <li className="flex items-start space-x-2">
-                  <HeartHandshake className="w-4 h-4 text-verificado-texto shrink-0 mt-0.5" />
-                  <span><strong className="text-white">Autonomia Total:</strong> você no comando da sua agenda, fotos e informações.</span>
+                <li className="flex items-start space-x-3">
+                  <span className="shrink-0 w-8 h-8 rounded-lg border border-ouro/40 flex items-center justify-center">
+                    <HeartHandshake className="w-4 h-4 text-ouro" />
+                  </span>
+                  <span className="pt-1.5"><strong className="text-white">Autonomia Total:</strong> você no comando da sua agenda, fotos e informações.</span>
                 </li>
               </ul>
             </div>
 
             <Link
               to="/anunciar"
-              className="w-full inline-flex items-center justify-center space-x-2.5 px-6 py-3.5 rounded-lg bg-transparent border-2 border-ouro text-white font-bold text-base uppercase tracking-wide hover:bg-ouro/15 transition-all shadow-lg active:scale-98"
+              className="w-full inline-flex items-center justify-center space-x-2.5 px-6 py-3.5 rounded-lg bg-ouro text-black font-bold text-base uppercase tracking-wide hover:brightness-110 transition-all shadow-lg active:scale-98"
             >
-              <Crown className="w-5 h-5 text-ouro" />
+              <Crown className="w-5 h-5 text-black" />
               <span>Quero Anunciar</span>
             </Link>
           </div>
