@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import {
   LayoutDashboard, UserRound, Images, ShieldCheck, BarChart3, CreditCard,
-  Heart, CheckCircle2, Circle, Clock, Upload, Check, AlertCircle, Send, XCircle, Trash2,
+  Heart, CheckCircle2, Circle, Clock, Upload, Check, AlertCircle, Send, XCircle, Trash2, Crown, X,
 } from 'lucide-react';
 import { DashboardLayout } from '../../layouts/DashboardLayout';
 import { RequireRole } from '../../components/RequireRole';
@@ -51,6 +51,9 @@ function ProfessionalDashboardContent() {
   const [planos, setPlanos] = useState<Plan[]>([]);
   const [solicitandoPlanoId, setSolicitandoPlanoId] = useState<number | null>(null);
   const [cancelandoPedido, setCancelandoPedido] = useState(false);
+  const [bannerPlanoFechado, setBannerPlanoFechado] = useState(() => {
+    try { return localStorage.getItem('reservasecreta_banner_plano_fechado') === 'true'; } catch { return false; }
+  });
   const fileInputRef = useRef<HTMLInputElement>(null);
   const documentInputRef = useRef<HTMLInputElement>(null);
   const selfieInputRef = useRef<HTMLInputElement>(null);
@@ -306,6 +309,34 @@ function ProfessionalDashboardContent() {
                 </h3>
                 <p className="text-xs text-nevoa mt-0.5">Renove o pagamento com a nossa equipe pra não perder os benefícios do plano.</p>
               </div>
+            </div>
+          )}
+
+          {perfil.status === 'aprovado' && !planoAtivo && !perfil.pedido_plano_pendente && !bannerPlanoFechado && (
+            <div className="relative flex items-start space-x-3 bg-ouro/10 border border-ouro/30 p-4 pr-10">
+              <div className="w-9 h-9 rounded-full bg-ouro/15 border border-ouro/40 flex items-center justify-center shrink-0">
+                <Crown className="w-4 h-4 text-ouro" />
+              </div>
+              <div className="flex-1">
+                <h3 className="text-sm font-semibold text-marfim">Seu perfil está no ar! Quer mais visibilidade?</h3>
+                <p className="text-xs text-nevoa mt-0.5">Os planos Top e Super Top liberam mais fotos e prioridade na listagem da sua cidade.</p>
+                <button
+                  onClick={() => setTab('plano')}
+                  className="mt-2.5 inline-flex items-center space-x-1.5 px-3.5 py-1.5 rounded-campo bg-ouro hover:bg-champanhe text-black font-bold text-xs transition-colors"
+                >
+                  <Crown className="w-3.5 h-3.5" /><span>Ver planos</span>
+                </button>
+              </div>
+              <button
+                onClick={() => {
+                  setBannerPlanoFechado(true);
+                  try { localStorage.setItem('reservasecreta_banner_plano_fechado', 'true'); } catch { /* noop */ }
+                }}
+                aria-label="Fechar aviso"
+                className="absolute top-3 right-3 text-nevoa hover:text-marfim"
+              >
+                <X className="w-4 h-4" />
+              </button>
             </div>
           )}
 
