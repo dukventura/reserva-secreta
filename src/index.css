@@ -4,16 +4,6 @@
    IDENTIDADE VISUAL.pdf). Paleta curta de proposito: onix domina ~80%
    da composicao, os neutros carregam o texto e o ouro ocupa no maximo
    10% da area. */
-/* Lavolta Swash - fonte script do manual, hospedada localmente (nao
-   esta no Google Fonts; licenca comercial confirmada pelo cliente). */
-@font-face {
-  font-family: 'Lavolta Swash';
-  src: url('/fonts/LavoltaSwash-Regular.otf') format('opentype');
-  font-weight: 400;
-  font-style: normal;
-  font-display: swap;
-}
-
 @theme {
   --color-onix: #000000;      /* preto puro do manual - fundo principal */
   --color-grafite: #0f0a0b;   /* quase-preto, so' o suficiente pra separar cartões do fundo */
@@ -31,12 +21,16 @@
   --color-verificado: #1f9d4b;
   --color-verificado-texto: #86efac;
 
-  /* Tipografia do manual: Montserrat pro corpo de texto, Lavolta Swash
+  /* Tipografia do manual: Montserrat pro corpo de texto, fonte script
      pros titulos/assinaturas em destaque (mesmo uso da logo: nome
-     proprio em script, resto em caixa alta normal). Bodoni Moda segue
-     como fallback pra onde a Lavolta ainda nao foi aplicada. */
+     proprio em script, resto em caixa alta normal). A fonte do manual
+     ("Lavolta Swash") tem um arquivo com os acentos e a pontuacao
+     quebrados (confirmado via fontTools - glyphs identicos/vazios pra
+     a,e,c,o,u acentuados e pra . , ; : ? ! etc) - sem uma exportacao
+     corrigida, usamos a Alex Brush (Google Fonts, cobertura completa
+     de PT-BR) como substituta mais proxima ate trocar. */
   --font-display: 'Bodoni Moda', Georgia, serif;
-  --font-script: 'Lavolta Swash', 'Bodoni Moda', cursive;
+  --font-script: 'Alex Brush', 'Bodoni Moda', cursive;
   --font-sans: 'Montserrat', system-ui, sans-serif;
   --font-mono: 'IBM Plex Mono', ui-monospace, monospace;
 

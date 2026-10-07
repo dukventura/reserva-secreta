@@ -55,7 +55,7 @@ export const Hero: React.FC<HeroProps> = ({ filters, onFilterChange, totalProfil
           {/* Headline Principal - a propria headline ja diz "o guia mais
               exclusivo", entao nao repetimos a mesma frase num badge
               separado acima dela. */}
-          <h1 className="text-3xl sm:text-5xl lg:text-6xl font-display font-normal text-white tracking-tight leading-tight">
+          <h1 className="text-3xl sm:text-5xl lg:text-6xl font-script font-normal text-white tracking-tight leading-tight">
             O guia mais <span className="text-ouro">exclusivo</span>{' '}
             <br className="hidden sm:inline" />
             do Sul de Minas
@@ -297,7 +297,7 @@ export const Hero: React.FC<HeroProps> = ({ filters, onFilterChange, totalProfil
             <div className="space-y-4">
               <div className="flex items-center gap-3">
                 <Monograma size={40} className="shrink-0" />
-                <h2 className="text-xl sm:text-2xl font-display font-normal text-white leading-snug">
+                <h2 className="text-xl sm:text-2xl font-script font-normal text-white leading-snug">
                   É acompanhante?<br />
                   <span className="text-ouro/80">Anuncie no Reserva Secreta.</span>
                 </h2>
