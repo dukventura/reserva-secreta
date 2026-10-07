@@ -5,6 +5,9 @@ import { db } from '../lib/db';
 import { autenticar, exigirPapel } from '../middleware/auth';
 import { registrarAuditoria } from '../lib/audit';
 import { ativarPlanoParaUsuario, somarDias } from '../lib/plans';
+import { removerArquivoPelaUrl } from '../lib/uploads';
+import { removerDocumento } from '../lib/documentUploads';
+import { removerSelfie } from '../lib/selfieUploads';
 
 // Catalogo publico (so planos ativos) - a profissional ve no proprio
 // painel o que cada plano oferece.
@@ -326,5 +329,45 @@ financeRouter.post('/plan-requests/:id/recusar', async (req, res) => {
     .where('id', '=', id)
     .execute();
   await registrarAuditoria(req.user!.sub, 'Recusou pedido de plano', pedido.stage_name);
+  res.json({ ok: true });
+});
+
+// Exclusao definitiva de conta de profissional - diferente de
+// suspender (reversivel, usado na moderacao do dia a dia), isto apaga
+// pra sempre: login, perfil, fotos, documento, selfie, assinaturas e
+// historico de pagamento. So' Admin Master, e so' alcanca contas com
+// role='profissional' (guarda extra pra nunca apagar staff/cliente
+// por engano via esta rota). Atende tanto limpeza de dados de teste
+// quanto pedido real de exclusao (direito ao esquecimento, LGPD).
+financeRouter.delete('/professionals/:userId', async (req, res) => {
+  const userId = Number(req.params.userId);
+  const usuario = await db
+    .selectFrom('users')
+    .innerJoin('professional_profiles', 'professional_profiles.user_id', 'users.id')
+    .select(['users.id', 'professional_profiles.id as profile_id', 'professional_profiles.stage_name'])
+    .where('users.id', '=', userId)
+    .where('users.role', '=', 'profissional')
+    .executeTakeFirst();
+  if (!usuario) {
+    res.status(404).json({ erro: 'Profissional não encontrada.' });
+    return;
+  }
+
+  // Le os caminhos dos arquivos antes de apagar as linhas (o cascade
+  // do banco apaga os registros, nao os arquivos no disco).
+  const fotos = await db.selectFrom('media').select('url').where('profile_id', '=', usuario.profile_id).execute();
+  const verificacao = await db
+    .selectFrom('verifications')
+    .select(['documento_url', 'selfie_url'])
+    .where('user_id', '=', userId)
+    .executeTakeFirst();
+
+  await db.deleteFrom('users').where('id', '=', userId).where('role', '=', 'profissional').execute();
+
+  fotos.forEach((f) => removerArquivoPelaUrl(f.url));
+  removerDocumento(verificacao?.documento_url);
+  removerSelfie(verificacao?.selfie_url);
+
+  await registrarAuditoria(req.user!.sub, 'Excluiu conta de profissional definitivamente', usuario.stage_name);
   res.json({ ok: true });
 });

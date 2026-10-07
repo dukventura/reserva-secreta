@@ -1,10 +1,10 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import {
-  AlertCircle, CheckCircle2, XCircle, Clock, Zap, Plus, Pencil, History, Search, Power,
+  AlertCircle, CheckCircle2, XCircle, Clock, Zap, Plus, Pencil, History, Search, Power, Trash2,
 } from 'lucide-react';
 import {
   listarAssinaturas, listarPlanos, criarPlano, editarPlano, ativarPlano, cancelarAssinatura,
-  ativarImpulso, encerrarImpulso, listarPagamentos, buscarResumoFinanceiro,
+  ativarImpulso, encerrarImpulso, listarPagamentos, buscarResumoFinanceiro, excluirProfissional,
   listarPedidosPlano, atenderPedidoPlano, recusarPedidoPlano, ApiError,
   type SubscriptionRow, type Plan, type PlanInput, type PaymentRow, type FinanceSummary, type PlanRequestRow,
 } from '../../lib/api';
@@ -256,6 +256,8 @@ function HistoricoProfissional({ userId }: { userId: number }) {
 function LinhaAssinatura({ a, planos, onAtualizar }: { a: SubscriptionRow; planos: Plan[]; onAtualizar: () => void }) {
   const [painel, setPainel] = useState<'nenhum' | 'ativar' | 'impulso' | 'historico'>('nenhum');
   const [confirmandoCancelar, setConfirmandoCancelar] = useState(false);
+  const [excluindoAberto, setExcluindoAberto] = useState(false);
+  const [confirmTexto, setConfirmTexto] = useState('');
   const [processando, setProcessando] = useState(false);
   const [erro, setErro] = useState('');
 
@@ -269,6 +271,8 @@ function LinhaAssinatura({ a, planos, onAtualizar }: { a: SubscriptionRow; plano
     try {
       await fn();
       setConfirmandoCancelar(false);
+      setExcluindoAberto(false);
+      setConfirmTexto('');
       onAtualizar();
     } catch (err) {
       setErro(err instanceof ApiError ? err.message : 'Não foi possível concluir.');
@@ -335,10 +339,38 @@ function LinhaAssinatura({ a, planos, onAtualizar }: { a: SubscriptionRow; plano
               </button>
             )
           )}
+          <button onClick={() => setExcluindoAberto((v) => !v)} className={btnPerigo}>
+            <Trash2 className="w-3.5 h-3.5" /><span>Excluir conta</span>
+          </button>
         </div>
       </div>
 
       <Erro texto={erro} />
+
+      {excluindoAberto && (
+        <div className="bg-red-500/10 border border-red-500/30 p-3.5 space-y-3">
+          <p className="text-xs text-red-200">
+            Isso apaga a conta de <strong>{a.stage_name}</strong> pra sempre: login, perfil, fotos, documento, selfie, assinaturas e histórico de pagamento. Não tem como desfazer.
+          </p>
+          <div>
+            <label className="block text-[11px] text-nevoa mb-1">
+              Digite <strong className="text-marfim">{a.stage_name}</strong> pra confirmar:
+            </label>
+            <input value={confirmTexto} onChange={(e) => setConfirmTexto(e.target.value)} className={inputCls} />
+          </div>
+          <div className="flex gap-2">
+            <button
+              onClick={() => executar(() => excluirProfissional(a.user_id))}
+              disabled={processando || confirmTexto !== a.stage_name}
+              className="flex items-center space-x-1.5 px-4 py-2 rounded-campo bg-red-500/30 border border-red-500/50 text-red-100 text-xs font-bold disabled:opacity-40 disabled:cursor-not-allowed"
+            >
+              <Trash2 className="w-3.5 h-3.5" /><span>Excluir definitivamente</span>
+            </button>
+            <button onClick={() => { setExcluindoAberto(false); setConfirmTexto(''); }} className={btnSecundario}>Cancelar</button>
+          </div>
+        </div>
+      )}
+
       {painel === 'ativar' && (
         <FormAtivar assinatura={a} planos={planos} onCancelar={() => setPainel('nenhum')} onFeito={() => { setPainel('nenhum'); onAtualizar(); }} />
       )}

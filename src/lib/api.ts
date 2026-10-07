@@ -558,6 +558,12 @@ export function cancelarAssinatura(userId: number) {
   return request<{ ok: true }>(`/api/finance/subscriptions/${userId}/cancelar`, { method: 'POST', auth: true });
 }
 
+// Exclusao definitiva - diferente de cancelar/suspender, apaga a
+// conta pra sempre (login, perfil, fotos, documentos, historico).
+export function excluirProfissional(userId: number) {
+  return request<{ ok: true }>(`/api/finance/professionals/${userId}`, { method: 'DELETE', auth: true });
+}
+
 export function ativarImpulso(userId: number, dados: { dias: number; valor_centavos: number; observacao?: string }) {
   return request<{ ok: true; boost_ate: string }>(`/api/finance/subscriptions/${userId}/impulso`, {
     method: 'POST',
