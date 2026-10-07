@@ -91,7 +91,7 @@ export const Hero: React.FC<HeroProps> = ({ filters, onFilterChange, totalProfil
 
         {/* 🔍 PAINEL DE FILTRO E BUSCA COM AUTOCOMPLETE DE CIDADES (Cliente) */}
         <div className="lg:col-span-3">
-          <div className="h-full flex flex-col justify-between p-5 sm:p-7 rounded-xl border border-ouro/30 shadow-2xl shadow-black/80 bg-grafite">
+          <div className="h-full flex flex-col justify-between p-5 sm:p-7 rounded-xl border-2 border-ouro/50 shadow-2xl shadow-black/80 bg-grafite">
           <div className="space-y-5">
 
             <div className="flex items-center justify-between border-b border-white/15 pb-4">
