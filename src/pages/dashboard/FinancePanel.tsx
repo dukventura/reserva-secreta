@@ -5,8 +5,8 @@ import {
 import {
   listarAssinaturas, listarPlanos, criarPlano, editarPlano, ativarPlano, cancelarAssinatura,
   ativarImpulso, encerrarImpulso, listarPagamentos, buscarResumoFinanceiro, excluirProfissional,
-  listarPedidosPlano, atenderPedidoPlano, recusarPedidoPlano, ApiError,
-  type SubscriptionRow, type Plan, type PlanInput, type PaymentRow, type FinanceSummary, type PlanRequestRow,
+  listarPedidosPlano, atenderPedidoPlano, recusarPedidoPlano, listarClientes, ApiError,
+  type SubscriptionRow, type Plan, type PlanInput, type PaymentRow, type FinanceSummary, type PlanRequestRow, type ClienteRow,
 } from '../../lib/api';
 
 function fmtReais(centavos: number) {
@@ -51,6 +51,14 @@ function situacaoDe(a: SubscriptionRow): Situacao {
   if (a.vence_em && diasRestantes(a.vence_em) <= 7) return 'vencendo';
   return 'em_dia';
 }
+
+const ROTULO_PERFIL_STATUS: Record<SubscriptionRow['perfil_status'], { label: string; cls: string }> = {
+  rascunho: { label: 'Cadastro incompleto', cls: 'bg-white/5 border-white/15 text-nevoa' },
+  pendente: { label: 'Aguardando aprovação', cls: 'bg-amber-500/15 border-amber-500/30 text-amber-300' },
+  aprovado: { label: '', cls: '' },
+  reprovado: { label: 'Reprovado', cls: 'bg-red-500/15 border-red-500/30 text-red-300' },
+  suspenso: { label: 'Suspenso', cls: 'bg-red-500/15 border-red-500/30 text-red-300' },
+};
 
 const FILTROS: { key: 'todas' | Situacao; label: string }[] = [
   { key: 'todas', label: 'Todas' },
@@ -295,6 +303,11 @@ function LinhaAssinatura({ a, planos, onAtualizar }: { a: SubscriptionRow; plano
               </span>
             )}
             {situacao === 'sem_plano' && <span className="text-[10px] px-2 py-0.5 rounded-campo bg-white/5 border border-white/10 text-nevoa uppercase">Grátis</span>}
+            {a.perfil_status !== 'aprovado' && (
+              <span className={`text-[10px] px-2 py-0.5 rounded-campo font-bold uppercase border ${ROTULO_PERFIL_STATUS[a.perfil_status].cls}`}>
+                {ROTULO_PERFIL_STATUS[a.perfil_status].label}
+              </span>
+            )}
             {impulsoVigente && (
               <span className="text-[10px] px-2 py-0.5 rounded-campo bg-amber-500/15 border border-amber-500/30 text-amber-300 font-bold uppercase flex items-center gap-1">
                 <Zap className="w-3 h-3" />Impulso até {fmtDataHora(a.boost_ate!)}
@@ -580,6 +593,34 @@ function AbaPagamentos() {
 
 // ---------- Pedidos ----------
 
+function AbaClientes({ clientes, carregando }: { clientes: ClienteRow[]; carregando: boolean }) {
+  const [busca, setBusca] = useState('');
+  const termo = busca.trim().toLowerCase();
+  const visiveis = clientes.filter((c) => !termo || c.name.toLowerCase().includes(termo) || c.email.toLowerCase().includes(termo));
+
+  return (
+    <div className="space-y-3">
+      <p className="text-xs text-nevoa">Contas de clientes (contratantes) cadastradas no site. Não geram cobrança — aqui é só visibilidade de quem se cadastrou.</p>
+      <div className="relative sm:w-64">
+        <Search className="w-3.5 h-3.5 text-nevoa absolute left-3 top-1/2 -translate-y-1/2" />
+        <input value={busca} onChange={(e) => setBusca(e.target.value)} placeholder="Buscar nome ou e-mail" className={`${inputCls} pl-8`} />
+      </div>
+      <div className="border border-white/10 divide-y divide-white/10">
+        {!carregando && visiveis.length === 0 && <p className="text-sm text-nevoa p-4">Nenhum cliente cadastrado.</p>}
+        {visiveis.map((c) => (
+          <div key={c.id} className="flex items-center justify-between gap-3 p-3.5">
+            <div>
+              <div className="text-sm font-semibold text-marfim">{c.name}</div>
+              <div className="text-xs text-nevoa">{c.email}</div>
+            </div>
+            <div className="text-[11px] text-nevoa shrink-0 font-mono">Cadastrado em {fmtData(c.created_at)}</div>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
+
 function AbaPedidos({ pedidos, onAtualizar }: { pedidos: PlanRequestRow[]; onAtualizar: () => void }) {
   const [processandoId, setProcessandoId] = useState<number | null>(null);
   const [erro, setErro] = useState('');
@@ -629,25 +670,28 @@ function AbaPedidos({ pedidos, onAtualizar }: { pedidos: PlanRequestRow[]; onAtu
 // ---------- Painel ----------
 
 export function FinancePanel() {
-  const [aba, setAba] = useState<'assinaturas' | 'planos' | 'pedidos' | 'pagamentos'>('assinaturas');
+  const [aba, setAba] = useState<'assinaturas' | 'clientes' | 'planos' | 'pedidos' | 'pagamentos'>('assinaturas');
   const [pedidos, setPedidos] = useState<PlanRequestRow[]>([]);
   const [assinaturas, setAssinaturas] = useState<SubscriptionRow[]>([]);
+  const [clientes, setClientes] = useState<ClienteRow[]>([]);
   const [planos, setPlanos] = useState<Plan[]>([]);
   const [resumo, setResumo] = useState<FinanceSummary | null>(null);
   const [carregando, setCarregando] = useState(true);
   const [erro, setErro] = useState('');
   const [filtro, setFiltro] = useState<'todas' | Situacao>('todas');
+  const [somenteIncompletos, setSomenteIncompletos] = useState(false);
   const [busca, setBusca] = useState('');
   const [versaoPagamentos, setVersaoPagamentos] = useState(0);
 
   const carregar = useCallback(() => {
     setErro('');
-    Promise.all([listarAssinaturas(), listarPlanos(), buscarResumoFinanceiro(), listarPedidosPlano()])
-      .then(([a, p, r, pd]) => {
+    Promise.all([listarAssinaturas(), listarPlanos(), buscarResumoFinanceiro(), listarPedidosPlano(), listarClientes()])
+      .then(([a, p, r, pd, c]) => {
         setAssinaturas(a.assinaturas);
         setPlanos(p.planos);
         setResumo(r);
         setPedidos(pd.pedidos);
+        setClientes(c.clientes);
         setVersaoPagamentos((v) => v + 1);
       })
       .catch((err) => setErro(err instanceof ApiError ? err.message : 'Não foi possível carregar o financeiro.'))
@@ -657,9 +701,11 @@ export function FinancePanel() {
   useEffect(carregar, [carregar]);
 
   const contagem = (s: Situacao) => assinaturas.filter((a) => situacaoDe(a) === s).length;
+  const incompletos = assinaturas.filter((a) => a.perfil_status === 'rascunho').length;
   const termo = busca.trim().toLowerCase();
   const visiveis = assinaturas
     .filter((a) => filtro === 'todas' || situacaoDe(a) === filtro)
+    .filter((a) => !somenteIncompletos || a.perfil_status === 'rascunho')
     .filter((a) => !termo || a.stage_name.toLowerCase().includes(termo) || a.email.toLowerCase().includes(termo));
 
   return (
@@ -693,7 +739,7 @@ export function FinancePanel() {
       </div>
 
       <div className="flex gap-1 border-b border-white/10">
-        {([['assinaturas', 'Assinaturas'], ['planos', 'Planos'], ['pedidos', `Pedidos${pedidos.length > 0 ? ` (${pedidos.length})` : ''}`], ['pagamentos', 'Pagamentos']] as const).map(([k, l]) => (
+        {([['assinaturas', 'Assinaturas'], ['clientes', `Clientes (${clientes.length})`], ['planos', 'Planos'], ['pedidos', `Pedidos${pedidos.length > 0 ? ` (${pedidos.length})` : ''}`], ['pagamentos', 'Pagamentos']] as const).map(([k, l]) => (
           <button
             key={k}
             onClick={() => setAba(k)}
@@ -720,6 +766,14 @@ export function FinancePanel() {
                   {f.label}{f.key !== 'todas' && ` (${contagem(f.key)})`}
                 </button>
               ))}
+              {incompletos > 0 && (
+                <button
+                  onClick={() => setSomenteIncompletos((v) => !v)}
+                  className={`px-2.5 py-1 rounded-campo text-[11px] font-semibold border transition-colors ${somenteIncompletos ? 'bg-ouro/20 border-ouro text-marfim' : 'bg-white/5 border-white/10 text-nevoa hover:text-marfim'}`}
+                >
+                  Cadastro incompleto ({incompletos})
+                </button>
+              )}
             </div>
             <div className="relative sm:ml-auto sm:w-64">
               <Search className="w-3.5 h-3.5 text-nevoa absolute left-3 top-1/2 -translate-y-1/2" />
@@ -733,6 +787,7 @@ export function FinancePanel() {
         </div>
       )}
 
+      {aba === 'clientes' && <AbaClientes clientes={clientes} carregando={carregando} />}
       {aba === 'planos' && <AbaPlanos planos={planos} onAtualizar={carregar} />}
       {aba === 'pedidos' && <AbaPedidos pedidos={pedidos} onAtualizar={carregar} />}
       {aba === 'pagamentos' && <AbaPagamentos key={versaoPagamentos} />}

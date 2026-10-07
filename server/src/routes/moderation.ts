@@ -237,7 +237,7 @@ moderationRouter.get('/media/pending', async (_req, res) => {
     .selectFrom('media')
     .innerJoin('professional_profiles', 'professional_profiles.id', 'media.profile_id')
     .select([
-      'media.id', 'media.url', 'media.created_at',
+      'media.id', 'media.url', 'media.created_at', 'professional_profiles.user_id',
       'professional_profiles.stage_name as profile_name', 'professional_profiles.slug as profile_slug',
     ])
     .where('media.status', '=', 'pendente')

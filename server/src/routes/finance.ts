@@ -94,13 +94,25 @@ financeRouter.get('/subscriptions', async (_req, res) => {
     .leftJoin('plans', 'plans.id', 'subscriptions.plan_id')
     .select([
       'professional_profiles.user_id', 'professional_profiles.stage_name', 'professional_profiles.is_vip',
-      'professional_profiles.boost_ate', 'users.email',
+      'professional_profiles.boost_ate', 'professional_profiles.status as perfil_status', 'users.email',
       'subscriptions.status', 'subscriptions.vence_em', 'subscriptions.ultimo_pagamento_em', 'subscriptions.plan_id',
       'plans.nome as plano_nome',
     ])
     .orderBy('professional_profiles.stage_name', 'asc')
     .execute();
   res.json({ assinaturas });
+});
+
+// Contas de contratante (cliente) nao aparecem em mais nenhum lugar do
+// painel - esta rota existe so' pra dar visibilidade de quem se cadastrou.
+financeRouter.get('/clientes', async (_req, res) => {
+  const clientes = await db
+    .selectFrom('users')
+    .select(['id', 'name', 'email', 'created_at'])
+    .where('role', '=', 'contratante')
+    .orderBy('created_at', 'desc')
+    .execute();
+  res.json({ clientes });
 });
 
 const ativarSchema = z.object({

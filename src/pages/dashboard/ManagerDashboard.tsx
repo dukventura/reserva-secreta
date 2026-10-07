@@ -1,23 +1,51 @@
 import React, { useState, useEffect } from 'react';
 import {
   LayoutDashboard, ClipboardCheck, Flag, History, CheckCircle2, XCircle,
-  MapPin, ShieldAlert, AlertCircle, Images, FileText, Eye, Radio, PauseCircle, PlayCircle,
+  MapPin, ShieldAlert, AlertCircle, Images, FileText, Eye, Radio, PauseCircle, PlayCircle, ShieldCheck,
 } from 'lucide-react';
 import { DashboardLayout } from '../../layouts/DashboardLayout';
 import { RequireRole } from '../../components/RequireRole';
 import { useModeration } from '../../context/ModerationContext';
-import { buscarArquivoDocumento, buscarArquivoSelfie, ApiError, type PendingDocument, type PendingSelfie } from '../../lib/api';
+import {
+  buscarArquivoDocumento, buscarArquivoSelfie, ApiError,
+  type PendingMedia, type PendingDocument, type PendingSelfie,
+} from '../../lib/api';
 
 const NAV = [
   { key: 'painel', label: 'Painel', icon: <LayoutDashboard className="w-4 h-4" /> },
   { key: 'aprovacoes', label: 'Aprovações', icon: <ClipboardCheck className="w-4 h-4" /> },
   { key: 'ativos', label: 'Anúncios no ar', icon: <Radio className="w-4 h-4" /> },
-  { key: 'fotos', label: 'Fotos', icon: <Images className="w-4 h-4" /> },
-  { key: 'documentos', label: 'Documentos', icon: <FileText className="w-4 h-4" /> },
-  { key: 'selfies', label: 'Selfies', icon: <Eye className="w-4 h-4" /> },
+  { key: 'verificacoes', label: 'Verificações', icon: <ShieldCheck className="w-4 h-4" /> },
   { key: 'denuncias', label: 'Denúncias', icon: <Flag className="w-4 h-4" /> },
   { key: 'historico', label: 'Histórico', icon: <History className="w-4 h-4" /> },
 ];
+
+interface GrupoVerificacao {
+  userId: number;
+  nome: string;
+  fotos: PendingMedia[];
+  documento: PendingDocument | null;
+  selfie: PendingSelfie | null;
+}
+
+function agruparPorProfissional(fotos: PendingMedia[], documentos: PendingDocument[], selfies: PendingSelfie[]): GrupoVerificacao[] {
+  const grupos = new Map<number, GrupoVerificacao>();
+
+  const obter = (userId: number, nome: string) => {
+    let g = grupos.get(userId);
+    if (!g) {
+      g = { userId, nome, fotos: [], documento: null, selfie: null };
+      grupos.set(userId, g);
+    }
+    return g;
+  };
+
+  fotos.forEach((f) => obter(f.user_id, f.profile_name).fotos.push(f));
+  documentos.forEach((d) => { obter(d.user_id, d.profile_name ?? d.user_name).documento = d; });
+  selfies.forEach((s) => { obter(s.user_id, s.profile_name ?? s.user_name).selfie = s; });
+
+  return Array.from(grupos.values()).sort((a, b) => a.nome.localeCompare(b.nome));
+}
 
 function fmtData(iso: string | null) {
   if (!iso) return '—';
@@ -186,91 +214,81 @@ function ManagerDashboardContent() {
         </div>
       )}
 
-      {tab === 'fotos' && (
+      {tab === 'verificacoes' && (
         <div className="space-y-3 max-w-3xl">
-          {!carregando && pendingMedia.length === 0 && <p className="text-sm text-nevoa">Nenhuma foto pendente no momento.</p>}
-          <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
-            {pendingMedia.map((m) => (
-              <div key={m.id} className="bg-grafite border border-white/10 p-3 space-y-2">
-                <img src={m.url} alt="" className="w-full aspect-[3/4] object-cover rounded-campo" />
-                <div className="text-xs text-marfim font-semibold truncate">{m.profile_name}</div>
-                <div className="text-[10px] text-nevoa">Enviada em {fmtData(m.created_at)}</div>
-                <div className="flex gap-2 pt-1">
-                  <button
-                    onClick={() => decideMedia(m.id, 'aprovado')}
-                    className="flex-1 flex items-center justify-center space-x-1 px-2 py-1.5 rounded-campo bg-verificado hover:opacity-90 text-marfim text-[11px] font-bold transition-opacity"
-                  >
-                    <CheckCircle2 className="w-3.5 h-3.5" /><span>Aprovar</span>
-                  </button>
-                  <button
-                    onClick={() => decideMedia(m.id, 'reprovado')}
-                    className="flex-1 flex items-center justify-center space-x-1 px-2 py-1.5 rounded-campo bg-white/5 border border-white/15 hover:border-red-400/40 text-nevoa hover:text-red-300 text-[11px] font-bold transition-colors"
-                  >
-                    <XCircle className="w-3.5 h-3.5" /><span>Reprovar</span>
-                  </button>
-                </div>
-              </div>
-            ))}
-          </div>
-        </div>
-      )}
+          <p className="text-xs text-nevoa mb-1">Fotos, documento e selfie agrupados por profissional — compare o rosto da selfie com o documento e com as fotos antes de aprovar.</p>
+          {(() => {
+            const grupos = agruparPorProfissional(pendingMedia, pendingDocuments, pendingSelfies);
+            if (!carregando && grupos.length === 0) {
+              return <p className="text-sm text-nevoa">Nenhuma verificação pendente no momento.</p>;
+            }
+            return grupos.map((g) => (
+              <div key={g.userId} className="bg-grafite border border-white/10 p-4 space-y-4">
+                <div className="text-sm font-semibold text-marfim">{g.nome}</div>
 
-      {tab === 'documentos' && (
-        <div className="space-y-3 max-w-3xl">
-          {!carregando && pendingDocuments.length === 0 && <p className="text-sm text-nevoa">Nenhum documento pendente no momento.</p>}
-          {pendingDocuments.map((d: PendingDocument) => (
-            <div key={d.user_id} className="flex flex-col sm:flex-row sm:items-center gap-4 bg-grafite border border-white/10 p-4">
-              <div className="flex-1 min-w-0 space-y-1">
-                <div className="text-sm font-semibold text-marfim">{d.profile_name ?? d.user_name}</div>
-                <div className="text-[11px] text-nevoa">Enviado em {fmtData(d.updated_at)}</div>
-              </div>
-              <VerArquivoButton userId={d.user_id} buscar={buscarArquivoDocumento} rotulo="Ver documento" />
-              <div className="flex sm:flex-col gap-2 shrink-0">
-                <button
-                  onClick={() => decideDocument(d.user_id, 'aprovado')}
-                  className="flex-1 sm:flex-none flex items-center justify-center space-x-1.5 px-4 py-2 rounded-campo bg-verificado hover:opacity-90 text-marfim text-xs font-bold transition-opacity"
-                >
-                  <CheckCircle2 className="w-4 h-4" /><span>Aprovar</span>
-                </button>
-                <button
-                  onClick={() => decideDocument(d.user_id, 'reprovado')}
-                  className="flex-1 sm:flex-none flex items-center justify-center space-x-1.5 px-4 py-2 rounded-campo bg-white/5 border border-white/15 hover:border-red-400/40 text-nevoa hover:text-red-300 text-xs font-bold transition-colors"
-                >
-                  <XCircle className="w-4 h-4" /><span>Reprovar</span>
-                </button>
-              </div>
-            </div>
-          ))}
-        </div>
-      )}
+                {g.fotos.length > 0 && (
+                  <div className="space-y-2">
+                    <div className="text-[11px] text-nevoa uppercase tracking-wider flex items-center gap-1.5"><Images className="w-3.5 h-3.5 text-ouro" />Fotos ({g.fotos.length})</div>
+                    <div className="grid grid-cols-3 sm:grid-cols-4 gap-2">
+                      {g.fotos.map((m) => (
+                        <div key={m.id} className="bg-black/30 border border-white/10 p-2 space-y-1.5">
+                          <img src={m.url} alt="" className="w-full aspect-[3/4] object-cover rounded-campo" />
+                          <div className="flex gap-1">
+                            <button
+                              onClick={() => decideMedia(m.id, 'aprovado')}
+                              className="flex-1 flex items-center justify-center px-1.5 py-1 rounded-campo bg-verificado hover:opacity-90 text-marfim text-[10px] font-bold transition-opacity"
+                            >
+                              <CheckCircle2 className="w-3 h-3" />
+                            </button>
+                            <button
+                              onClick={() => decideMedia(m.id, 'reprovado')}
+                              className="flex-1 flex items-center justify-center px-1.5 py-1 rounded-campo bg-white/5 border border-white/15 hover:border-red-400/40 text-nevoa hover:text-red-300 text-[10px] font-bold transition-colors"
+                            >
+                              <XCircle className="w-3 h-3" />
+                            </button>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
 
-      {tab === 'selfies' && (
-        <div className="space-y-3 max-w-3xl">
-          <p className="text-xs text-nevoa mb-1">Compare o rosto da selfie com o documento e com as fotos do perfil antes de aprovar.</p>
-          {!carregando && pendingSelfies.length === 0 && <p className="text-sm text-nevoa">Nenhuma selfie pendente no momento.</p>}
-          {pendingSelfies.map((s: PendingSelfie) => (
-            <div key={s.user_id} className="flex flex-col sm:flex-row sm:items-center gap-4 bg-grafite border border-white/10 p-4">
-              <div className="flex-1 min-w-0 space-y-1">
-                <div className="text-sm font-semibold text-marfim">{s.profile_name ?? s.user_name}</div>
-                <div className="text-[11px] text-nevoa">Enviada em {fmtData(s.updated_at)}</div>
+                {g.documento && (
+                  <div className="flex flex-col sm:flex-row sm:items-center gap-3 border-t border-white/10 pt-3">
+                    <div className="flex-1 min-w-0 flex items-center gap-1.5 text-[11px] text-nevoa uppercase tracking-wider">
+                      <FileText className="w-3.5 h-3.5 text-ouro" />Documento — enviado em {fmtData(g.documento.updated_at)}
+                    </div>
+                    <VerArquivoButton userId={g.documento.user_id} buscar={buscarArquivoDocumento} rotulo="Ver documento" />
+                    <div className="flex gap-2 shrink-0">
+                      <button onClick={() => decideDocument(g.documento!.user_id, 'aprovado')} className="flex items-center justify-center space-x-1.5 px-3 py-1.5 rounded-campo bg-verificado hover:opacity-90 text-marfim text-xs font-bold transition-opacity">
+                        <CheckCircle2 className="w-4 h-4" /><span>Aprovar</span>
+                      </button>
+                      <button onClick={() => decideDocument(g.documento!.user_id, 'reprovado')} className="flex items-center justify-center space-x-1.5 px-3 py-1.5 rounded-campo bg-white/5 border border-white/15 hover:border-red-400/40 text-nevoa hover:text-red-300 text-xs font-bold transition-colors">
+                        <XCircle className="w-4 h-4" /><span>Reprovar</span>
+                      </button>
+                    </div>
+                  </div>
+                )}
+
+                {g.selfie && (
+                  <div className="flex flex-col sm:flex-row sm:items-center gap-3 border-t border-white/10 pt-3">
+                    <div className="flex-1 min-w-0 flex items-center gap-1.5 text-[11px] text-nevoa uppercase tracking-wider">
+                      <Eye className="w-3.5 h-3.5 text-ouro" />Selfie — enviada em {fmtData(g.selfie.updated_at)}
+                    </div>
+                    <VerArquivoButton userId={g.selfie.user_id} buscar={buscarArquivoSelfie} rotulo="Ver selfie" />
+                    <div className="flex gap-2 shrink-0">
+                      <button onClick={() => decideSelfie(g.selfie!.user_id, 'aprovado')} className="flex items-center justify-center space-x-1.5 px-3 py-1.5 rounded-campo bg-verificado hover:opacity-90 text-marfim text-xs font-bold transition-opacity">
+                        <CheckCircle2 className="w-4 h-4" /><span>Aprovar</span>
+                      </button>
+                      <button onClick={() => decideSelfie(g.selfie!.user_id, 'reprovado')} className="flex items-center justify-center space-x-1.5 px-3 py-1.5 rounded-campo bg-white/5 border border-white/15 hover:border-red-400/40 text-nevoa hover:text-red-300 text-xs font-bold transition-colors">
+                        <XCircle className="w-4 h-4" /><span>Reprovar</span>
+                      </button>
+                    </div>
+                  </div>
+                )}
               </div>
-              <VerArquivoButton userId={s.user_id} buscar={buscarArquivoSelfie} rotulo="Ver selfie" />
-              <div className="flex sm:flex-col gap-2 shrink-0">
-                <button
-                  onClick={() => decideSelfie(s.user_id, 'aprovado')}
-                  className="flex-1 sm:flex-none flex items-center justify-center space-x-1.5 px-4 py-2 rounded-campo bg-verificado hover:opacity-90 text-marfim text-xs font-bold transition-opacity"
-                >
-                  <CheckCircle2 className="w-4 h-4" /><span>Aprovar</span>
-                </button>
-                <button
-                  onClick={() => decideSelfie(s.user_id, 'reprovado')}
-                  className="flex-1 sm:flex-none flex items-center justify-center space-x-1.5 px-4 py-2 rounded-campo bg-white/5 border border-white/15 hover:border-red-400/40 text-nevoa hover:text-red-300 text-xs font-bold transition-colors"
-                >
-                  <XCircle className="w-4 h-4" /><span>Reprovar</span>
-                </button>
-              </div>
-            </div>
-          ))}
+            ));
+          })()}
         </div>
       )}
 

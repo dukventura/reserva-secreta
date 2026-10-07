@@ -208,6 +208,7 @@ export interface PendingMedia {
   id: number;
   url: string;
   created_at: string;
+  user_id: number;
   profile_name: string;
   profile_slug: string;
 }
@@ -496,12 +497,20 @@ export interface SubscriptionRow {
   stage_name: string;
   is_vip: number;
   boost_ate: string | null;
+  perfil_status: 'rascunho' | 'pendente' | 'aprovado' | 'reprovado' | 'suspenso';
   email: string;
   status: 'ativo' | 'vencido' | 'cancelado' | null;
   vence_em: string | null;
   ultimo_pagamento_em: string | null;
   plan_id: number | null;
   plano_nome: string | null;
+}
+
+export interface ClienteRow {
+  id: number;
+  name: string;
+  email: string;
+  created_at: string;
 }
 
 export interface PaymentRow {
@@ -544,6 +553,10 @@ export function editarPlano(id: number, dados: Partial<PlanInput> & { ativo?: bo
 
 export function listarAssinaturas() {
   return request<{ assinaturas: SubscriptionRow[] }>('/api/finance/subscriptions', { auth: true });
+}
+
+export function listarClientes() {
+  return request<{ clientes: ClienteRow[] }>('/api/finance/clientes', { auth: true });
 }
 
 export function ativarPlano(userId: number, dados: { plan_id: number; dias?: number; valor_centavos?: number; observacao?: string }) {
