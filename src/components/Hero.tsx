@@ -91,7 +91,8 @@ export const Hero: React.FC<HeroProps> = ({ filters, onFilterChange, totalProfil
 
         {/* 🔍 PAINEL DE FILTRO E BUSCA COM AUTOCOMPLETE DE CIDADES (Cliente) */}
         <div className="lg:col-span-3">
-          <div className="h-full p-5 sm:p-7 rounded-xl border border-ouro/30 shadow-2xl shadow-black/80 space-y-5 bg-grafite">
+          <div className="h-full flex flex-col justify-between p-5 sm:p-7 rounded-xl border border-ouro/30 shadow-2xl shadow-black/80 bg-grafite">
+          <div className="space-y-5">
 
             <div className="flex items-center justify-between border-b border-white/15 pb-4">
               <div className="flex items-center space-x-2.5 text-white font-semibold text-base">
@@ -277,9 +278,11 @@ export const Hero: React.FC<HeroProps> = ({ filters, onFilterChange, totalProfil
               </button>
             </div>
 
+          </div>
+
             <Link
               to="/cadastro"
-              className="w-full inline-flex items-center justify-center space-x-2.5 px-6 py-3.5 rounded-lg bg-ouro text-black font-bold text-base uppercase tracking-wide hover:brightness-110 transition-all shadow-lg active:scale-98"
+              className="w-full inline-flex items-center justify-center space-x-2.5 px-6 py-3.5 rounded-lg bg-ouro text-black font-bold text-base uppercase tracking-wide hover:brightness-110 transition-all shadow-lg active:scale-98 mt-5"
             >
               <UserPlus className="w-5 h-5 text-black" />
               <span>Sou Cliente — Criar Conta</span>
@@ -292,29 +295,31 @@ export const Hero: React.FC<HeroProps> = ({ filters, onFilterChange, totalProfil
         <div className="lg:col-span-2">
           <div className="h-full flex flex-col justify-between p-6 sm:p-7 rounded-xl border-2 border-ouro/50 bg-grafite shadow-2xl shadow-black/80 space-y-6">
             <div className="space-y-4">
-              <Monograma size={56} />
-              <h2 className="text-xl sm:text-2xl font-display font-normal text-white leading-snug">
-                É acompanhante?<br />
-                <span className="text-ouro/80">Anuncie no Reserva Secreta.</span>
-              </h2>
+              <div className="flex items-center gap-3">
+                <Monograma size={40} className="shrink-0" />
+                <h2 className="text-xl sm:text-2xl font-display font-normal text-white leading-snug">
+                  É acompanhante?<br />
+                  <span className="text-ouro/80">Anuncie no Reserva Secreta.</span>
+                </h2>
+              </div>
               <ul className="space-y-3 text-sm text-gray-200">
-                <li className="flex items-start space-x-3">
-                  <span className="shrink-0 w-8 h-8 rounded-lg border border-ouro/40 flex items-center justify-center">
+                <li className="flex items-center space-x-3">
+                  <span className="shrink-0 w-8 h-8 rounded-lg bg-black border border-ouro/40 flex items-center justify-center">
                     <WhatsAppIcon className="w-4 h-4 text-ouro" />
                   </span>
-                  <span className="pt-1.5"><strong className="text-white">Atendimento Direto:</strong> receba contatos direto no seu WhatsApp, sem intermediários.</span>
+                  <span><strong className="text-white">Atendimento Direto:</strong> receba contatos direto no seu WhatsApp, sem intermediários.</span>
                 </li>
-                <li className="flex items-start space-x-3">
-                  <span className="shrink-0 w-8 h-8 rounded-lg border border-ouro/40 flex items-center justify-center">
+                <li className="flex items-center space-x-3">
+                  <span className="shrink-0 w-8 h-8 rounded-lg bg-black border border-ouro/40 flex items-center justify-center">
                     <ShieldCheck className="w-4 h-4 text-ouro" />
                   </span>
-                  <span className="pt-1.5"><strong className="text-white">Selo Verificado:</strong> garanta mais credibilidade e destaque para o seu perfil.</span>
+                  <span><strong className="text-white">Selo Verificado:</strong> garanta mais credibilidade e destaque para o seu perfil.</span>
                 </li>
-                <li className="flex items-start space-x-3">
-                  <span className="shrink-0 w-8 h-8 rounded-lg border border-ouro/40 flex items-center justify-center">
+                <li className="flex items-center space-x-3">
+                  <span className="shrink-0 w-8 h-8 rounded-lg bg-black border border-ouro/40 flex items-center justify-center">
                     <HeartHandshake className="w-4 h-4 text-ouro" />
                   </span>
-                  <span className="pt-1.5"><strong className="text-white">Autonomia Total:</strong> você no comando da sua agenda, fotos e informações.</span>
+                  <span><strong className="text-white">Autonomia Total:</strong> você no comando da sua agenda, fotos e informações.</span>
                 </li>
               </ul>
             </div>
