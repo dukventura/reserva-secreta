@@ -21,16 +21,11 @@
   --color-verificado: #1f9d4b;
   --color-verificado-texto: #86efac;
 
-  /* Tipografia do manual: Montserrat pro corpo de texto, fonte script
-     pros titulos/assinaturas em destaque (mesmo uso da logo: nome
-     proprio em script, resto em caixa alta normal). A fonte do manual
-     ("Lavolta Swash") tem um arquivo com os acentos e a pontuacao
-     quebrados (confirmado via fontTools - glyphs identicos/vazios pra
-     a,e,c,o,u acentuados e pra . , ; : ? ! etc) - sem uma exportacao
-     corrigida, usamos a Alex Brush (Google Fonts, cobertura completa
-     de PT-BR) como substituta mais proxima ate trocar. */
+  /* Tipografia do manual: Montserrat pro corpo de texto, Bodoni Moda
+     pros titulos em destaque. A fonte script (Alex Brush, no lugar da
+     Lavolta Swash quebrada) foi testada nos titulos e a cliente pediu
+     pra voltar pra esta serif - ver git log por "font-script". */
   --font-display: 'Bodoni Moda', Georgia, serif;
-  --font-script: 'Alex Brush', 'Bodoni Moda', cursive;
   --font-sans: 'Montserrat', system-ui, sans-serif;
   --font-mono: 'IBM Plex Mono', ui-monospace, monospace;
 
