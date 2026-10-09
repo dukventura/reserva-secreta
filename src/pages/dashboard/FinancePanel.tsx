@@ -3,7 +3,7 @@ import {
   AlertCircle, CheckCircle2, XCircle, Clock, Zap, Plus, Pencil, History, Search, Power, Trash2,
 } from 'lucide-react';
 import {
-  listarAssinaturas, listarPlanos, criarPlano, editarPlano, ativarPlano, cancelarAssinatura,
+  listarAssinaturas, listarPlanos, criarPlano, editarPlano, excluirPlano, ativarPlano, cancelarAssinatura,
   ativarImpulso, encerrarImpulso, listarPagamentos, buscarResumoFinanceiro, excluirProfissional,
   listarPedidosPlano, atenderPedidoPlano, recusarPedidoPlano, listarClientes, ApiError,
   type SubscriptionRow, type Plan, type PlanInput, type PaymentRow, type FinanceSummary, type PlanRequestRow, type ClienteRow,
@@ -475,6 +475,8 @@ function FormPlano({ inicial, onSalvar, onCancelar }: {
 function AbaPlanos({ planos, onAtualizar }: { planos: Plan[]; onAtualizar: () => void }) {
   const [criando, setCriando] = useState(false);
   const [editandoId, setEditandoId] = useState<number | null>(null);
+  const [excluindoId, setExcluindoId] = useState<number | null>(null);
+  const [processandoId, setProcessandoId] = useState<number | null>(null);
   const [erro, setErro] = useState('');
 
   const alternarAtivo = async (p: Plan) => {
@@ -484,6 +486,20 @@ function AbaPlanos({ planos, onAtualizar }: { planos: Plan[]; onAtualizar: () =>
       onAtualizar();
     } catch (err) {
       setErro(err instanceof ApiError ? err.message : 'Não foi possível alterar o plano.');
+    }
+  };
+
+  const excluir = async (p: Plan) => {
+    setErro('');
+    setProcessandoId(p.id);
+    try {
+      await excluirPlano(p.id);
+      setExcluindoId(null);
+      onAtualizar();
+    } catch (err) {
+      setErro(err instanceof ApiError ? err.message : 'Não foi possível excluir o plano.');
+    } finally {
+      setProcessandoId(null);
     }
   };
 
@@ -512,6 +528,18 @@ function AbaPlanos({ planos, onAtualizar }: { planos: Plan[]; onAtualizar: () =>
                 <button onClick={() => alternarAtivo(p)} className={p.ativo === 1 ? btnPerigo : btnPrimario}>
                   <Power className="w-3.5 h-3.5" /><span>{p.ativo === 1 ? 'Desativar' : 'Reativar'}</span>
                 </button>
+                {excluindoId === p.id ? (
+                  <>
+                    <button onClick={() => excluir(p)} disabled={processandoId === p.id} className="flex items-center space-x-1.5 px-3 py-1.5 rounded-campo bg-red-500/20 border border-red-500/40 text-red-200 text-xs font-bold disabled:opacity-50">
+                      <span>Confirmar exclusão</span>
+                    </button>
+                    <button onClick={() => setExcluindoId(null)} className={btnSecundario}>Voltar</button>
+                  </>
+                ) : (
+                  <button onClick={() => setExcluindoId(p.id)} className={btnPerigo}>
+                    <Trash2 className="w-3.5 h-3.5" /><span>Excluir</span>
+                  </button>
+                )}
               </div>
             </div>
             {editandoId === p.id && (
@@ -551,7 +579,7 @@ function AbaPlanos({ planos, onAtualizar }: { planos: Plan[]; onAtualizar: () =>
           <Plus className="w-4 h-4" /><span>Novo plano</span>
         </button>
       )}
-      <p className="text-xs text-nevoa">Editar ou desativar um plano não muda quem já pagou — vale a partir do próximo pagamento registrado. Plano desativado some da lista de opções, mas o histórico continua.</p>
+      <p className="text-xs text-nevoa">Editar ou desativar um plano não muda quem já pagou — vale a partir do próximo pagamento registrado. Plano desativado some da lista de opções, mas o histórico continua. Excluir só é permitido pra planos sem nenhum uso (sem assinatura, pagamento ou pedido) — se já teve uso, desative em vez de excluir.</p>
     </div>
   );
 }

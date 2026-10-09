@@ -551,6 +551,10 @@ export function editarPlano(id: number, dados: Partial<PlanInput> & { ativo?: bo
   return request<{ ok: true }>(`/api/finance/plans/${id}`, { method: 'PATCH', body: dados, auth: true });
 }
 
+export function excluirPlano(id: number) {
+  return request<{ ok: true }>(`/api/finance/plans/${id}`, { method: 'DELETE', auth: true });
+}
+
 export function listarAssinaturas() {
   return request<{ assinaturas: SubscriptionRow[] }>('/api/finance/subscriptions', { auth: true });
 }

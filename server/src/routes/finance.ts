@@ -86,6 +86,33 @@ financeRouter.patch('/plans/:id', async (req, res) => {
   res.json({ ok: true });
 });
 
+// Exclusao definitiva so' e' permitida se o plano nunca foi usado de
+// verdade (nenhuma assinatura, pagamento ou pedido referencia ele) -
+// senao o historico fica com um plan_id orfao. Planos com uso real
+// devem ser desativados, nao excluidos.
+financeRouter.delete('/plans/:id', async (req, res) => {
+  const id = Number(req.params.id);
+  const plano = await db.selectFrom('plans').select('nome').where('id', '=', id).executeTakeFirst();
+  if (!plano) {
+    res.status(404).json({ erro: 'Plano não encontrado.' });
+    return;
+  }
+
+  const [assinaturas, pagamentos, pedidos] = await Promise.all([
+    db.selectFrom('subscriptions').select(db.fn.countAll<number>().as('c')).where('plan_id', '=', id).executeTakeFirstOrThrow(),
+    db.selectFrom('payments').select(db.fn.countAll<number>().as('c')).where('plan_id', '=', id).executeTakeFirstOrThrow(),
+    db.selectFrom('plan_requests').select(db.fn.countAll<number>().as('c')).where('plan_id', '=', id).executeTakeFirstOrThrow(),
+  ]);
+  if (Number(assinaturas.c) > 0 || Number(pagamentos.c) > 0 || Number(pedidos.c) > 0) {
+    res.status(400).json({ erro: 'Este plano já tem assinaturas, pagamentos ou pedidos no histórico. Desative em vez de excluir, pra não perder esse histórico.' });
+    return;
+  }
+
+  await db.deleteFrom('plans').where('id', '=', id).execute();
+  await registrarAuditoria(req.user!.sub, 'Excluiu plano', plano.nome);
+  res.json({ ok: true });
+});
+
 financeRouter.get('/subscriptions', async (_req, res) => {
   const assinaturas = await db
     .selectFrom('professional_profiles')
