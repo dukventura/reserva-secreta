@@ -14,11 +14,28 @@ export const CAMPOS_PUBLICOS = [
 // isVerified reflete o documento aprovado de verdade (tabela
 // verifications), em vez de um campo redundante que poderia
 // dessincronizar do status real de verificacao.
+//
+// thumbnail_url vem da galeria de verdade (media aprovada), nao de
+// cover_image - esse campo nunca e' preenchido no fluxo real de
+// cadastro (/anunciar so' grava em `media`), entao o card da home
+// sempre aparecia "Sem foto" mesmo pra perfis com fotos aprovadas,
+// enquanto a pagina de perfil (que le a galeria de verdade) mostrava
+// normal. Mesma correcao ja aplicada em moderation.ts.
 export function comVerificacao() {
   return db
     .selectFrom('professional_profiles')
     .leftJoin('verifications', 'verifications.user_id', 'professional_profiles.user_id')
-    .select([...CAMPOS_PUBLICOS, 'verifications.documento_status as documento_status'])
+    .select((eb) => [
+      ...CAMPOS_PUBLICOS,
+      'verifications.documento_status as documento_status',
+      eb.selectFrom('media')
+        .select('media.url')
+        .whereRef('media.profile_id', '=', 'professional_profiles.id')
+        .where('media.status', '=', 'aprovado')
+        .orderBy('media.position', 'asc')
+        .limit(1)
+        .as('thumbnail_url'),
+    ])
     .where('professional_profiles.status', '=', 'aprovado');
 }
 

@@ -32,9 +32,9 @@ export const ProfileCard: React.FC<ProfileCardProps> = ({ profile }) => {
       <div className="relative aspect-[3/4] w-full overflow-hidden bg-[#18080C]">
 
         {/* Imagem de Capa */}
-        {profile.cover_image ? (
+        {profile.thumbnail_url ?? profile.cover_image ? (
           <img
-            src={profile.cover_image}
+            src={profile.thumbnail_url ?? profile.cover_image!}
             alt={profile.stage_name}
             loading="lazy"
             className="w-full h-full object-cover object-center group-hover:scale-105 transition-transform duration-500"

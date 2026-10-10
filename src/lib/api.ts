@@ -120,6 +120,7 @@ export interface PublicProfile {
   whatsapp: string;
   is_vip: number;
   cover_image: string | null;
+  thumbnail_url: string | null;
   is_verified: boolean;
 }
 
