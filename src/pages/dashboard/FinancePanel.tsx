@@ -4,7 +4,7 @@ import {
 } from 'lucide-react';
 import {
   listarAssinaturas, listarPlanos, criarPlano, editarPlano, excluirPlano, ativarPlano, cancelarAssinatura,
-  ativarImpulso, encerrarImpulso, listarPagamentos, buscarResumoFinanceiro, excluirProfissional,
+  ativarImpulso, encerrarImpulso, listarPagamentos, buscarResumoFinanceiro, excluirProfissional, excluirCliente,
   listarPedidosPlano, atenderPedidoPlano, recusarPedidoPlano, listarClientes, buscarArquivoComprovante, ApiError,
   type SubscriptionRow, type Plan, type PlanInput, type PaymentRow, type FinanceSummary, type PlanRequestRow, type ClienteRow,
 } from '../../lib/api';
@@ -621,7 +621,52 @@ function AbaPagamentos() {
 
 // ---------- Pedidos ----------
 
-function AbaClientes({ clientes, carregando }: { clientes: ClienteRow[]; carregando: boolean }) {
+function LinhaCliente({ c, onAtualizar }: { c: ClienteRow; onAtualizar: () => void }) {
+  const [confirmando, setConfirmando] = useState(false);
+  const [processando, setProcessando] = useState(false);
+  const [erro, setErro] = useState('');
+
+  const excluir = async () => {
+    setProcessando(true);
+    setErro('');
+    try {
+      await excluirCliente(c.id);
+      onAtualizar();
+    } catch (err) {
+      setErro(err instanceof ApiError ? err.message : 'Não foi possível excluir o cliente.');
+      setProcessando(false);
+    }
+  };
+
+  return (
+    <div className="flex flex-col gap-2 p-3.5">
+      <div className="flex items-center justify-between gap-3">
+        <div>
+          <div className="text-sm font-semibold text-marfim">{c.name}</div>
+          <div className="text-xs text-nevoa">{c.email}</div>
+        </div>
+        <div className="flex items-center gap-2 shrink-0">
+          <div className="text-[11px] text-nevoa font-mono">Cadastrado em {fmtData(c.created_at)}</div>
+          {confirmando ? (
+            <>
+              <button onClick={excluir} disabled={processando} className="flex items-center space-x-1.5 px-3 py-1.5 rounded-campo bg-red-500/20 border border-red-500/40 text-red-200 text-xs font-bold disabled:opacity-50">
+                <span>{processando ? 'Excluindo...' : 'Confirmar exclusão'}</span>
+              </button>
+              <button onClick={() => setConfirmando(false)} className={btnSecundario}>Voltar</button>
+            </>
+          ) : (
+            <button onClick={() => setConfirmando(true)} className={btnPerigo}>
+              <Trash2 className="w-3.5 h-3.5" /><span>Excluir</span>
+            </button>
+          )}
+        </div>
+      </div>
+      {erro && <span className="text-[11px] text-red-400">{erro}</span>}
+    </div>
+  );
+}
+
+function AbaClientes({ clientes, carregando, onAtualizar }: { clientes: ClienteRow[]; carregando: boolean; onAtualizar: () => void }) {
   const [busca, setBusca] = useState('');
   const termo = busca.trim().toLowerCase();
   const visiveis = clientes.filter((c) => !termo || c.name.toLowerCase().includes(termo) || c.email.toLowerCase().includes(termo));
@@ -635,15 +680,7 @@ function AbaClientes({ clientes, carregando }: { clientes: ClienteRow[]; carrega
       </div>
       <div className="border border-white/10 divide-y divide-white/10">
         {!carregando && visiveis.length === 0 && <p className="text-sm text-nevoa p-4">Nenhum cliente cadastrado.</p>}
-        {visiveis.map((c) => (
-          <div key={c.id} className="flex items-center justify-between gap-3 p-3.5">
-            <div>
-              <div className="text-sm font-semibold text-marfim">{c.name}</div>
-              <div className="text-xs text-nevoa">{c.email}</div>
-            </div>
-            <div className="text-[11px] text-nevoa shrink-0 font-mono">Cadastrado em {fmtData(c.created_at)}</div>
-          </div>
-        ))}
+        {visiveis.map((c) => <LinhaCliente key={c.id} c={c} onAtualizar={onAtualizar} />)}
       </div>
     </div>
   );
@@ -850,7 +887,7 @@ export function FinancePanel() {
         </div>
       )}
 
-      {aba === 'clientes' && <AbaClientes clientes={clientes} carregando={carregando} />}
+      {aba === 'clientes' && <AbaClientes clientes={clientes} carregando={carregando} onAtualizar={carregar} />}
       {aba === 'planos' && <AbaPlanos planos={planos} onAtualizar={carregar} />}
       {aba === 'pedidos' && <AbaPedidos pedidos={pedidos} onAtualizar={carregar} />}
       {aba === 'pagamentos' && <AbaPagamentos key={versaoPagamentos} />}

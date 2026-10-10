@@ -588,6 +588,10 @@ export function excluirProfissional(userId: number) {
   return request<{ ok: true }>(`/api/finance/professionals/${userId}`, { method: 'DELETE', auth: true });
 }
 
+export function excluirCliente(userId: number) {
+  return request<{ ok: true }>(`/api/finance/clientes/${userId}`, { method: 'DELETE', auth: true });
+}
+
 export function ativarImpulso(userId: number, dados: { dias: number; valor_centavos: number; observacao?: string }) {
   return request<{ ok: true; boost_ate: string }>(`/api/finance/subscriptions/${userId}/impulso`, {
     method: 'POST',

@@ -439,3 +439,25 @@ financeRouter.delete('/professionals/:userId', async (req, res) => {
   await registrarAuditoria(req.user!.sub, 'Excluiu conta de profissional definitivamente', usuario.stage_name);
   res.json({ ok: true });
 });
+
+// Exclusao definitiva de conta de cliente (contratante) - mais simples
+// que a de profissional: sem foto/documento/assinatura, so' favoritos
+// (cascade) e denuncias feitas por ela (viram anonimas via SET NULL).
+financeRouter.delete('/clientes/:userId', async (req, res) => {
+  const userId = Number(req.params.userId);
+  const usuario = await db
+    .selectFrom('users')
+    .select(['id', 'name'])
+    .where('id', '=', userId)
+    .where('role', '=', 'contratante')
+    .executeTakeFirst();
+  if (!usuario) {
+    res.status(404).json({ erro: 'Cliente não encontrado.' });
+    return;
+  }
+
+  await db.deleteFrom('users').where('id', '=', userId).where('role', '=', 'contratante').execute();
+
+  await registrarAuditoria(req.user!.sub, 'Excluiu conta de cliente definitivamente', usuario.name);
+  res.json({ ok: true });
+});
