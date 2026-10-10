@@ -434,10 +434,10 @@ export const AdvertisePage: React.FC = () => {
               Seu anúncio entrou na fila de análise da nossa equipe. Assim que o documento for verificado, ele fica visível no catálogo — normalmente em até 24h úteis.
             </p>
             <button
-              onClick={() => navigate('/')}
+              onClick={() => navigate('/painel/profissional')}
               className="inline-block px-5 py-2.5 rounded-campo bg-ouro hover:bg-champanhe text-black font-bold text-sm transition-colors"
             >
-              Voltar para o site
+              Ir para o meu painel
             </button>
           </div>
         )}
