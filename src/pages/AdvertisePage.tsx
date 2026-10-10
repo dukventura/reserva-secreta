@@ -47,6 +47,13 @@ export const AdvertisePage: React.FC = () => {
   const selfieInputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
+    // Troca de etapa (dados -> verificacao -> sucesso) sem isso deixa a
+    // pagina na posicao de scroll de onde a pessoa estava no formulario
+    // anterior, em vez de comecar a proxima etapa do topo.
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  }, [etapa]);
+
+  useEffect(() => {
     // Lista completa dos 853 municipios de MG (nao so as 2 cidades que
     // ja tinham anuncio) - o autocomplete filtra conforme digita, em
     // vez de um <select> gigante ou travado numa lista curta.
