@@ -1,11 +1,11 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import {
-  AlertCircle, CheckCircle2, XCircle, Clock, Zap, Plus, Pencil, History, Search, Power, Trash2,
+  AlertCircle, CheckCircle2, XCircle, Clock, Zap, Plus, Pencil, History, Search, Power, Trash2, Eye,
 } from 'lucide-react';
 import {
   listarAssinaturas, listarPlanos, criarPlano, editarPlano, excluirPlano, ativarPlano, cancelarAssinatura,
   ativarImpulso, encerrarImpulso, listarPagamentos, buscarResumoFinanceiro, excluirProfissional,
-  listarPedidosPlano, atenderPedidoPlano, recusarPedidoPlano, listarClientes, ApiError,
+  listarPedidosPlano, atenderPedidoPlano, recusarPedidoPlano, listarClientes, buscarArquivoComprovante, ApiError,
   type SubscriptionRow, type Plan, type PlanInput, type PaymentRow, type FinanceSummary, type PlanRequestRow, type ClienteRow,
 } from '../../lib/api';
 
@@ -649,6 +649,33 @@ function AbaClientes({ clientes, carregando }: { clientes: ClienteRow[]; carrega
   );
 }
 
+function VerComprovanteButton({ pedidoId }: { pedidoId: number }) {
+  const [carregando, setCarregando] = useState(false);
+  const [erro, setErro] = useState('');
+
+  const abrir = async () => {
+    setCarregando(true);
+    setErro('');
+    try {
+      const url = await buscarArquivoComprovante(pedidoId);
+      window.open(url, '_blank', 'noopener,noreferrer');
+    } catch (err) {
+      setErro(err instanceof ApiError ? err.message : 'Não foi possível abrir o comprovante.');
+    } finally {
+      setCarregando(false);
+    }
+  };
+
+  return (
+    <div className="flex flex-col items-start gap-1">
+      <button onClick={abrir} disabled={carregando} className={btnSecundario}>
+        <Eye className="w-3.5 h-3.5" /><span>{carregando ? 'Abrindo...' : 'Ver comprovante'}</span>
+      </button>
+      {erro && <span className="text-[10px] text-red-400">{erro}</span>}
+    </div>
+  );
+}
+
 function AbaPedidos({ pedidos, onAtualizar }: { pedidos: PlanRequestRow[]; onAtualizar: () => void }) {
   const [processandoId, setProcessandoId] = useState<number | null>(null);
   const [erro, setErro] = useState('');
@@ -675,12 +702,20 @@ function AbaPedidos({ pedidos, onAtualizar }: { pedidos: PlanRequestRow[]; onAtu
         {pedidos.map((p) => (
           <div key={p.id} className="flex flex-col sm:flex-row sm:items-center gap-3 p-3.5">
             <div className="flex-1 min-w-0">
-              <div className="text-sm font-semibold text-marfim">{p.stage_name}</div>
+              <div className="flex items-center gap-2">
+                <div className="text-sm font-semibold text-marfim">{p.stage_name}</div>
+                {p.tem_comprovante ? (
+                  <span className="text-[10px] px-2 py-0.5 rounded-campo bg-verificado/15 border border-verificado/30 text-verificado-texto font-bold uppercase">Comprovante enviado</span>
+                ) : (
+                  <span className="text-[10px] px-2 py-0.5 rounded-campo bg-white/5 border border-white/10 text-nevoa uppercase">Sem comprovante ainda</span>
+                )}
+              </div>
               <div className="text-xs text-nevoa">
                 Quer o plano <span className="text-ouro font-semibold">{p.plano_nome}</span> ({fmtReais(p.preco_centavos)}) · pedido em {fmtDataHora(p.created_at)}
               </div>
             </div>
             <div className="flex gap-2 shrink-0">
+              {p.tem_comprovante && <VerComprovanteButton pedidoId={p.id} />}
               <button onClick={() => executar(p.id, () => atenderPedidoPlano(p.id))} disabled={processandoId === p.id} className={btnPrimario}>
                 <CheckCircle2 className="w-3.5 h-3.5" /><span>Atender</span>
               </button>

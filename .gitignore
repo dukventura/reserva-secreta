@@ -29,6 +29,10 @@ server/private/documents/*
 server/private/selfies/*
 !server/private/selfies/.gitkeep
 
+# Comprovantes de PIX anexados a pedidos de plano - dado financeiro, mesmo motivo.
+server/private/comprovantes/*
+!server/private/comprovantes/.gitkeep
+
 # Editor directories and files
 .vscode/*
 !.vscode/extensions.json

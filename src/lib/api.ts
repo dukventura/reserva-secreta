@@ -164,7 +164,7 @@ export interface MyProfile {
   plano_nome: string | null;
   max_fotos: number;
   boost_ate: string | null;
-  pedido_plano_pendente: { id: number; plano_nome: string; created_at: string } | null;
+  pedido_plano_pendente: { id: number; plano_nome: string; created_at: string; comprovante_enviado: boolean } | null;
   gallery: { id: number; url: string; status: 'pendente' | 'aprovado' | 'reprovado' }[];
 }
 
@@ -353,6 +353,12 @@ export function solicitarPlano(planId: number) {
 
 export function cancelarPedidoPlano(id: number) {
   return request<{ ok: true }>(`/api/profiles/me/plan-requests/${id}/cancelar`, { method: 'POST', auth: true });
+}
+
+export function enviarComprovantePedido(id: number, arquivo: File) {
+  const form = new FormData();
+  form.append('comprovante', arquivo);
+  return request<{ ok: true }>(`/api/profiles/me/plan-requests/${id}/comprovante`, { method: 'POST', body: form, auth: true });
 }
 
 // ---- moderacao ----
@@ -609,6 +615,7 @@ export interface PlanRequestRow {
   plan_id: number;
   plano_nome: string;
   preco_centavos: number;
+  tem_comprovante: boolean;
 }
 
 export function listarPedidosPlano() {
@@ -621,6 +628,19 @@ export function atenderPedidoPlano(id: number) {
 
 export function recusarPedidoPlano(id: number) {
   return request<{ ok: true }>(`/api/finance/plan-requests/${id}/recusar`, { method: 'POST', auth: true });
+}
+
+// O comprovante nunca tem URL publica - precisa do token de
+// autenticacao no header, entao vira um blob local em vez de um <img
+// src> direto (mesma logica do documento/selfie de verificacao).
+export async function buscarArquivoComprovante(pedidoId: number): Promise<string> {
+  const token = getToken();
+  const response = await fetch(`${API_URL}/api/finance/plan-requests/${pedidoId}/comprovante/file`, {
+    headers: token ? { Authorization: `Bearer ${token}` } : {},
+  });
+  if (!response.ok) throw new ApiError(response.status, 'Não foi possível carregar o comprovante.');
+  const blob = await response.blob();
+  return URL.createObjectURL(blob);
 }
 
 // ---- denuncias publicas ----

@@ -8,6 +8,7 @@ import { ativarPlanoParaUsuario, somarDias } from '../lib/plans';
 import { removerArquivoPelaUrl } from '../lib/uploads';
 import { removerDocumento } from '../lib/documentUploads';
 import { removerSelfie } from '../lib/selfieUploads';
+import { caminhoComprovante, removerComprovante } from '../lib/comprovanteUploads';
 
 // Catalogo publico (so planos ativos) - a profissional ve no proprio
 // painel o que cada plano oferece.
@@ -312,13 +313,25 @@ financeRouter.get('/plan-requests', async (_req, res) => {
     .innerJoin('professional_profiles', 'professional_profiles.user_id', 'plan_requests.user_id')
     .innerJoin('plans', 'plans.id', 'plan_requests.plan_id')
     .select([
-      'plan_requests.id', 'plan_requests.user_id', 'plan_requests.created_at',
+      'plan_requests.id', 'plan_requests.user_id', 'plan_requests.created_at', 'plan_requests.comprovante_url',
       'professional_profiles.stage_name', 'plans.id as plan_id', 'plans.nome as plano_nome', 'plans.preco_centavos',
     ])
     .where('plan_requests.status', '=', 'pendente')
     .orderBy('plan_requests.created_at', 'asc')
     .execute();
-  res.json({ pedidos });
+  res.json({ pedidos: pedidos.map(({ comprovante_url, ...p }) => ({ ...p, tem_comprovante: comprovante_url !== null })) });
+});
+
+// Nunca serve o comprovante por URL publica - mesma logica do
+// documento/selfie, so' essa rota autenticada le do disco privado.
+financeRouter.get('/plan-requests/:id/comprovante/file', async (req, res) => {
+  const id = Number(req.params.id);
+  const pedido = await db.selectFrom('plan_requests').select('comprovante_url').where('id', '=', id).executeTakeFirst();
+  if (!pedido?.comprovante_url) {
+    res.status(404).json({ erro: 'Comprovante não encontrado.' });
+    return;
+  }
+  res.sendFile(caminhoComprovante(pedido.comprovante_url));
 });
 
 financeRouter.post('/plan-requests/:id/atender', async (req, res) => {
@@ -400,12 +413,19 @@ financeRouter.delete('/professionals/:userId', async (req, res) => {
     .select(['documento_url', 'selfie_url'])
     .where('user_id', '=', userId)
     .executeTakeFirst();
+  const comprovantes = await db
+    .selectFrom('plan_requests')
+    .select('comprovante_url')
+    .where('user_id', '=', userId)
+    .where('comprovante_url', 'is not', null)
+    .execute();
 
   await db.deleteFrom('users').where('id', '=', userId).where('role', '=', 'profissional').execute();
 
   fotos.forEach((f) => removerArquivoPelaUrl(f.url));
   removerDocumento(verificacao?.documento_url);
   removerSelfie(verificacao?.selfie_url);
+  comprovantes.forEach((c) => removerComprovante(c.comprovante_url));
 
   await registrarAuditoria(req.user!.sub, 'Excluiu conta de profissional definitivamente', usuario.stage_name);
   res.json({ ok: true });

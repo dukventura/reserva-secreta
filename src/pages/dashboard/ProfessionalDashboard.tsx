@@ -8,7 +8,7 @@ import { RequireRole } from '../../components/RequireRole';
 import { PixPagamento } from '../../components/PixPagamento';
 import {
   buscarMeuPerfil, listarPlanosPublicos, atualizarMeuPerfil, enviarPerfilParaAprovacao, enviarFoto, removerFoto,
-  enviarDocumento, enviarSelfie, solicitarPlano, cancelarPedidoPlano, ApiError,
+  enviarDocumento, enviarSelfie, solicitarPlano, cancelarPedidoPlano, enviarComprovantePedido, ApiError,
   type MyProfile, type AtualizacaoPerfil, type Plan,
 } from '../../lib/api';
 
@@ -49,12 +49,14 @@ function ProfessionalDashboardContent() {
   const [planos, setPlanos] = useState<Plan[]>([]);
   const [solicitandoPlanoId, setSolicitandoPlanoId] = useState<number | null>(null);
   const [cancelandoPedido, setCancelandoPedido] = useState(false);
+  const [enviandoComprovante, setEnviandoComprovante] = useState(false);
   const [bannerPlanoFechado, setBannerPlanoFechado] = useState(() => {
     try { return localStorage.getItem('reservasecreta_banner_plano_fechado') === 'true'; } catch { return false; }
   });
   const fileInputRef = useRef<HTMLInputElement>(null);
   const documentInputRef = useRef<HTMLInputElement>(null);
   const selfieInputRef = useRef<HTMLInputElement>(null);
+  const comprovanteInputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
     listarPlanosPublicos().then(({ planos }) => setPlanos(planos)).catch(() => {});
@@ -205,6 +207,22 @@ function ProfessionalDashboardContent() {
       setErro(err instanceof ApiError ? err.message : 'Não foi possível cancelar o pedido.');
     } finally {
       setCancelandoPedido(false);
+    }
+  };
+
+  const handleEnviarComprovante = async (pedidoId: number, e: React.ChangeEvent<HTMLInputElement>) => {
+    const arquivo = e.target.files?.[0];
+    e.target.value = '';
+    if (!arquivo) return;
+    setEnviandoComprovante(true);
+    setErro('');
+    try {
+      await enviarComprovantePedido(pedidoId, arquivo);
+      carregar();
+    } catch (err) {
+      setErro(err instanceof ApiError ? err.message : 'Não foi possível enviar o comprovante.');
+    } finally {
+      setEnviandoComprovante(false);
     }
   };
 
@@ -672,6 +690,25 @@ function ProfessionalDashboardContent() {
                   />
                 );
               })()}
+              <div className="bg-black/30 border border-white/10 p-4 space-y-2">
+                {perfil.pedido_plano_pendente.comprovante_enviado ? (
+                  <div className="flex items-center space-x-1.5 text-xs text-verificado-texto font-semibold">
+                    <Check className="w-4 h-4" /><span>Comprovante enviado — aguardando a equipe confirmar.</span>
+                  </div>
+                ) : (
+                  <>
+                    <p className="text-xs text-nevoa">Já pagou? Envie o comprovante pra agilizar a confirmação.</p>
+                    <input ref={comprovanteInputRef} type="file" accept="image/*,.pdf" className="hidden" onChange={(e) => handleEnviarComprovante(perfil.pedido_plano_pendente!.id, e)} />
+                    <button
+                      onClick={() => comprovanteInputRef.current?.click()}
+                      disabled={enviandoComprovante}
+                      className="flex items-center space-x-1.5 px-3 py-2 rounded-campo bg-white/5 border border-white/15 hover:border-ouro/40 text-marfim text-xs font-bold transition-colors disabled:opacity-60"
+                    >
+                      <Upload className="w-3.5 h-3.5" /><span>{enviandoComprovante ? 'Enviando...' : 'Enviar comprovante'}</span>
+                    </button>
+                  </>
+                )}
+              </div>
             </div>
           )}
 

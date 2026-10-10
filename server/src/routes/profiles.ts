@@ -8,6 +8,7 @@ import { uploadFoto, urlPublicaUpload, removerArquivoPelaUrl } from '../lib/uplo
 import { limiteFotos } from '../lib/plans';
 import { uploadDocumento, removerDocumento } from '../lib/documentUploads';
 import { uploadSelfie, removerSelfie } from '../lib/selfieUploads';
+import { uploadComprovante, removerComprovante } from '../lib/comprovanteUploads';
 import { comVerificacao, parseJsonArray, paraPerfilPublico } from '../lib/publicProfile';
 
 export const profilesRouter = Router();
@@ -70,7 +71,7 @@ profilesRouter.get('/me', autenticar, exigirPapel('profissional'), async (req, r
   const pedidoPendente = await db
     .selectFrom('plan_requests')
     .innerJoin('plans', 'plans.id', 'plan_requests.plan_id')
-    .select(['plan_requests.id', 'plan_requests.created_at', 'plans.nome as plano_nome'])
+    .select(['plan_requests.id', 'plan_requests.created_at', 'plan_requests.comprovante_url', 'plans.nome as plano_nome'])
     .where('plan_requests.user_id', '=', req.user!.sub)
     .where('plan_requests.status', '=', 'pendente')
     .executeTakeFirst();
@@ -90,7 +91,12 @@ profilesRouter.get('/me', autenticar, exigirPapel('profissional'), async (req, r
       selfie_enviada: selfie_url !== null,
       max_fotos: await limiteFotos(req.user!.sub),
       pedido_plano_pendente: pedidoPendente
-        ? { id: pedidoPendente.id, plano_nome: pedidoPendente.plano_nome, created_at: pedidoPendente.created_at }
+        ? {
+            id: pedidoPendente.id,
+            plano_nome: pedidoPendente.plano_nome,
+            created_at: pedidoPendente.created_at,
+            comprovante_enviado: pedidoPendente.comprovante_url !== null,
+          }
         : null,
     },
   });
@@ -139,6 +145,40 @@ profilesRouter.post('/me/plan-requests/:id/cancelar', autenticar, exigirPapel('p
   }
   await db.updateTable('plan_requests').set({ status: 'cancelado', resolved_at: new Date() }).where('id', '=', id).execute();
   res.json({ ok: true });
+});
+
+// Sinaliza pra equipe que ja pagou o PIX gerado na tela - a confirmacao
+// de verdade continua manual (ver financeRouter /plan-requests/:id/atender),
+// isso so' poupa a profissional de precisar mandar WhatsApp avulso.
+profilesRouter.post('/me/plan-requests/:id/comprovante', autenticar, exigirPapel('profissional'), (req, res) => {
+  uploadComprovante(req, res, async (err: unknown) => {
+    if (err) {
+      const mensagem = err instanceof multer.MulterError && err.code === 'LIMIT_FILE_SIZE'
+        ? 'Arquivo muito grande. Máximo de 8MB.'
+        : err instanceof Error ? err.message : 'Não foi possível processar o arquivo.';
+      res.status(400).json({ erro: mensagem });
+      return;
+    }
+    if (!req.file) {
+      res.status(400).json({ erro: 'Nenhum arquivo enviado.' });
+      return;
+    }
+    const id = Number(req.params.id);
+    const pedido = await db
+      .selectFrom('plan_requests')
+      .select(['id', 'status', 'comprovante_url'])
+      .where('id', '=', id)
+      .where('user_id', '=', req.user!.sub)
+      .executeTakeFirst();
+    if (!pedido || pedido.status !== 'pendente') {
+      removerComprovante(req.file.filename);
+      res.status(404).json({ erro: 'Pedido não encontrado ou já resolvido.' });
+      return;
+    }
+    if (pedido.comprovante_url) removerComprovante(pedido.comprovante_url);
+    await db.updateTable('plan_requests').set({ comprovante_url: req.file.filename }).where('id', '=', id).execute();
+    res.status(201).json({ ok: true });
+  });
 });
 
 const edicaoSchema = z.object({
