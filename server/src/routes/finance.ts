@@ -24,6 +24,44 @@ plansPublicRouter.get('/', async (_req, res) => {
   res.json({ planos });
 });
 
+// Leitura de cadastros (quem se inscreveu, em que status) - gerente
+// tambem usa isso pra moderacao, so' nao mexe em plano/pagamento/
+// exclusao de conta, que fica exclusivo do financeRouter abaixo
+// (master). Fica num router separado, montado antes do financeRouter
+// em index.ts, pra essas duas rotas responderem pro gerente sem abrir
+// o resto do financeiro pra esse papel.
+export const cadastrosRouter = Router();
+cadastrosRouter.use(autenticar, exigirPapel('master', 'gerente'));
+
+cadastrosRouter.get('/subscriptions', async (_req, res) => {
+  const assinaturas = await db
+    .selectFrom('professional_profiles')
+    .innerJoin('users', 'users.id', 'professional_profiles.user_id')
+    .leftJoin('subscriptions', 'subscriptions.user_id', 'professional_profiles.user_id')
+    .leftJoin('plans', 'plans.id', 'subscriptions.plan_id')
+    .select([
+      'professional_profiles.user_id', 'professional_profiles.stage_name', 'professional_profiles.is_vip',
+      'professional_profiles.boost_ate', 'professional_profiles.status as perfil_status', 'users.email',
+      'subscriptions.status', 'subscriptions.vence_em', 'subscriptions.ultimo_pagamento_em', 'subscriptions.plan_id',
+      'plans.nome as plano_nome',
+    ])
+    .orderBy('professional_profiles.stage_name', 'asc')
+    .execute();
+  res.json({ assinaturas });
+});
+
+// Contas de contratante (cliente) nao aparecem em mais nenhum lugar do
+// painel - esta rota existe so' pra dar visibilidade de quem se cadastrou.
+cadastrosRouter.get('/clientes', async (_req, res) => {
+  const clientes = await db
+    .selectFrom('users')
+    .select(['id', 'name', 'email', 'created_at'])
+    .where('role', '=', 'contratante')
+    .orderBy('created_at', 'desc')
+    .execute();
+  res.json({ clientes });
+});
+
 // Pagamento ainda e' conciliado fora do site (PIX manual) - estas rotas
 // registram o que ja foi recebido. Tudo restrito ao Admin Master.
 export const financeRouter = Router();
@@ -112,35 +150,6 @@ financeRouter.delete('/plans/:id', async (req, res) => {
   await db.deleteFrom('plans').where('id', '=', id).execute();
   await registrarAuditoria(req.user!.sub, 'Excluiu plano', plano.nome);
   res.json({ ok: true });
-});
-
-financeRouter.get('/subscriptions', async (_req, res) => {
-  const assinaturas = await db
-    .selectFrom('professional_profiles')
-    .innerJoin('users', 'users.id', 'professional_profiles.user_id')
-    .leftJoin('subscriptions', 'subscriptions.user_id', 'professional_profiles.user_id')
-    .leftJoin('plans', 'plans.id', 'subscriptions.plan_id')
-    .select([
-      'professional_profiles.user_id', 'professional_profiles.stage_name', 'professional_profiles.is_vip',
-      'professional_profiles.boost_ate', 'professional_profiles.status as perfil_status', 'users.email',
-      'subscriptions.status', 'subscriptions.vence_em', 'subscriptions.ultimo_pagamento_em', 'subscriptions.plan_id',
-      'plans.nome as plano_nome',
-    ])
-    .orderBy('professional_profiles.stage_name', 'asc')
-    .execute();
-  res.json({ assinaturas });
-});
-
-// Contas de contratante (cliente) nao aparecem em mais nenhum lugar do
-// painel - esta rota existe so' pra dar visibilidade de quem se cadastrou.
-financeRouter.get('/clientes', async (_req, res) => {
-  const clientes = await db
-    .selectFrom('users')
-    .select(['id', 'name', 'email', 'created_at'])
-    .where('role', '=', 'contratante')
-    .orderBy('created_at', 'desc')
-    .execute();
-  res.json({ clientes });
 });
 
 const ativarSchema = z.object({

@@ -6,7 +6,7 @@ import { profilesRouter } from './routes/profiles';
 import { moderationRouter } from './routes/moderation';
 import { reportsRouter } from './routes/reports';
 import { citiesRouter } from './routes/cities';
-import { financeRouter, plansPublicRouter } from './routes/finance';
+import { financeRouter, plansPublicRouter, cadastrosRouter } from './routes/finance';
 import { clientRouter } from './routes/client';
 import { UPLOAD_DIR } from './lib/uploads';
 
@@ -33,6 +33,7 @@ app.use('/api/moderation', moderationRouter);
 app.use('/api/reports', reportsRouter);
 app.use('/api/cities', citiesRouter);
 app.use('/api/plans', plansPublicRouter);
+app.use('/api/finance', cadastrosRouter);
 app.use('/api/finance', financeRouter);
 app.use('/api/client', clientRouter);
 

@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import {
   LayoutDashboard, Users, Wallet, History, ShieldCheck, ArrowRight,
   UserPlus, AlertCircle,
@@ -25,6 +25,7 @@ function fmtData(iso: string) {
 
 function AdminDashboardContent() {
   const [tab, setTab] = useState('painel');
+  const navigate = useNavigate();
   const { pendingProfiles, reports, pendingMedia, pendingDocuments, pendingSelfies, auditLog, carregando, erro, refresh } = useModeration();
   const [equipe, setEquipe] = useState<StaffMember[]>([]);
   const [carregandoEquipe, setCarregandoEquipe] = useState(true);
@@ -78,18 +79,22 @@ function AdminDashboardContent() {
         <div className="space-y-6">
           <div className="grid grid-cols-2 sm:grid-cols-7 gap-4">
             {[
-              { label: 'Membros da equipe', value: carregandoEquipe ? '...' : equipe.length },
-              { label: 'Anúncios pendentes', value: carregando ? '...' : pendingProfiles.length },
-              { label: 'Fotos pendentes', value: carregando ? '...' : pendingMedia.length },
-              { label: 'Documentos pendentes', value: carregando ? '...' : pendingDocuments.length },
-              { label: 'Selfies pendentes', value: carregando ? '...' : pendingSelfies.length },
-              { label: 'Denúncias abertas', value: carregando ? '...' : reports.length },
-              { label: 'Ações no log', value: carregando ? '...' : auditLog.length },
+              { label: 'Membros da equipe', value: carregandoEquipe ? '...' : equipe.length, acao: () => setTab('equipe') },
+              { label: 'Anúncios pendentes', value: carregando ? '...' : pendingProfiles.length, acao: () => navigate('/painel/gerente') },
+              { label: 'Fotos pendentes', value: carregando ? '...' : pendingMedia.length, acao: () => navigate('/painel/gerente') },
+              { label: 'Documentos pendentes', value: carregando ? '...' : pendingDocuments.length, acao: () => navigate('/painel/gerente') },
+              { label: 'Selfies pendentes', value: carregando ? '...' : pendingSelfies.length, acao: () => navigate('/painel/gerente') },
+              { label: 'Denúncias abertas', value: carregando ? '...' : reports.length, acao: () => navigate('/painel/gerente') },
+              { label: 'Ações no log', value: carregando ? '...' : auditLog.length, acao: () => setTab('auditoria') },
             ].map((s) => (
-              <div key={s.label} className="bg-grafite border border-white/10 p-4 space-y-1.5">
+              <button
+                key={s.label}
+                onClick={s.acao}
+                className="text-left bg-grafite border border-white/10 hover:border-ouro/40 p-4 space-y-1.5 transition-colors cursor-pointer"
+              >
                 <span className="text-[11px] text-nevoa uppercase tracking-wider">{s.label}</span>
                 <div className="text-xl font-display text-marfim">{s.value}</div>
-              </div>
+              </button>
             ))}
           </div>
 

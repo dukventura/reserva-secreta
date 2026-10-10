@@ -1,14 +1,14 @@
 import React, { useState, useEffect } from 'react';
 import {
   LayoutDashboard, ClipboardCheck, Flag, History, CheckCircle2, XCircle,
-  MapPin, ShieldAlert, AlertCircle, Images, FileText, Eye, Radio, PauseCircle, PlayCircle, ShieldCheck,
+  MapPin, ShieldAlert, AlertCircle, Images, FileText, Eye, Radio, PauseCircle, PlayCircle, ShieldCheck, Users,
 } from 'lucide-react';
 import { DashboardLayout } from '../../layouts/DashboardLayout';
 import { RequireRole } from '../../components/RequireRole';
 import { useModeration } from '../../context/ModerationContext';
 import {
-  buscarArquivoDocumento, buscarArquivoSelfie, ApiError,
-  type PendingMedia, type PendingDocument, type PendingSelfie,
+  buscarArquivoDocumento, buscarArquivoSelfie, listarAssinaturas, listarClientes, ApiError,
+  type PendingMedia, type PendingDocument, type PendingSelfie, type SubscriptionRow, type ClienteRow,
 } from '../../lib/api';
 
 const NAV = [
@@ -16,9 +16,18 @@ const NAV = [
   { key: 'aprovacoes', label: 'Aprovações', icon: <ClipboardCheck className="w-4 h-4" /> },
   { key: 'ativos', label: 'Anúncios no ar', icon: <Radio className="w-4 h-4" /> },
   { key: 'verificacoes', label: 'Verificações', icon: <ShieldCheck className="w-4 h-4" /> },
+  { key: 'cadastros', label: 'Cadastros', icon: <Users className="w-4 h-4" /> },
   { key: 'denuncias', label: 'Denúncias', icon: <Flag className="w-4 h-4" /> },
   { key: 'historico', label: 'Histórico', icon: <History className="w-4 h-4" /> },
 ];
+
+const ROTULO_PERFIL_STATUS: Record<SubscriptionRow['perfil_status'], { label: string; cls: string }> = {
+  rascunho: { label: 'Cadastro incompleto', cls: 'bg-white/5 border-white/15 text-nevoa' },
+  pendente: { label: 'Aguardando aprovação', cls: 'bg-amber-500/15 border-amber-500/30 text-amber-300' },
+  aprovado: { label: 'Aprovado', cls: 'bg-verificado/15 border-verificado/30 text-verificado-texto' },
+  reprovado: { label: 'Reprovado', cls: 'bg-red-500/15 border-red-500/30 text-red-300' },
+  suspenso: { label: 'Suspenso', cls: 'bg-red-500/15 border-red-500/30 text-red-300' },
+};
 
 interface GrupoVerificacao {
   userId: number;
@@ -87,9 +96,22 @@ function ManagerDashboardContent() {
   const [tab, setTab] = useState('painel');
   const { pendingProfiles, activeProfiles, reports, pendingMedia, pendingDocuments, pendingSelfies, auditLog, carregando, erro, refresh, decideProfile, setProfileStatus, decideReport, decideMedia, decideDocument, decideSelfie } = useModeration();
 
+  const [assinaturas, setAssinaturas] = useState<SubscriptionRow[]>([]);
+  const [clientes, setClientes] = useState<ClienteRow[]>([]);
+  const [carregandoCadastros, setCarregandoCadastros] = useState(true);
+  const [erroCadastros, setErroCadastros] = useState('');
+  const [subAbaCadastros, setSubAbaCadastros] = useState<'profissionais' | 'clientes'>('profissionais');
+
   useEffect(() => {
     refresh();
   }, [refresh]);
+
+  useEffect(() => {
+    Promise.all([listarAssinaturas(), listarClientes()])
+      .then(([a, c]) => { setAssinaturas(a.assinaturas); setClientes(c.clientes); })
+      .catch((err) => setErroCadastros(err instanceof ApiError ? err.message : 'Não foi possível carregar os cadastros.'))
+      .finally(() => setCarregandoCadastros(false));
+  }, []);
 
   return (
     <DashboardLayout title="Painel do Gerente" navItems={NAV} activeKey={tab} onSelect={setTab} manualHref="/manual/administrativo">
@@ -102,22 +124,27 @@ function ManagerDashboardContent() {
       )}
 
       {tab === 'painel' && (
-        <div className="grid grid-cols-2 sm:grid-cols-6 gap-4">
+        <div className="grid grid-cols-2 sm:grid-cols-7 gap-4">
           {[
-            { label: 'Anúncios pendentes', value: pendingProfiles.length, icon: <ClipboardCheck className="w-4 h-4 text-ouro" /> },
-            { label: 'Fotos pendentes', value: pendingMedia.length, icon: <Images className="w-4 h-4 text-ouro" /> },
-            { label: 'Documentos pendentes', value: pendingDocuments.length, icon: <FileText className="w-4 h-4 text-ouro" /> },
-            { label: 'Selfies pendentes', value: pendingSelfies.length, icon: <Eye className="w-4 h-4 text-ouro" /> },
-            { label: 'Denúncias abertas', value: reports.length, icon: <Flag className="w-4 h-4 text-ouro" /> },
-            { label: 'Ações registradas', value: auditLog.length, icon: <History className="w-4 h-4 text-ouro" /> },
+            { label: 'Anúncios pendentes', value: pendingProfiles.length, icon: <ClipboardCheck className="w-4 h-4 text-ouro" />, irPara: 'aprovacoes' },
+            { label: 'Fotos pendentes', value: pendingMedia.length, icon: <Images className="w-4 h-4 text-ouro" />, irPara: 'verificacoes' },
+            { label: 'Documentos pendentes', value: pendingDocuments.length, icon: <FileText className="w-4 h-4 text-ouro" />, irPara: 'verificacoes' },
+            { label: 'Selfies pendentes', value: pendingSelfies.length, icon: <Eye className="w-4 h-4 text-ouro" />, irPara: 'verificacoes' },
+            { label: 'Cadastros', value: carregandoCadastros ? '...' : assinaturas.length + clientes.length, icon: <Users className="w-4 h-4 text-ouro" />, irPara: 'cadastros' },
+            { label: 'Denúncias abertas', value: reports.length, icon: <Flag className="w-4 h-4 text-ouro" />, irPara: 'denuncias' },
+            { label: 'Ações registradas', value: auditLog.length, icon: <History className="w-4 h-4 text-ouro" />, irPara: 'historico' },
           ].map((s) => (
-            <div key={s.label} className="bg-grafite border border-white/10 p-4 space-y-2">
+            <button
+              key={s.label}
+              onClick={() => setTab(s.irPara)}
+              className="text-left bg-grafite border border-white/10 hover:border-ouro/40 p-4 space-y-2 transition-colors cursor-pointer"
+            >
               <div className="flex items-center justify-between">
                 <span className="text-[11px] text-nevoa uppercase tracking-wider">{s.label}</span>
                 {s.icon}
               </div>
               <div className="text-xl font-display text-marfim">{carregando ? '...' : s.value}</div>
-            </div>
+            </button>
           ))}
         </div>
       )}
@@ -289,6 +316,63 @@ function ManagerDashboardContent() {
               </div>
             ));
           })()}
+        </div>
+      )}
+
+      {tab === 'cadastros' && (
+        <div className="space-y-4 max-w-3xl">
+          {erroCadastros && (
+            <div className="flex items-start space-x-2 bg-red-500/10 border border-red-500/30 p-3 text-xs text-red-300">
+              <AlertCircle className="w-4 h-4 shrink-0 mt-0.5" />
+              <span>{erroCadastros}</span>
+            </div>
+          )}
+          <div className="flex gap-1 border-b border-white/10">
+            {([['profissionais', `Profissionais (${assinaturas.length})`], ['clientes', `Clientes (${clientes.length})`]] as const).map(([k, l]) => (
+              <button
+                key={k}
+                onClick={() => setSubAbaCadastros(k)}
+                className={`px-4 py-2 text-sm font-semibold border-b-2 -mb-px transition-colors ${subAbaCadastros === k ? 'border-ouro text-ouro' : 'border-transparent text-nevoa hover:text-marfim'}`}
+              >
+                {l}
+              </button>
+            ))}
+          </div>
+
+          {subAbaCadastros === 'profissionais' && (
+            <div className="border border-white/10 divide-y divide-white/10">
+              {!carregandoCadastros && assinaturas.length === 0 && <p className="text-sm text-nevoa p-4">Nenhum cadastro de profissional.</p>}
+              {assinaturas.map((a) => (
+                <div key={a.user_id} className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 p-3.5">
+                  <div>
+                    <div className="flex items-center gap-2">
+                      <span className="text-sm font-semibold text-marfim">{a.stage_name}</span>
+                      <span className={`text-[10px] px-2 py-0.5 rounded-campo font-bold uppercase border ${ROTULO_PERFIL_STATUS[a.perfil_status].cls}`}>
+                        {ROTULO_PERFIL_STATUS[a.perfil_status].label}
+                      </span>
+                    </div>
+                    <div className="text-xs text-nevoa">{a.email}</div>
+                  </div>
+                  {a.plano_nome && <span className="text-[11px] text-nevoa">Plano: <span className="text-ouro font-semibold">{a.plano_nome}</span></span>}
+                </div>
+              ))}
+            </div>
+          )}
+
+          {subAbaCadastros === 'clientes' && (
+            <div className="border border-white/10 divide-y divide-white/10">
+              {!carregandoCadastros && clientes.length === 0 && <p className="text-sm text-nevoa p-4">Nenhum cliente cadastrado.</p>}
+              {clientes.map((c) => (
+                <div key={c.id} className="flex items-center justify-between gap-3 p-3.5">
+                  <div>
+                    <div className="text-sm font-semibold text-marfim">{c.name}</div>
+                    <div className="text-xs text-nevoa">{c.email}</div>
+                  </div>
+                  <div className="text-[11px] text-nevoa shrink-0 font-mono">Cadastrado em {fmtData(c.created_at)}</div>
+                </div>
+              ))}
+            </div>
+          )}
         </div>
       )}
 
