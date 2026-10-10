@@ -5,14 +5,12 @@ import {
 } from 'lucide-react';
 import { DashboardLayout } from '../../layouts/DashboardLayout';
 import { RequireRole } from '../../components/RequireRole';
+import { PixPagamento } from '../../components/PixPagamento';
 import {
   buscarMeuPerfil, listarPlanosPublicos, atualizarMeuPerfil, enviarPerfilParaAprovacao, enviarFoto, removerFoto,
   enviarDocumento, enviarSelfie, solicitarPlano, cancelarPedidoPlano, ApiError,
   type MyProfile, type AtualizacaoPerfil, type Plan,
 } from '../../lib/api';
-
-// TODO: trocar pelo numero real de WhatsApp da equipe assim que existir.
-const WHATSAPP_EQUIPE = '5535999999999';
 
 const NAV = [
   { key: 'painel', label: 'Painel', icon: <LayoutDashboard className="w-4 h-4" /> },
@@ -189,11 +187,6 @@ function ProfessionalDashboardContent() {
     setErro('');
     try {
       await solicitarPlano(plano.id);
-      // Abre o WhatsApp com a mensagem pronta pra equipe nao depender
-      // de ficar checando o painel - o pedido ja fica registrado no
-      // sistema independente disso.
-      const texto = encodeURIComponent(`Olá! Quero assinar o plano ${plano.nome} (${(plano.preco_centavos / 100).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}) no Reserva Secreta.`);
-      window.open(`https://wa.me/${WHATSAPP_EQUIPE}?text=${texto}`, '_blank', 'noopener,noreferrer');
       carregar();
     } catch (err) {
       setErro(err instanceof ApiError ? err.message : 'Não foi possível enviar o pedido.');
@@ -652,21 +645,33 @@ function ProfessionalDashboardContent() {
               <div className="text-xs text-amber-300 font-semibold">Impulso ativo até {impulsoAte.toLocaleString('pt-BR', { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' })} — seu perfil está no topo da cidade.</div>
             )}
           </div>
-          <p className="text-xs text-nevoa">O pagamento é combinado diretamente com a nossa equipe via PIX. Peça o plano abaixo, confirme o pagamento pelo WhatsApp e assim que recebermos, o plano é ativado no seu anúncio.</p>
+          <p className="text-xs text-nevoa">Pague por PIX direto aqui no site. Assim que o pagamento cair, nossa equipe confirma e o plano é ativado no seu anúncio.</p>
 
           {perfil.pedido_plano_pendente && (
-            <div className="flex items-center justify-between gap-3 bg-ouro/10 border border-ouro/30 p-4">
-              <div>
-                <div className="text-sm font-semibold text-marfim">Pedido enviado: plano {perfil.pedido_plano_pendente.plano_nome}</div>
-                <div className="text-xs text-nevoa">Em {new Date(perfil.pedido_plano_pendente.created_at).toLocaleString('pt-BR')} — aguardando confirmação da equipe.</div>
+            <div className="space-y-3 bg-ouro/10 border border-ouro/30 p-4">
+              <div className="flex items-center justify-between gap-3">
+                <div>
+                  <div className="text-sm font-semibold text-marfim">Pedido enviado: plano {perfil.pedido_plano_pendente.plano_nome}</div>
+                  <div className="text-xs text-nevoa">Em {new Date(perfil.pedido_plano_pendente.created_at).toLocaleString('pt-BR')} — aguardando confirmação da equipe.</div>
+                </div>
+                <button
+                  onClick={() => handleCancelarPedido(perfil.pedido_plano_pendente!.id)}
+                  disabled={cancelandoPedido}
+                  className="shrink-0 flex items-center space-x-1.5 px-3 py-1.5 rounded-campo bg-white/5 border border-white/15 hover:border-red-400/40 text-nevoa hover:text-red-300 text-xs font-bold transition-colors disabled:opacity-60"
+                >
+                  <XCircle className="w-3.5 h-3.5" /><span>{cancelandoPedido ? 'Cancelando...' : 'Cancelar pedido'}</span>
+                </button>
               </div>
-              <button
-                onClick={() => handleCancelarPedido(perfil.pedido_plano_pendente!.id)}
-                disabled={cancelandoPedido}
-                className="shrink-0 flex items-center space-x-1.5 px-3 py-1.5 rounded-campo bg-white/5 border border-white/15 hover:border-red-400/40 text-nevoa hover:text-red-300 text-xs font-bold transition-colors disabled:opacity-60"
-              >
-                <XCircle className="w-3.5 h-3.5" /><span>{cancelandoPedido ? 'Cancelando...' : 'Cancelar pedido'}</span>
-              </button>
+              {(() => {
+                const planoPendente = planos.find((p) => p.nome === perfil.pedido_plano_pendente!.plano_nome);
+                if (!planoPendente) return null;
+                return (
+                  <PixPagamento
+                    valorCentavos={planoPendente.preco_centavos}
+                    referencia={`RS${perfil.pedido_plano_pendente!.id}`}
+                  />
+                );
+              })()}
             </div>
           )}
 
