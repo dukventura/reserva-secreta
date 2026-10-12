@@ -20,6 +20,7 @@ import {
 } from 'lucide-react';
 import { buscarPerfilPorSlug, ApiError, type PublicProfileDetail } from '../lib/api';
 import { FavoriteButton } from '../components/FavoriteButton';
+import { useSeo } from '../hooks/useSeo';
 
 export const ProfilePage: React.FC = () => {
   const { slug } = useParams<{ slug: string }>();
@@ -27,6 +28,14 @@ export const ProfilePage: React.FC = () => {
   const [carregando, setCarregando] = useState(true);
   const [naoEncontrado, setNaoEncontrado] = useState(false);
   const [activeImageIndex, setActiveImageIndex] = useState(0);
+  useSeo(profile
+    ? {
+        title: `${profile.stage_name}, acompanhante em ${profile.city}`,
+        description: profile.tagline || profile.bio?.slice(0, 155)
+          || `${profile.stage_name}, ${profile.age} anos, acompanhante em ${profile.city} - MG. Fotos reais e contato direto pelo WhatsApp.`,
+        image: profile.gallery[0] ?? profile.cover_image,
+      }
+    : { noindex: naoEncontrado });
 
   useEffect(() => {
     if (!slug) return;

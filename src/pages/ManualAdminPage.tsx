@@ -1,7 +1,9 @@
 import React from 'react';
 import { LogIn, ClipboardCheck, Images, Flag, History, Users, Wallet } from 'lucide-react';
+import { useSeo } from '../hooks/useSeo';
 
 export const ManualAdminPage: React.FC = () => {
+  useSeo({ title: 'Manual administrativo', noindex: true });
   return (
     <div className="max-w-3xl mx-auto px-4 sm:px-6 py-10 sm:py-16 space-y-10">
       <div className="space-y-2">

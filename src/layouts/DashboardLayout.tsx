@@ -4,6 +4,7 @@ import { LogOut, ExternalLink, BookOpen } from 'lucide-react';
 import { Logotipo } from '../components/Logo';
 import { useSession } from '../context/SessionContext';
 import type { UserRole } from '../types';
+import { useSeo } from '../hooks/useSeo';
 
 export interface DashboardNavItem {
   key: string;
@@ -32,6 +33,7 @@ interface DashboardLayoutProps {
    onSelect em vez de sub-rotas aninhadas - suficiente para uma
    demonstracao navegavel, e mais simples de revisar com o cliente. */
 export const DashboardLayout: React.FC<DashboardLayoutProps> = ({ title, navItems, activeKey, onSelect, children, manualHref }) => {
+  useSeo({ title, noindex: true });
   const { session, sair } = useSession();
 
   return (

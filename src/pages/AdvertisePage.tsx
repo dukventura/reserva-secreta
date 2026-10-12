@@ -7,12 +7,17 @@ import {
 import { useSession } from '../context/SessionContext';
 import { ApiError, enviarPerfilParaAprovacao, enviarDocumento, enviarSelfie, listarCidades, type CityOption } from '../lib/api';
 import { Monograma } from '../components/Logo';
+import { useSeo } from '../hooks/useSeo';
 
 type Etapa = 'dados' | 'verificacao' | 'sucesso';
 type Categoria = 'VIP' | 'Mulheres' | 'Trans';
 const MAX_SUGESTOES = 8;
 
 export const AdvertisePage: React.FC = () => {
+  useSeo({
+    title: 'Anuncie seu perfil',
+    description: 'Anuncie como acompanhante no Reserva Secreta: perfil verificado, fotos reais e contato direto pelo WhatsApp com clientes de Ilicínea, Boa Esperança e região.',
+  });
   const { registrarProfissional } = useSession();
   const navigate = useNavigate();
   const [etapa, setEtapa] = useState<Etapa>('dados');

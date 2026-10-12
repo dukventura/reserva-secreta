@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!-- Paginas fixas do site. Os perfis ficam em sitemap-perfis.xml, servido
+     pela API (ver robots.txt). Ao adicionar uma cidade em
+     src/data/cities.ts, inclua a URL dela aqui tambem. -->
+<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
+  <url><loc>https://reservasecreta.com.br/</loc></url>
+  <url><loc>https://reservasecreta.com.br/cidade/ilicinea</loc></url>
+  <url><loc>https://reservasecreta.com.br/cidade/boa-esperanca</loc></url>
+  <url><loc>https://reservasecreta.com.br/anunciar</loc></url>
+</urlset>

@@ -1,2 +1,13 @@
 User-agent: *
 Allow: /
+# Paginas de conta e paineis: nao tem conteudo publico pra indexar.
+Disallow: /painel/
+Disallow: /minha-conta
+Disallow: /entrar
+Disallow: /cadastro
+Disallow: /manual/
+
+Sitemap: https://reservasecreta.com.br/sitemap.xml
+# Perfis entram e saem toda hora, entao a lista deles e' gerada pela API
+# (server/src/routes/sitemap.ts) a partir dos perfis aprovados.
+Sitemap: https://api.reservasecreta.com.br/sitemap-perfis.xml

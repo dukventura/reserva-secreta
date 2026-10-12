@@ -1,5 +1,6 @@
 import React from 'react';
 import { UserPlus, ClipboardList, UserRound, Images, RefreshCw, ShieldCheck, LifeBuoy } from 'lucide-react';
+import { useSeo } from '../hooks/useSeo';
 
 const STATUS = [
   { status: 'Rascunho', significado: 'Ainda não foi enviado para análise' },
@@ -10,6 +11,7 @@ const STATUS = [
 ];
 
 export const ManualProfissionalPage: React.FC = () => {
+  useSeo({ title: 'Manual da profissional', noindex: true });
   return (
     <div className="max-w-3xl mx-auto px-4 sm:px-6 py-10 sm:py-16 space-y-10">
       <div className="space-y-2">

@@ -4,6 +4,7 @@ import { Mail, KeyRound, AlertCircle } from 'lucide-react';
 import { useSession } from '../context/SessionContext';
 import { ApiError } from '../lib/api';
 import type { UserRole } from '../types';
+import { useSeo } from '../hooks/useSeo';
 
 const PAINEL_POR_PAPEL: Record<UserRole, string> = {
   master: '/painel/admin',
@@ -13,6 +14,7 @@ const PAINEL_POR_PAPEL: Record<UserRole, string> = {
 };
 
 export const LoginPage: React.FC = () => {
+  useSeo({ title: 'Entrar', noindex: true });
   const { entrar } = useSession();
   const navigate = useNavigate();
   const [email, setEmail] = useState('');

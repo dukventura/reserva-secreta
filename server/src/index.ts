@@ -8,6 +8,7 @@ import { reportsRouter } from './routes/reports';
 import { citiesRouter } from './routes/cities';
 import { financeRouter, plansPublicRouter, cadastrosRouter } from './routes/finance';
 import { clientRouter } from './routes/client';
+import { sitemapRouter } from './routes/sitemap';
 import { UPLOAD_DIR } from './lib/uploads';
 
 const app = express();
@@ -26,6 +27,7 @@ app.use(express.json({ limit: '1mb' }));
 app.use('/uploads', express.static(UPLOAD_DIR));
 
 app.get('/health', (_req, res) => res.json({ ok: true }));
+app.use(sitemapRouter);
 
 app.use('/api/auth', authRouter);
 app.use('/api/profiles', profilesRouter);

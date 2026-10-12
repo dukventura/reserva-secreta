@@ -5,6 +5,7 @@ import { Hero } from '../components/Hero';
 import { ProfileGrid } from '../components/ProfileGrid';
 import { useProfileFilters } from '../hooks/useProfileFilters';
 import { cidadePorSlug } from '../data/cities';
+import { useSeo } from '../hooks/useSeo';
 import { listarPerfis, ApiError, type PublicProfile } from '../lib/api';
 
 export const CityPage: React.FC = () => {
@@ -14,6 +15,12 @@ export const CityPage: React.FC = () => {
   const [profiles, setProfiles] = useState<PublicProfile[]>([]);
   const [carregando, setCarregando] = useState(true);
   const [erro, setErro] = useState('');
+  useSeo(cidade
+    ? {
+        title: `Acompanhantes em ${cidade} - MG`,
+        description: `Acompanhantes de luxo em ${cidade}, Sul de Minas. Perfis verificados com fotos reais, valores e contato direto pelo WhatsApp no Reserva Secreta.`,
+      }
+    : { title: 'Cidade não encontrada', noindex: true });
 
   useEffect(() => {
     if (!cidade) return;
