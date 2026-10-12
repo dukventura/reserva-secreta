@@ -4,7 +4,7 @@ import { MapPinOff } from 'lucide-react';
 import { Hero } from '../components/Hero';
 import { ProfileGrid } from '../components/ProfileGrid';
 import { useProfileFilters } from '../hooks/useProfileFilters';
-import { cidadePorSlug } from '../data/cities';
+import { cidadePorSlug, TEXTO_CIDADE } from '../data/cities';
 import { useSeo } from '../hooks/useSeo';
 import { listarPerfis, ApiError, type PublicProfile } from '../lib/api';
 
@@ -55,6 +55,12 @@ export const CityPage: React.FC = () => {
       ) : (
         <ProfileGrid profiles={profiles} filters={filters} onResetFilters={handleResetFilters} />
       )}
+      <section className="max-w-3xl mx-auto px-4 sm:px-6 lg:px-8 py-12 space-y-4">
+        <h2 className="text-2xl font-display text-marfim">{TEXTO_CIDADE[cidade].titulo}</h2>
+        {TEXTO_CIDADE[cidade].paragrafos.map((p) => (
+          <p key={p} className="text-sm text-nevoa leading-relaxed">{p}</p>
+        ))}
+      </section>
     </>
   );
 };
