@@ -3,8 +3,10 @@ import { useNavigate, Link } from 'react-router-dom';
 import { Mail, KeyRound, UserRound, ShieldCheck, ArrowRight, AlertCircle } from 'lucide-react';
 import { useSession } from '../context/SessionContext';
 import { ApiError } from '../lib/api';
+import { useSeo } from '../hooks/useSeo';
 
 export const ClientSignupPage: React.FC = () => {
+  useSeo({ title: 'Criar conta', noindex: true });
   const { registrarContratante } = useSession();
   const navigate = useNavigate();
   const [nome, setNome] = useState('');

@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { Heart, UserCircle2, Flag, AlertCircle, CheckCircle2, KeyRound } from 'lucide-react';
 import { RequireRole } from '../components/RequireRole';
+import { useSeo } from '../hooks/useSeo';
 import { ProfileCard } from '../components/ProfileCard';
 import { useFavorites } from '../context/FavoritesContext';
 import {
@@ -212,8 +213,11 @@ function ClientDashboardContent() {
   );
 }
 
-export const ClientDashboard: React.FC = () => (
-  <RequireRole allow={['contratante']}>
-    <ClientDashboardContent />
-  </RequireRole>
-);
+export const ClientDashboard: React.FC = () => {
+  useSeo({ title: 'Minha conta', noindex: true });
+  return (
+    <RequireRole allow={['contratante']}>
+      <ClientDashboardContent />
+    </RequireRole>
+  );
+};

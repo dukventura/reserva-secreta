@@ -3,8 +3,10 @@ import { Hero } from '../components/Hero';
 import { ProfileGrid } from '../components/ProfileGrid';
 import { useProfileFilters } from '../hooks/useProfileFilters';
 import { listarPerfis, ApiError, type PublicProfile } from '../lib/api';
+import { useSeo } from '../hooks/useSeo';
 
 export const HomePage: React.FC = () => {
+  useSeo();
   const { filters, handleFilterChange, handleResetFilters } = useProfileFilters();
   const [profiles, setProfiles] = useState<PublicProfile[]>([]);
   const [carregando, setCarregando] = useState(true);
