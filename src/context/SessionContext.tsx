@@ -22,7 +22,7 @@ interface SessionContextValue {
 const SessionContext = createContext<SessionContextValue | undefined>(undefined);
 
 function paraSessao(user: api.AuthUser): DemoSession {
-  return { role: user.role, name: user.name };
+  return { id: user.id, role: user.role, name: user.name, email: user.email };
 }
 
 export const SessionProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {

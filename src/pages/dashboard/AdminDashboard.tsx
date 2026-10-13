@@ -2,12 +2,16 @@ import React, { useState, useEffect } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import {
   LayoutDashboard, Users, Wallet, History, ShieldCheck, ArrowRight,
-  UserPlus, AlertCircle,
+  UserPlus, AlertCircle, Trash2, Shield, Check, X, ShieldAlert,
 } from 'lucide-react';
 import { DashboardLayout } from '../../layouts/DashboardLayout';
 import { RequireRole } from '../../components/RequireRole';
 import { useModeration } from '../../context/ModerationContext';
-import { listarEquipe, criarMembroEquipe, ApiError, type StaffMember } from '../../lib/api';
+import { useSession } from '../../context/SessionContext';
+import {
+  listarEquipe, criarMembroEquipe, atualizarMembroEquipe, excluirMembroEquipe,
+  ApiError, type StaffMember,
+} from '../../lib/api';
 import { FinancePanel } from './FinancePanel';
 
 const NAV = [
@@ -23,9 +27,250 @@ function fmtData(iso: string) {
   return new Date(iso).toLocaleDateString('pt-BR', { day: '2-digit', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' });
 }
 
+function LinhaMembroEquipe({
+  membro,
+  souEu,
+  onAtualizar,
+}: {
+  membro: StaffMember;
+  souEu: boolean;
+  onAtualizar: () => void;
+}) {
+  const [editando, setEditando] = useState(false);
+  const [novoPapel, setNovoPapel] = useState<'gerente' | 'master'>(membro.role);
+  const [salvando, setSalvando] = useState(false);
+  const [confirmandoExclusao, setConfirmandoExclusao] = useState(false);
+  const [excluindo, setExcluindo] = useState(false);
+  const [erro, setErro] = useState('');
+
+  const salvarPermissao = async () => {
+    if (novoPapel === membro.role) {
+      setEditando(false);
+      return;
+    }
+    setSalvando(true);
+    setErro('');
+    try {
+      await atualizarMembroEquipe(membro.id, { role: novoPapel });
+      setEditando(false);
+      onAtualizar();
+    } catch (err) {
+      setErro(err instanceof ApiError ? err.message : 'Não foi possível alterar a permissão.');
+    } finally {
+      setSalvando(false);
+    }
+  };
+
+  const confirmarExcluir = async () => {
+    setExcluindo(true);
+    setErro('');
+    try {
+      await excluirMembroEquipe(membro.id);
+      onAtualizar();
+    } catch (err) {
+      setErro(err instanceof ApiError ? err.message : 'Não foi possível excluir o membro.');
+      setExcluindo(false);
+      setConfirmandoExclusao(false);
+    }
+  };
+
+  return (
+    <div className="p-4 space-y-3 transition-colors hover:bg-white/[0.02]">
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+        <div>
+          <div className="flex items-center space-x-2">
+            <span className="text-sm font-semibold text-marfim">{membro.name}</span>
+            {souEu && (
+              <span className="text-[10px] px-1.5 py-0.5 rounded bg-white/10 text-nevoa font-mono uppercase tracking-wide">
+                Você
+              </span>
+            )}
+          </div>
+          <div className="text-xs text-nevoa">{membro.email}</div>
+        </div>
+
+        <div className="flex items-center flex-wrap gap-2 shrink-0">
+          <span
+            className={`text-[11px] px-2.5 py-1 rounded-campo font-semibold uppercase ${
+              membro.role === 'master'
+                ? 'bg-ouro/15 border border-ouro/30 text-ouro'
+                : 'bg-white/10 border border-white/20 text-nevoa'
+            }`}
+          >
+            {ROTULO_PAPEL[membro.role]}
+          </span>
+
+          {!editando && !confirmandoExclusao && (
+            <>
+              <button
+                type="button"
+                onClick={() => {
+                  setNovoPapel(membro.role);
+                  setEditando(true);
+                  setConfirmandoExclusao(false);
+                  setErro('');
+                }}
+                className="flex items-center space-x-1.5 px-3 py-1.5 rounded-campo bg-white/5 border border-white/15 text-nevoa hover:text-marfim hover:border-ouro/40 text-xs font-semibold transition-colors"
+                title="Alterar permissão de acesso"
+              >
+                <Shield className="w-3.5 h-3.5 text-ouro" />
+                <span>Alterar permissão</span>
+              </button>
+
+              <button
+                type="button"
+                onClick={() => {
+                  setConfirmandoExclusao(true);
+                  setEditando(false);
+                  setErro('');
+                }}
+                disabled={souEu}
+                title={souEu ? 'Você não pode excluir sua própria conta' : 'Excluir membro da equipe'}
+                className="flex items-center space-x-1.5 px-3 py-1.5 rounded-campo bg-white/5 border border-white/15 hover:border-red-500/40 text-nevoa hover:text-red-300 text-xs font-semibold transition-colors disabled:opacity-30 disabled:cursor-not-allowed"
+              >
+                <Trash2 className="w-3.5 h-3.5" />
+                <span>Excluir</span>
+              </button>
+            </>
+          )}
+        </div>
+      </div>
+
+      {erro && (
+        <div className="flex items-start space-x-2 bg-red-500/10 border border-red-500/30 p-2.5 text-xs text-red-300 rounded-campo">
+          <AlertCircle className="w-4 h-4 shrink-0 mt-0.5" />
+          <span>{erro}</span>
+        </div>
+      )}
+
+      {/* Painel inline de alteração de permissão */}
+      {editando && (
+        <div className="bg-grafite border border-ouro/30 p-3.5 rounded-campo space-y-3">
+          <div className="flex items-center justify-between">
+            <span className="text-xs font-semibold text-ouro uppercase tracking-wider">
+              Alterar permissão: {membro.name}
+            </span>
+            <button
+              type="button"
+              onClick={() => {
+                setEditando(false);
+                setErro('');
+              }}
+              className="text-nevoa hover:text-marfim text-xs p-1"
+            >
+              <X className="w-4 h-4" />
+            </button>
+          </div>
+
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+            <label
+              className={`flex items-start space-x-2.5 p-2.5 border rounded-campo cursor-pointer transition-colors ${
+                novoPapel === 'gerente'
+                  ? 'border-ouro bg-ouro/10 text-marfim'
+                  : 'border-white/10 hover:border-white/20 text-nevoa'
+              }`}
+            >
+              <input
+                type="radio"
+                name={`papel-${membro.id}`}
+                value="gerente"
+                checked={novoPapel === 'gerente'}
+                onChange={() => setNovoPapel('gerente')}
+                className="mt-0.5 accent-[#c5a880]"
+              />
+              <div className="text-xs">
+                <div className="font-bold text-marfim">Gerente</div>
+                <div className="text-[11px] text-nevoa">Moderação de anúncios, fotos, documentos e denúncias.</div>
+              </div>
+            </label>
+
+            <label
+              className={`flex items-start space-x-2.5 p-2.5 border rounded-campo cursor-pointer transition-colors ${
+                novoPapel === 'master'
+                  ? 'border-ouro bg-ouro/10 text-marfim'
+                  : 'border-white/10 hover:border-white/20 text-nevoa'
+              }`}
+            >
+              <input
+                type="radio"
+                name={`papel-${membro.id}`}
+                value="master"
+                checked={novoPapel === 'master'}
+                onChange={() => setNovoPapel('master')}
+                className="mt-0.5 accent-[#c5a880]"
+              />
+              <div className="text-xs">
+                <div className="font-bold text-marfim">Admin Master</div>
+                <div className="text-[11px] text-nevoa">Acesso total administrativo, equipe, financeiro e auditoria.</div>
+              </div>
+            </label>
+          </div>
+
+          <div className="flex items-center space-x-2 pt-1">
+            <button
+              type="button"
+              onClick={salvarPermissao}
+              disabled={salvando || novoPapel === membro.role}
+              className="flex items-center space-x-1.5 px-3.5 py-1.5 rounded-campo bg-ouro hover:bg-champanhe text-black font-bold text-xs transition-colors disabled:opacity-50"
+            >
+              <Check className="w-3.5 h-3.5" />
+              <span>{salvando ? 'Salvando...' : 'Salvar permissão'}</span>
+            </button>
+            <button
+              type="button"
+              onClick={() => {
+                setEditando(false);
+                setNovoPapel(membro.role);
+                setErro('');
+              }}
+              className="px-3.5 py-1.5 rounded-campo bg-white/5 border border-white/10 text-nevoa hover:text-marfim text-xs font-semibold transition-colors"
+            >
+              Cancelar
+            </button>
+          </div>
+        </div>
+      )}
+
+      {/* Confirmação inline de exclusão */}
+      {confirmandoExclusao && (
+        <div className="bg-red-500/10 border border-red-500/30 p-3.5 rounded-campo space-y-2.5">
+          <div className="flex items-center space-x-2 text-xs text-red-200">
+            <ShieldAlert className="w-4 h-4 text-red-400 shrink-0" />
+            <span>
+              Tem certeza que deseja excluir o membro <strong>{membro.name}</strong> ({membro.email})? A conta perderá acesso ao painel imediatamente.
+            </span>
+          </div>
+          <div className="flex items-center space-x-2 pt-1">
+            <button
+              type="button"
+              onClick={confirmarExcluir}
+              disabled={excluindo}
+              className="flex items-center space-x-1.5 px-3 py-1.5 rounded-campo bg-red-500/20 border border-red-500/40 text-red-200 hover:bg-red-500/30 text-xs font-bold transition-colors disabled:opacity-50"
+            >
+              <Trash2 className="w-3.5 h-3.5" />
+              <span>{excluindo ? 'Excluindo...' : 'Confirmar exclusão'}</span>
+            </button>
+            <button
+              type="button"
+              onClick={() => {
+                setConfirmandoExclusao(false);
+                setErro('');
+              }}
+              className="px-3 py-1.5 rounded-campo bg-white/5 border border-white/15 text-nevoa hover:text-marfim text-xs font-semibold transition-colors"
+            >
+              Voltar
+            </button>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
 function AdminDashboardContent() {
   const [tab, setTab] = useState('painel');
   const navigate = useNavigate();
+  const { session } = useSession();
   const { pendingProfiles, reports, pendingMedia, pendingDocuments, pendingSelfies, auditLog, carregando, erro, refresh } = useModeration();
   const [equipe, setEquipe] = useState<StaffMember[]>([]);
   const [carregandoEquipe, setCarregandoEquipe] = useState(true);
@@ -58,6 +303,7 @@ function AdminDashboardContent() {
       setNovoMembro({ name: '', email: '', password: '', role: 'gerente' });
       setMostrarForm(false);
       carregarEquipe();
+      refresh();
     } catch (err) {
       setErroEquipe(err instanceof ApiError ? err.message : 'Não foi possível criar a conta.');
     } finally {
@@ -127,15 +373,20 @@ function AdminDashboardContent() {
             {!carregandoEquipe && equipe.length === 0 && (
               <p className="text-sm text-nevoa p-4">Nenhum membro cadastrado.</p>
             )}
-            {equipe.map((m) => (
-              <div key={m.id} className="flex items-center justify-between gap-3 p-4">
-                <div>
-                  <div className="text-sm font-semibold text-marfim">{m.name}</div>
-                  <div className="text-xs text-nevoa">{m.email}</div>
-                </div>
-                <span className="text-[11px] px-2.5 py-1 rounded-campo bg-ouro/10 border border-ouro/20 text-ouro font-semibold uppercase">{ROTULO_PAPEL[m.role]}</span>
-              </div>
-            ))}
+            {equipe.map((m) => {
+              const souEu = Boolean((session?.id && session.id === m.id) || (session?.email && session.email === m.email));
+              return (
+                <LinhaMembroEquipe
+                  key={m.id}
+                  membro={m}
+                  souEu={souEu}
+                  onAtualizar={() => {
+                    carregarEquipe();
+                    refresh();
+                  }}
+                />
+              );
+            })}
           </div>
 
           {mostrarForm ? (

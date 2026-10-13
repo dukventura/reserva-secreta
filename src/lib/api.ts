@@ -274,6 +274,14 @@ export function criarMembroEquipe(dados: { name: string; email: string; password
   return request<{ user: AuthUser }>('/api/auth/staff', { method: 'POST', body: dados, auth: true });
 }
 
+export function atualizarMembroEquipe(id: number, dados: { role?: 'gerente' | 'master'; name?: string }) {
+  return request<{ ok: true; user: AuthUser }>(`/api/auth/staff/${id}`, { method: 'PATCH', body: dados, auth: true });
+}
+
+export function excluirMembroEquipe(id: number) {
+  return request<{ ok: true }>(`/api/auth/staff/${id}`, { method: 'DELETE', auth: true });
+}
+
 // ---- cidades ----
 
 export function listarCidades() {

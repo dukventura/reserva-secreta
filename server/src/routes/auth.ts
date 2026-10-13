@@ -175,6 +175,134 @@ authRouter.get('/staff', autenticar, exigirPapel('master'), async (_req, res) =>
   res.json({ equipe });
 });
 
+const atualizarStaffSchema = z.object({
+  role: z.enum(['gerente', 'master']).optional(),
+  name: z.string().trim().min(2).max(120).optional(),
+});
+
+authRouter.patch('/staff/:id', autenticar, exigirPapel('master'), async (req, res) => {
+  const targetId = Number(req.params.id);
+  if (!Number.isFinite(targetId) || targetId <= 0) {
+    res.status(400).json({ erro: 'ID de usuário inválido.' });
+    return;
+  }
+
+  const parsed = atualizarStaffSchema.safeParse(req.body);
+  if (!parsed.success) {
+    res.status(400).json({ erro: 'Dados inválidos.', detalhes: parsed.error.flatten() });
+    return;
+  }
+  const dados = parsed.data;
+  if (!dados.role && !dados.name) {
+    res.status(400).json({ erro: 'Nenhum dado informado para atualização.' });
+    return;
+  }
+
+  const membro = await db
+    .selectFrom('users')
+    .select(['id', 'name', 'email', 'role'])
+    .where('id', '=', targetId)
+    .where('role', 'in', ['master', 'gerente'])
+    .executeTakeFirst();
+
+  if (!membro) {
+    res.status(404).json({ erro: 'Membro da equipe não encontrado.' });
+    return;
+  }
+
+  // Se estiver tentando alterar de master para gerente, garante que reste pelo menos 1 outro master
+  if (dados.role && dados.role !== 'master' && membro.role === 'master') {
+    const outrosMasters = await db
+      .selectFrom('users')
+      .select('id')
+      .where('role', '=', 'master')
+      .where('id', '!=', targetId)
+      .execute();
+    if (outrosMasters.length === 0) {
+      res.status(400).json({ erro: 'Não é possível remover a permissão do único Admin Master do sistema.' });
+      return;
+    }
+  }
+
+  const updateFields: { role?: 'gerente' | 'master'; name?: string } = {};
+  if (dados.role) updateFields.role = dados.role;
+  if (dados.name) updateFields.name = dados.name;
+
+  await db.updateTable('users').set(updateFields).where('id', '=', targetId).execute();
+
+  const alteracoes: string[] = [];
+  if (dados.role && dados.role !== membro.role) {
+    alteracoes.push(`papel alterado para ${dados.role === 'master' ? 'Admin Master' : 'Gerente'}`);
+  }
+  if (dados.name && dados.name !== membro.name) {
+    alteracoes.push(`nome alterado para ${dados.name}`);
+  }
+
+  await registrarAuditoria(
+    req.user!.sub,
+    `Atualizou permissões do membro (${alteracoes.join(', ') || 'dados'})`,
+    membro.name,
+  );
+
+  res.json({
+    ok: true,
+    user: {
+      id: membro.id,
+      role: dados.role ?? membro.role,
+      name: dados.name ?? membro.name,
+      email: membro.email,
+    },
+  });
+});
+
+authRouter.delete('/staff/:id', autenticar, exigirPapel('master'), async (req, res) => {
+  const targetId = Number(req.params.id);
+  if (!Number.isFinite(targetId) || targetId <= 0) {
+    res.status(400).json({ erro: 'ID de usuário inválido.' });
+    return;
+  }
+
+  if (targetId === req.user!.sub) {
+    res.status(400).json({ erro: 'Você não pode excluir sua própria conta.' });
+    return;
+  }
+
+  const membro = await db
+    .selectFrom('users')
+    .select(['id', 'name', 'email', 'role'])
+    .where('id', '=', targetId)
+    .where('role', 'in', ['master', 'gerente'])
+    .executeTakeFirst();
+
+  if (!membro) {
+    res.status(404).json({ erro: 'Membro da equipe não encontrado.' });
+    return;
+  }
+
+  if (membro.role === 'master') {
+    const outrosMasters = await db
+      .selectFrom('users')
+      .select('id')
+      .where('role', '=', 'master')
+      .where('id', '!=', targetId)
+      .execute();
+    if (outrosMasters.length === 0) {
+      res.status(400).json({ erro: 'Não é possível excluir o único Admin Master do sistema.' });
+      return;
+    }
+  }
+
+  await db.deleteFrom('users').where('id', '=', targetId).where('role', 'in', ['master', 'gerente']).execute();
+
+  await registrarAuditoria(
+    req.user!.sub,
+    `Excluiu membro da equipe (${membro.role === 'master' ? 'Admin Master' : 'Gerente'})`,
+    membro.name,
+  );
+
+  res.json({ ok: true });
+});
+
 authRouter.get('/me', autenticar, async (req, res) => {
   const usuario = await db
     .selectFrom('users')

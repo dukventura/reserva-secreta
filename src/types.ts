@@ -11,6 +11,8 @@ export interface FilterState {
 export type UserRole = 'master' | 'gerente' | 'profissional' | 'contratante';
 
 export interface DemoSession {
+  id?: number;
   role: UserRole;
   name: string;
+  email?: string;
 }
