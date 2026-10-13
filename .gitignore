@@ -8,9 +8,11 @@ pnpm-debug.log*
 lerna-debug.log*
 
 node_modules
-dist
+/dist
 dist-ssr
 *.local
+!server/dist
+!server/dist/**
 
 # Segredos do backend - nunca commitar credencial de banco/JWT.
 .env
