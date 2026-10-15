@@ -16,6 +16,7 @@ const documentUploads_1 = require("../lib/documentUploads");
 const selfieUploads_1 = require("../lib/selfieUploads");
 const comprovanteUploads_1 = require("../lib/comprovanteUploads");
 const publicProfile_1 = require("../lib/publicProfile");
+const mercadopago_1 = require("../lib/mercadopago");
 exports.profilesRouter = (0, express_1.Router)();
 const categoriaQuerySchema = zod_1.z.enum(['VIP', 'Mulheres', 'Trans']);
 // Diretorio publico: only 'aprovado' aparece. E' o portao central do
@@ -177,6 +178,56 @@ exports.profilesRouter.post('/me/plan-requests/:id/comprovante', auth_1.autentic
         await db_1.db.updateTable('plan_requests').set({ comprovante_url: req.file.filename }).where('id', '=', id).execute();
         res.status(201).json({ ok: true });
     });
+});
+// Gera a cobranca PIX pela API do Mercado Pago pra esse pedido -
+// alternativa automatica ao PIX manual (o webhook em routes/webhooks.ts
+// confirma e ativa o plano sozinho quando o pagamento aprova). Se o
+// pedido ja tem um pagamento MP em aberto, devolve o mesmo QR Code em
+// vez de criar outro - evita cobranca duplicada ao reabrir a tela.
+exports.profilesRouter.post('/me/plan-requests/:id/mercadopago', auth_1.autenticar, (0, auth_1.exigirPapel)('profissional'), async (req, res) => {
+    if (!(0, mercadopago_1.mercadoPagoConfigurado)()) {
+        res.status(503).json({ erro: 'Pagamento automático ainda não está disponível. Use o PIX manual.' });
+        return;
+    }
+    const id = Number(req.params.id);
+    const pedido = await db_1.db
+        .selectFrom('plan_requests')
+        .innerJoin('plans', 'plans.id', 'plan_requests.plan_id')
+        .innerJoin('users', 'users.id', 'plan_requests.user_id')
+        .select([
+        'plan_requests.id', 'plan_requests.user_id', 'plan_requests.status', 'plan_requests.mercadopago_payment_id',
+        'plans.nome as plano_nome', 'plans.preco_centavos', 'users.email',
+    ])
+        .where('plan_requests.id', '=', id)
+        .where('plan_requests.user_id', '=', req.user.sub)
+        .executeTakeFirst();
+    if (!pedido || pedido.status !== 'pendente') {
+        res.status(404).json({ erro: 'Pedido não encontrado ou já resolvido.' });
+        return;
+    }
+    try {
+        if (pedido.mercadopago_payment_id) {
+            const existente = await (0, mercadopago_1.buscarPagamentoMercadoPago)(pedido.mercadopago_payment_id);
+            const dados = existente.point_of_interaction?.transaction_data;
+            if (existente.status === 'pending' && dados?.qr_code && dados?.qr_code_base64) {
+                res.json({ qr_code_base64: dados.qr_code_base64, qr_code: dados.qr_code });
+                return;
+            }
+            // Pagamento anterior expirou/foi cancelado/rejeitado - gera um novo abaixo.
+        }
+        const pix = await (0, mercadopago_1.criarPixMercadoPago)({
+            valorCentavos: pedido.preco_centavos,
+            descricao: `Plano ${pedido.plano_nome} - Reserva Secreta`,
+            referenciaExterna: `plano-${pedido.id}-${Date.now()}`,
+            payerEmail: pedido.email,
+        });
+        await db_1.db.updateTable('plan_requests').set({ mercadopago_payment_id: pix.paymentId }).where('id', '=', id).execute();
+        res.json({ qr_code_base64: pix.qrCodeBase64, qr_code: pix.qrCode });
+    }
+    catch (err) {
+        console.error('Erro ao criar PIX no Mercado Pago:', err);
+        res.status(502).json({ erro: 'Não foi possível gerar o PIX automático agora. Tente o PIX manual.' });
+    }
 });
 const edicaoSchema = zod_1.z.object({
     tagline: zod_1.z.string().max(255).optional(),

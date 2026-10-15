@@ -42,7 +42,9 @@ export async function ativarPlanoParaUsuario(params: {
   dias?: number;
   valorCentavos?: number;
   observacao?: string | null;
-  registradoPor: number;
+  // null quando a ativacao e' automatica (ex: webhook do Mercado Pago
+  // confirmando o PIX), sem um admin/gerente por tras da acao.
+  registradoPor: number | null;
 }): Promise<{ venceEm: Date; renovacao: boolean }> {
   const { userId, plano, registradoPor } = params;
   const dias = params.dias ?? plano.duracao_dias;

@@ -6,6 +6,7 @@ import {
 import { DashboardLayout } from '../../layouts/DashboardLayout';
 import { RequireRole } from '../../components/RequireRole';
 import { PixPagamento } from '../../components/PixPagamento';
+import { PagamentoMercadoPago } from '../../components/PagamentoMercadoPago';
 import {
   buscarMeuPerfil, listarPlanosPublicos, atualizarMeuPerfil, enviarPerfilParaAprovacao, enviarFoto, removerFoto,
   enviarDocumento, enviarSelfie, solicitarPlano, cancelarPedidoPlano, enviarComprovantePedido, ApiError,
@@ -50,6 +51,7 @@ function ProfessionalDashboardContent() {
   const [solicitandoPlanoId, setSolicitandoPlanoId] = useState<number | null>(null);
   const [cancelandoPedido, setCancelandoPedido] = useState(false);
   const [enviandoComprovante, setEnviandoComprovante] = useState(false);
+  const [mostrarPixManual, setMostrarPixManual] = useState(false);
   const [bannerPlanoFechado, setBannerPlanoFechado] = useState(() => {
     try { return localStorage.getItem('reservasecreta_banner_plano_fechado') === 'true'; } catch { return false; }
   });
@@ -89,6 +91,16 @@ function ProfessionalDashboardContent() {
   };
 
   useEffect(carregar, []);
+
+  // Enquanto tem pedido de plano pendente, confere de tempos em tempos
+  // se ja' foi confirmado - cobre tanto o PIX automatico (webhook do
+  // Mercado Pago ativa sozinho) quanto o admin atendendo manualmente,
+  // sem a profissional precisar recarregar a pagina pra ver o plano ativo.
+  useEffect(() => {
+    if (!perfil?.pedido_plano_pendente) return;
+    const intervalo = setInterval(carregar, 8000);
+    return () => clearInterval(intervalo);
+  }, [perfil?.pedido_plano_pendente?.id]);
 
   const paraLista = (texto: string) => texto.split(',').map((s) => s.trim()).filter(Boolean);
 
@@ -680,35 +692,49 @@ function ProfessionalDashboardContent() {
                   <XCircle className="w-3.5 h-3.5" /><span>{cancelandoPedido ? 'Cancelando...' : 'Cancelar pedido'}</span>
                 </button>
               </div>
-              {(() => {
-                const planoPendente = planos.find((p) => p.nome === perfil.pedido_plano_pendente!.plano_nome);
-                if (!planoPendente) return null;
-                return (
-                  <PixPagamento
-                    valorCentavos={planoPendente.preco_centavos}
-                    referencia={`RS${perfil.pedido_plano_pendente!.id}`}
-                  />
-                );
-              })()}
-              <div className="bg-black/30 border border-white/10 p-4 space-y-2">
-                {perfil.pedido_plano_pendente.comprovante_enviado ? (
-                  <div className="flex items-center space-x-1.5 text-xs text-verificado-texto font-semibold">
-                    <Check className="w-4 h-4" /><span>Comprovante enviado — aguardando a equipe confirmar.</span>
+              {mostrarPixManual ? (
+                <>
+                  {(() => {
+                    const planoPendente = planos.find((p) => p.nome === perfil.pedido_plano_pendente!.plano_nome);
+                    if (!planoPendente) return null;
+                    return (
+                      <PixPagamento
+                        valorCentavos={planoPendente.preco_centavos}
+                        referencia={`RS${perfil.pedido_plano_pendente!.id}`}
+                      />
+                    );
+                  })()}
+                  <div className="bg-black/30 border border-white/10 p-4 space-y-2">
+                    {perfil.pedido_plano_pendente.comprovante_enviado ? (
+                      <div className="flex items-center space-x-1.5 text-xs text-verificado-texto font-semibold">
+                        <Check className="w-4 h-4" /><span>Comprovante enviado — aguardando a equipe confirmar.</span>
+                      </div>
+                    ) : (
+                      <>
+                        <p className="text-xs text-nevoa">Já pagou? Envie o comprovante pra agilizar a confirmação.</p>
+                        <input ref={comprovanteInputRef} type="file" accept="image/*,.pdf" className="hidden" onChange={(e) => handleEnviarComprovante(perfil.pedido_plano_pendente!.id, e)} />
+                        <button
+                          onClick={() => comprovanteInputRef.current?.click()}
+                          disabled={enviandoComprovante}
+                          className="flex items-center space-x-1.5 px-3 py-2 rounded-campo bg-white/5 border border-white/15 hover:border-ouro/40 text-marfim text-xs font-bold transition-colors disabled:opacity-60"
+                        >
+                          <Upload className="w-3.5 h-3.5" /><span>{enviandoComprovante ? 'Enviando...' : 'Enviar comprovante'}</span>
+                        </button>
+                      </>
+                    )}
                   </div>
-                ) : (
-                  <>
-                    <p className="text-xs text-nevoa">Já pagou? Envie o comprovante pra agilizar a confirmação.</p>
-                    <input ref={comprovanteInputRef} type="file" accept="image/*,.pdf" className="hidden" onChange={(e) => handleEnviarComprovante(perfil.pedido_plano_pendente!.id, e)} />
-                    <button
-                      onClick={() => comprovanteInputRef.current?.click()}
-                      disabled={enviandoComprovante}
-                      className="flex items-center space-x-1.5 px-3 py-2 rounded-campo bg-white/5 border border-white/15 hover:border-ouro/40 text-marfim text-xs font-bold transition-colors disabled:opacity-60"
-                    >
-                      <Upload className="w-3.5 h-3.5" /><span>{enviandoComprovante ? 'Enviando...' : 'Enviar comprovante'}</span>
-                    </button>
-                  </>
-                )}
-              </div>
+                  <button onClick={() => setMostrarPixManual(false)} className="text-xs text-nevoa hover:text-ouro underline transition-colors">
+                    Prefere o pagamento automático?
+                  </button>
+                </>
+              ) : (
+                <>
+                  <PagamentoMercadoPago pedidoId={perfil.pedido_plano_pendente.id} />
+                  <button onClick={() => setMostrarPixManual(true)} className="text-xs text-nevoa hover:text-ouro underline transition-colors">
+                    Prefere pagar direto?
+                  </button>
+                </>
+              )}
             </div>
           )}
 

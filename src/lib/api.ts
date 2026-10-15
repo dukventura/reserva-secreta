@@ -370,6 +370,10 @@ export function enviarComprovantePedido(id: number, arquivo: File) {
   return request<{ ok: true }>(`/api/profiles/me/plan-requests/${id}/comprovante`, { method: 'POST', body: form, auth: true });
 }
 
+export function criarPixMercadoPago(pedidoId: number) {
+  return request<{ qr_code_base64: string; qr_code: string }>(`/api/profiles/me/plan-requests/${pedidoId}/mercadopago`, { method: 'POST', auth: true });
+}
+
 // ---- moderacao ----
 
 export function listarPerfisPendentes() {

@@ -8,6 +8,7 @@ import { reportsRouter } from './routes/reports';
 import { citiesRouter } from './routes/cities';
 import { financeRouter, plansPublicRouter, cadastrosRouter } from './routes/finance';
 import { clientRouter } from './routes/client';
+import { webhooksRouter } from './routes/webhooks';
 import { sitemapRouter } from './routes/sitemap';
 import { UPLOAD_DIR } from './lib/uploads';
 
@@ -38,6 +39,7 @@ app.use('/api/plans', plansPublicRouter);
 app.use('/api/finance', cadastrosRouter);
 app.use('/api/finance', financeRouter);
 app.use('/api/client', clientRouter);
+app.use('/api/webhooks', webhooksRouter);
 
 // eslint-disable-next-line @typescript-eslint/no-unused-vars
 app.use((err: unknown, _req: express.Request, res: express.Response, _next: express.NextFunction) => {
