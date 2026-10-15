@@ -10,7 +10,7 @@ import { createPool } from 'mysql2';
 export type UserRole = 'master' | 'gerente' | 'profissional' | 'contratante';
 export type ModerationStatus = 'pendente' | 'aprovado' | 'reprovado';
 export type ProfileStatus = 'rascunho' | 'pendente' | 'aprovado' | 'reprovado' | 'suspenso';
-export type Category = 'VIP' | 'Mulheres' | 'Trans';
+export type Category = 'Mulheres' | 'Trans';
 
 interface UsersTable {
   id: Generated<number>;

@@ -25,7 +25,7 @@ const cadastroSchema = zod_1.z.discriminatedUnion('role', [
     cadastroBase.extend({
         role: zod_1.z.literal('profissional'),
         city: zod_1.z.string().trim().min(1),
-        category: zod_1.z.enum(['VIP', 'Mulheres', 'Trans']),
+        category: zod_1.z.enum(['Mulheres', 'Trans']),
         age: zod_1.z.number().int().min(18).max(99),
         whatsapp: zod_1.z.string().trim().min(10).max(20),
     }),

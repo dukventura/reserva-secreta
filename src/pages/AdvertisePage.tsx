@@ -10,7 +10,7 @@ import { Monograma } from '../components/Logo';
 import { useSeo } from '../hooks/useSeo';
 
 type Etapa = 'dados' | 'verificacao' | 'sucesso';
-type Categoria = 'VIP' | 'Mulheres' | 'Trans';
+type Categoria = 'Mulheres' | 'Trans';
 const MAX_SUGESTOES = 8;
 
 export const AdvertisePage: React.FC = () => {
@@ -34,7 +34,7 @@ export const AdvertisePage: React.FC = () => {
     password: '',
     age: '',
     city: '',
-    category: 'VIP' as Categoria,
+    category: 'Mulheres' as Categoria,
     whatsapp: '',
   });
 
@@ -268,7 +268,6 @@ export const AdvertisePage: React.FC = () => {
                   onChange={(e) => setFormData({ ...formData, category: e.target.value as Categoria })}
                   className="w-full bg-onix text-marfim text-sm rounded-campo px-3 py-2.5 border border-white/15 focus:border-ouro outline-none"
                 >
-                  <option value="VIP">VIP</option>
                   <option value="Mulheres">Mulheres</option>
                   <option value="Trans">Trans</option>
                 </select>

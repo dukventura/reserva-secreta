@@ -14,7 +14,7 @@ import { criarPixMercadoPago, buscarPagamentoMercadoPago, mercadoPagoConfigurado
 
 export const profilesRouter = Router();
 
-const categoriaQuerySchema = z.enum(['VIP', 'Mulheres', 'Trans']);
+const categoriaQuerySchema = z.enum(['Mulheres', 'Trans']);
 
 // Diretorio publico: only 'aprovado' aparece. E' o portao central do
 // produto - nada entra aqui sem passar pela fila do gerente.

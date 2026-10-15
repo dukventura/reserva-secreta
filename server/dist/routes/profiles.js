@@ -18,7 +18,7 @@ const comprovanteUploads_1 = require("../lib/comprovanteUploads");
 const publicProfile_1 = require("../lib/publicProfile");
 const mercadopago_1 = require("../lib/mercadopago");
 exports.profilesRouter = (0, express_1.Router)();
-const categoriaQuerySchema = zod_1.z.enum(['VIP', 'Mulheres', 'Trans']);
+const categoriaQuerySchema = zod_1.z.enum(['Mulheres', 'Trans']);
 // Diretorio publico: only 'aprovado' aparece. E' o portao central do
 // produto - nada entra aqui sem passar pela fila do gerente.
 exports.profilesRouter.get('/', async (req, res) => {

@@ -113,7 +113,7 @@ export interface PublicProfile {
   tattoos: string | null;
   services: string[];
   locations: string[];
-  category: 'VIP' | 'Mulheres' | 'Trans';
+  category: 'Mulheres' | 'Trans';
   tagline: string | null;
   bio: string | null;
   hourly_rate: string | null;
@@ -145,7 +145,7 @@ export interface MyProfile {
   tattoos: string | null;
   services: string[];
   locations: string[];
-  category: 'VIP' | 'Mulheres' | 'Trans';
+  category: 'Mulheres' | 'Trans';
   tagline: string | null;
   bio: string | null;
   hourly_rate: string | null;
@@ -175,7 +175,7 @@ export interface PendingModerationProfile {
   stage_name: string;
   age: number;
   city: string;
-  category: 'VIP' | 'Mulheres' | 'Trans';
+  category: 'Mulheres' | 'Trans';
   whatsapp: string;
   thumbnail_url: string | null;
   submitted_at: string | null;
@@ -188,7 +188,7 @@ export interface ActiveProfile {
   stage_name: string;
   age: number;
   city: string;
-  category: 'VIP' | 'Mulheres' | 'Trans';
+  category: 'Mulheres' | 'Trans';
   whatsapp: string;
   status: 'aprovado' | 'suspenso';
   thumbnail_url: string | null;
@@ -237,7 +237,7 @@ export function registrarProfissional(dados: {
   email: string;
   password: string;
   city: string;
-  category: 'VIP' | 'Mulheres' | 'Trans';
+  category: 'Mulheres' | 'Trans';
   age: number;
   whatsapp: string;
 }) {

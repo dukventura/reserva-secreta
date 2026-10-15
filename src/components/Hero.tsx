@@ -181,7 +181,6 @@ export const Hero: React.FC<HeroProps> = ({ filters, onFilterChange, totalProfil
                     className="w-full bg-[#18080C] text-white text-sm font-medium rounded-lg px-4 py-3 border border-white/20 focus:border-ouro focus:ring-2 focus:ring-ouro/30 outline-none appearance-none transition-all cursor-pointer"
                   >
                     <option value="Todas">Todas as Categorias</option>
-                    <option value="VIP">VIP</option>
                     <option value="Mulheres">Mulheres</option>
                     <option value="Trans">Trans</option>
                   </select>
@@ -265,17 +264,6 @@ export const Hero: React.FC<HeroProps> = ({ filters, onFilterChange, totalProfil
               >
                 Boa Esperança
               </Link>
-
-              <button
-                onClick={() => onFilterChange({ category: 'VIP' })}
-                className={`px-3 py-1.5 rounded-md border transition-all ${
-                  filters.category === 'VIP'
-                    ? 'bg-ouro/25 border-ouro text-white font-bold'
-                    : 'bg-white/5 border-white/10 text-gray-300 hover:border-white/30 hover:text-white'
-                }`}
-              >
-                Somente VIP
-              </button>
             </div>
 
           </div>

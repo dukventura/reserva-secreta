@@ -1,5 +1,5 @@
 export type City = 'Todas' | 'Ilicínea' | 'Boa Esperança';
-export type Category = 'Todas' | 'VIP' | 'Mulheres' | 'Trans';
+export type Category = 'Todas' | 'Mulheres' | 'Trans';
 
 export interface FilterState {
   city: City;
