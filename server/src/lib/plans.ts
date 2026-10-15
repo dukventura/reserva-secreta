@@ -1,5 +1,5 @@
 import type { Selectable } from 'kysely';
-import { db, type Database } from './db';
+import { db, type Database, type SubscriptionStatus } from './db';
 
 type Plan = Selectable<Database['plans']>;
 
@@ -43,7 +43,7 @@ export async function ativarPlanoParaUsuario(params: {
   valorCentavos?: number;
   observacao?: string | null;
   registradoPor: number;
-}): Promise<{ venceEm: Date; renovacao: boolean }> {
+}): Promise<{ venceEm: Date; renovacao: boolean; paymentId: number }> {
   const { userId, plano, registradoPor } = params;
   const dias = params.dias ?? plano.duracao_dias;
   const valor = params.valorCentavos ?? plano.preco_centavos;
@@ -54,7 +54,7 @@ export async function ativarPlanoParaUsuario(params: {
   const base = renovacao ? inicioDoDia(atual!.vence_em) : hoje;
   const venceEm = somarDias(base, dias);
 
-  await db.transaction().execute(async (trx) => {
+  const paymentId = await db.transaction().execute(async (trx) => {
     await trx
       .insertInto('subscriptions')
       .values({ user_id: userId, plan_id: plano.id, status: 'ativo', vence_em: venceEm, ultimo_pagamento_em: hoje, registrado_por: registradoPor })
@@ -65,14 +65,115 @@ export async function ativarPlanoParaUsuario(params: {
       .set({ is_vip: plano.selo_vip, prioridade: plano.prioridade })
       .where('user_id', '=', userId)
       .execute();
-    await trx
+    const pagamento = await trx
       .insertInto('payments')
       .values({
         user_id: userId, tipo: 'plano', plan_id: plano.id, valor_centavos: valor, dias,
         observacao: params.observacao || null, registrado_por: registradoPor,
       })
-      .execute();
+      .executeTakeFirstOrThrow();
+    return Number(pagamento.insertId);
   });
 
-  return { venceEm, renovacao: Boolean(renovacao) };
+  return { venceEm, renovacao: Boolean(renovacao), paymentId };
+}
+
+interface AssinaturaAnterior {
+  subscription: { plan_id: number | null; status: string; vence_em: string; ultimo_pagamento_em: string; registrado_por: number | null } | null;
+  is_vip: number;
+  prioridade: number;
+}
+
+/* Liberacao automatica: sem API do banco nao da' pra saber sozinho que
+   o PIX caiu, entao o plano e' ativado na hora em que a profissional
+   envia o comprovante, e a equipe confere o extrato depois. Guarda um
+   retrato do que existia antes pra conseguir desfazer se o dinheiro
+   nao cair. Quem ja teve uma liberacao desfeita perde esse direito e
+   volta pra fila manual. Retorna false quando nao liberou. */
+export async function liberarPlanoAutomaticamente(pedidoId: number): Promise<boolean> {
+  const pedido = await db
+    .selectFrom('plan_requests')
+    .select(['id', 'user_id', 'plan_id', 'status', 'liberado_em'])
+    .where('id', '=', pedidoId)
+    .executeTakeFirst();
+  if (!pedido || pedido.status !== 'pendente' || pedido.liberado_em) return false;
+
+  const plano = await db.selectFrom('plans').selectAll().where('id', '=', pedido.plan_id).executeTakeFirst();
+  if (!plano || !plano.ativo) return false;
+
+  const jaFoiDesfeita = await db
+    .selectFrom('plan_requests')
+    .select('id')
+    .where('user_id', '=', pedido.user_id)
+    .where('status', '=', 'recusado')
+    .where('liberado_em', 'is not', null)
+    .executeTakeFirst();
+  if (jaFoiDesfeita) return false;
+
+  const sub = await db.selectFrom('subscriptions').selectAll().where('user_id', '=', pedido.user_id).executeTakeFirst();
+  const perfil = await db
+    .selectFrom('professional_profiles')
+    .select(['is_vip', 'prioridade'])
+    .where('user_id', '=', pedido.user_id)
+    .executeTakeFirstOrThrow();
+  const anterior: AssinaturaAnterior = {
+    subscription: sub
+      ? {
+          plan_id: sub.plan_id, status: sub.status, vence_em: sub.vence_em.toISOString(),
+          ultimo_pagamento_em: sub.ultimo_pagamento_em.toISOString(), registrado_por: sub.registrado_por,
+        }
+      : null,
+    is_vip: perfil.is_vip,
+    prioridade: perfil.prioridade,
+  };
+
+  const { paymentId } = await ativarPlanoParaUsuario({
+    userId: pedido.user_id,
+    plano,
+    observacao: `Liberado automaticamente pelo comprovante (pedido RS${pedido.id}) - conferir PIX`,
+    registradoPor: pedido.user_id,
+  });
+  await db
+    .updateTable('plan_requests')
+    .set({ liberado_em: new Date(), liberacao_payment_id: paymentId, assinatura_anterior: JSON.stringify(anterior) })
+    .where('id', '=', pedido.id)
+    .execute();
+  return true;
+}
+
+/* Desfaz uma liberacao automatica cujo PIX nao caiu: devolve a
+   assinatura e o destaque do perfil ao que eram antes e apaga o
+   pagamento que tinha sido registrado. */
+export async function desfazerLiberacao(pedidoId: number): Promise<void> {
+  const pedido = await db
+    .selectFrom('plan_requests')
+    .select(['user_id', 'liberado_em', 'liberacao_payment_id', 'assinatura_anterior'])
+    .where('id', '=', pedidoId)
+    .executeTakeFirst();
+  if (!pedido?.liberado_em || !pedido.assinatura_anterior) return;
+  const anterior = JSON.parse(pedido.assinatura_anterior) as AssinaturaAnterior;
+
+  await db.transaction().execute(async (trx) => {
+    if (anterior.subscription) {
+      const s = anterior.subscription;
+      await trx
+        .updateTable('subscriptions')
+        .set({
+          plan_id: s.plan_id, status: s.status as SubscriptionStatus, vence_em: new Date(s.vence_em),
+          ultimo_pagamento_em: new Date(s.ultimo_pagamento_em), registrado_por: s.registrado_por,
+        })
+        .where('user_id', '=', pedido.user_id)
+        .execute();
+    } else {
+      await trx.deleteFrom('subscriptions').where('user_id', '=', pedido.user_id).execute();
+    }
+    await trx
+      .updateTable('professional_profiles')
+      .set({ is_vip: anterior.is_vip, prioridade: anterior.prioridade })
+      .where('user_id', '=', pedido.user_id)
+      .execute();
+    if (pedido.liberacao_payment_id) {
+      await trx.deleteFrom('payments').where('id', '=', pedido.liberacao_payment_id).execute();
+    }
+  });
 }

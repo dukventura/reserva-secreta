@@ -5,7 +5,7 @@ import { sql } from 'kysely';
 import { db } from '../lib/db';
 import { autenticar, exigirPapel } from '../middleware/auth';
 import { uploadFoto, urlPublicaUpload, removerArquivoPelaUrl } from '../lib/uploads';
-import { limiteFotos } from '../lib/plans';
+import { liberarPlanoAutomaticamente, limiteFotos } from '../lib/plans';
 import { uploadDocumento, removerDocumento } from '../lib/documentUploads';
 import { uploadSelfie, removerSelfie } from '../lib/selfieUploads';
 import { uploadComprovante, removerComprovante } from '../lib/comprovanteUploads';
@@ -71,7 +71,7 @@ profilesRouter.get('/me', autenticar, exigirPapel('profissional'), async (req, r
   const pedidoPendente = await db
     .selectFrom('plan_requests')
     .innerJoin('plans', 'plans.id', 'plan_requests.plan_id')
-    .select(['plan_requests.id', 'plan_requests.created_at', 'plan_requests.comprovante_url', 'plans.nome as plano_nome'])
+    .select(['plan_requests.id', 'plan_requests.created_at', 'plan_requests.comprovante_url', 'plan_requests.liberado_em', 'plans.nome as plano_nome'])
     .where('plan_requests.user_id', '=', req.user!.sub)
     .where('plan_requests.status', '=', 'pendente')
     .executeTakeFirst();
@@ -96,6 +96,7 @@ profilesRouter.get('/me', autenticar, exigirPapel('profissional'), async (req, r
             plano_nome: pedidoPendente.plano_nome,
             created_at: pedidoPendente.created_at,
             comprovante_enviado: pedidoPendente.comprovante_url !== null,
+            liberado: pedidoPendente.liberado_em !== null,
           }
         : null,
     },
@@ -135,7 +136,7 @@ profilesRouter.post('/me/plan-requests/:id/cancelar', autenticar, exigirPapel('p
   const id = Number(req.params.id);
   const pedido = await db
     .selectFrom('plan_requests')
-    .select(['id', 'status'])
+    .select(['id', 'status', 'liberado_em'])
     .where('id', '=', id)
     .where('user_id', '=', req.user!.sub)
     .executeTakeFirst();
@@ -143,13 +144,19 @@ profilesRouter.post('/me/plan-requests/:id/cancelar', autenticar, exigirPapel('p
     res.status(404).json({ erro: 'Pedido não encontrado ou já resolvido.' });
     return;
   }
+  // Plano ja liberado pelo comprovante: cancelar aqui deixaria o plano
+  // ativo sem a equipe nunca conferir o PIX.
+  if (pedido.liberado_em) {
+    res.status(409).json({ erro: 'Seu plano já foi liberado e o pagamento está em conferência. Fale com a equipe se precisar cancelar.' });
+    return;
+  }
   await db.updateTable('plan_requests').set({ status: 'cancelado', resolved_at: new Date() }).where('id', '=', id).execute();
   res.json({ ok: true });
 });
 
-// Sinaliza pra equipe que ja pagou o PIX gerado na tela - a confirmacao
-// de verdade continua manual (ver financeRouter /plan-requests/:id/atender),
-// isso so' poupa a profissional de precisar mandar WhatsApp avulso.
+// Recebe o comprovante do PIX e ja libera o plano na hora (ver
+// liberarPlanoAutomaticamente) - a equipe confere o extrato depois e
+// desfaz pelo financeRouter /plan-requests/:id/recusar se nao caiu.
 profilesRouter.post('/me/plan-requests/:id/comprovante', autenticar, exigirPapel('profissional'), (req, res) => {
   uploadComprovante(req, res, async (err: unknown) => {
     if (err) {
@@ -177,7 +184,8 @@ profilesRouter.post('/me/plan-requests/:id/comprovante', autenticar, exigirPapel
     }
     if (pedido.comprovante_url) removerComprovante(pedido.comprovante_url);
     await db.updateTable('plan_requests').set({ comprovante_url: req.file.filename }).where('id', '=', id).execute();
-    res.status(201).json({ ok: true });
+    const liberado = await liberarPlanoAutomaticamente(id);
+    res.status(201).json({ ok: true, liberado });
   });
 });
 

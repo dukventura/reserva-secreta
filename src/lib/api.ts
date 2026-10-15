@@ -165,7 +165,7 @@ export interface MyProfile {
   plano_nome: string | null;
   max_fotos: number;
   boost_ate: string | null;
-  pedido_plano_pendente: { id: number; plano_nome: string; created_at: string; comprovante_enviado: boolean } | null;
+  pedido_plano_pendente: { id: number; plano_nome: string; created_at: string; comprovante_enviado: boolean; liberado: boolean } | null;
   gallery: { id: number; url: string; status: 'pendente' | 'aprovado' | 'reprovado' }[];
 }
 
@@ -359,7 +359,7 @@ export function cancelarPedidoPlano(id: number) {
 export function enviarComprovantePedido(id: number, arquivo: File) {
   const form = new FormData();
   form.append('comprovante', arquivo);
-  return request<{ ok: true }>(`/api/profiles/me/plan-requests/${id}/comprovante`, { method: 'POST', body: form, auth: true });
+  return request<{ ok: true; liberado: boolean }>(`/api/profiles/me/plan-requests/${id}/comprovante`, { method: 'POST', body: form, auth: true });
 }
 
 // ---- moderacao ----
@@ -617,6 +617,8 @@ export interface PlanRequestRow {
   plano_nome: string;
   preco_centavos: number;
   tem_comprovante: boolean;
+  /** Plano ja ativado sozinho quando o comprovante chegou - falta so' conferir o PIX no extrato. */
+  liberado: boolean;
 }
 
 export function listarPedidosPlano() {

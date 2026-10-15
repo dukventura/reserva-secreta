@@ -4,7 +4,7 @@ import { sql } from 'kysely';
 import { db } from '../lib/db';
 import { autenticar, exigirPapel } from '../middleware/auth';
 import { registrarAuditoria } from '../lib/audit';
-import { ativarPlanoParaUsuario, somarDias } from '../lib/plans';
+import { ativarPlanoParaUsuario, desfazerLiberacao, somarDias } from '../lib/plans';
 import { removerArquivoPelaUrl } from '../lib/uploads';
 import { removerDocumento } from '../lib/documentUploads';
 import { removerSelfie } from '../lib/selfieUploads';
@@ -322,13 +322,17 @@ financeRouter.get('/plan-requests', async (_req, res) => {
     .innerJoin('professional_profiles', 'professional_profiles.user_id', 'plan_requests.user_id')
     .innerJoin('plans', 'plans.id', 'plan_requests.plan_id')
     .select([
-      'plan_requests.id', 'plan_requests.user_id', 'plan_requests.created_at', 'plan_requests.comprovante_url',
+      'plan_requests.id', 'plan_requests.user_id', 'plan_requests.created_at', 'plan_requests.comprovante_url', 'plan_requests.liberado_em',
       'professional_profiles.stage_name', 'plans.id as plan_id', 'plans.nome as plano_nome', 'plans.preco_centavos',
     ])
     .where('plan_requests.status', '=', 'pendente')
     .orderBy('plan_requests.created_at', 'asc')
     .execute();
-  res.json({ pedidos: pedidos.map(({ comprovante_url, ...p }) => ({ ...p, tem_comprovante: comprovante_url !== null })) });
+  res.json({
+    pedidos: pedidos.map(({ comprovante_url, liberado_em, ...p }) => ({
+      ...p, tem_comprovante: comprovante_url !== null, liberado: liberado_em !== null,
+    })),
+  });
 });
 
 // Nunca serve o comprovante por URL publica - mesma logica do
@@ -348,11 +352,23 @@ financeRouter.post('/plan-requests/:id/atender', async (req, res) => {
   const pedido = await db
     .selectFrom('plan_requests')
     .innerJoin('professional_profiles', 'professional_profiles.user_id', 'plan_requests.user_id')
-    .select(['plan_requests.id', 'plan_requests.user_id', 'plan_requests.plan_id', 'plan_requests.status', 'professional_profiles.stage_name'])
+    .select(['plan_requests.id', 'plan_requests.user_id', 'plan_requests.plan_id', 'plan_requests.status', 'plan_requests.liberado_em', 'professional_profiles.stage_name'])
     .where('plan_requests.id', '=', id)
     .executeTakeFirst();
   if (!pedido || pedido.status !== 'pendente') {
     res.status(404).json({ erro: 'Pedido não encontrado ou já resolvido.' });
+    return;
+  }
+  // Ja liberado pelo comprovante: o plano ja' esta' ativo e o pagamento
+  // ja' foi registrado - atender aqui so' confirma que o PIX caiu.
+  if (pedido.liberado_em) {
+    await db
+      .updateTable('plan_requests')
+      .set({ status: 'atendido', resolved_at: new Date(), resolved_by: req.user!.sub })
+      .where('id', '=', id)
+      .execute();
+    await registrarAuditoria(req.user!.sub, 'Confirmou PIX de plano liberado automaticamente', pedido.stage_name);
+    res.json({ ok: true });
     return;
   }
   const plano = await db.selectFrom('plans').selectAll().where('id', '=', pedido.plan_id).executeTakeFirst();
@@ -377,19 +393,24 @@ financeRouter.post('/plan-requests/:id/recusar', async (req, res) => {
   const pedido = await db
     .selectFrom('plan_requests')
     .innerJoin('professional_profiles', 'professional_profiles.user_id', 'plan_requests.user_id')
-    .select(['plan_requests.id', 'plan_requests.status', 'professional_profiles.stage_name'])
+    .select(['plan_requests.id', 'plan_requests.status', 'plan_requests.liberado_em', 'professional_profiles.stage_name'])
     .where('plan_requests.id', '=', id)
     .executeTakeFirst();
   if (!pedido || pedido.status !== 'pendente') {
     res.status(404).json({ erro: 'Pedido não encontrado ou já resolvido.' });
     return;
   }
+  if (pedido.liberado_em) await desfazerLiberacao(id);
   await db
     .updateTable('plan_requests')
     .set({ status: 'recusado', resolved_at: new Date(), resolved_by: req.user!.sub })
     .where('id', '=', id)
     .execute();
-  await registrarAuditoria(req.user!.sub, 'Recusou pedido de plano', pedido.stage_name);
+  await registrarAuditoria(
+    req.user!.sub,
+    pedido.liberado_em ? 'Recusou pedido de plano e desfez a liberação automática' : 'Recusou pedido de plano',
+    pedido.stage_name,
+  );
   res.json({ ok: true });
 });
 

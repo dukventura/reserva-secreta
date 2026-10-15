@@ -663,9 +663,19 @@ function ProfessionalDashboardContent() {
               <div className="text-xs text-amber-300 font-semibold">Impulso ativo até {impulsoAte.toLocaleString('pt-BR', { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' })} — seu perfil está no topo da cidade.</div>
             )}
           </div>
-          <p className="text-xs text-nevoa">Pague por PIX direto aqui no site. Assim que o pagamento cair, nossa equipe confirma e o plano é ativado no seu anúncio.</p>
+          <p className="text-xs text-nevoa">Pague por PIX direto aqui no site e envie o comprovante: o plano é ativado no seu anúncio na hora.</p>
 
-          {perfil.pedido_plano_pendente && (
+          {perfil.pedido_plano_pendente?.liberado && (
+            <div className="flex items-start space-x-2 bg-verificado/10 border border-verificado/30 p-4">
+              <Check className="w-4 h-4 text-verificado-texto shrink-0 mt-0.5" />
+              <div>
+                <div className="text-sm font-semibold text-marfim">Plano {perfil.pedido_plano_pendente.plano_nome} liberado!</div>
+                <div className="text-xs text-nevoa">Já está ativo no seu anúncio. Nossa equipe só vai conferir o PIX no extrato — se o pagamento não for encontrado, o plano é desfeito.</div>
+              </div>
+            </div>
+          )}
+
+          {perfil.pedido_plano_pendente && !perfil.pedido_plano_pendente.liberado && (
             <div className="space-y-3 bg-ouro/10 border border-ouro/30 p-4">
               <div className="flex items-center justify-between gap-3">
                 <div>
@@ -693,11 +703,11 @@ function ProfessionalDashboardContent() {
               <div className="bg-black/30 border border-white/10 p-4 space-y-2">
                 {perfil.pedido_plano_pendente.comprovante_enviado ? (
                   <div className="flex items-center space-x-1.5 text-xs text-verificado-texto font-semibold">
-                    <Check className="w-4 h-4" /><span>Comprovante enviado — aguardando a equipe confirmar.</span>
+                    <Check className="w-4 h-4" /><span>Comprovante enviado — aguardando a equipe confirmar o pagamento.</span>
                   </div>
                 ) : (
                   <>
-                    <p className="text-xs text-nevoa">Já pagou? Envie o comprovante pra agilizar a confirmação.</p>
+                    <p className="text-xs text-nevoa">Já pagou? Envie o comprovante e o plano é liberado na hora.</p>
                     <input ref={comprovanteInputRef} type="file" accept="image/*,.pdf" className="hidden" onChange={(e) => handleEnviarComprovante(perfil.pedido_plano_pendente!.id, e)} />
                     <button
                       onClick={() => comprovanteInputRef.current?.click()}
