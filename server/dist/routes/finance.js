@@ -62,7 +62,11 @@ exports.cadastrosRouter.get('/clientes', async (_req, res) => {
 // Pagamento ainda e' conciliado fora do site (PIX manual) - estas rotas
 // registram o que ja foi recebido. Tudo restrito ao Admin Master.
 exports.financeRouter = (0, express_1.Router)();
-exports.financeRouter.use(auth_1.autenticar, (0, auth_1.exigirPapel)('master'));
+// Gerente tambem usa o financeiro no dia a dia (planos, assinaturas,
+// pedidos, pagamentos) - so' a exclusao definitiva de conta
+// (profissional/cliente, la embaixo) fica travada so' pro Master, por
+// ser irreversivel.
+exports.financeRouter.use(auth_1.autenticar, (0, auth_1.exigirPapel)('master', 'gerente'));
 const planoSchema = zod_1.z.object({
     nome: zod_1.z.string().trim().min(2).max(60),
     preco_centavos: zod_1.z.number().int().min(0),
@@ -363,7 +367,7 @@ exports.financeRouter.post('/plan-requests/:id/recusar', async (req, res) => {
 // role='profissional' (guarda extra pra nunca apagar staff/cliente
 // por engano via esta rota). Atende tanto limpeza de dados de teste
 // quanto pedido real de exclusao (direito ao esquecimento, LGPD).
-exports.financeRouter.delete('/professionals/:userId', async (req, res) => {
+exports.financeRouter.delete('/professionals/:userId', (0, auth_1.exigirPapel)('master'), async (req, res) => {
     const userId = Number(req.params.userId);
     const usuario = await db_1.db
         .selectFrom('users')
@@ -401,7 +405,7 @@ exports.financeRouter.delete('/professionals/:userId', async (req, res) => {
 // Exclusao definitiva de conta de cliente (contratante) - mais simples
 // que a de profissional: sem foto/documento/assinatura, so' favoritos
 // (cascade) e denuncias feitas por ela (viram anonimas via SET NULL).
-exports.financeRouter.delete('/clientes/:userId', async (req, res) => {
+exports.financeRouter.delete('/clientes/:userId', (0, auth_1.exigirPapel)('master'), async (req, res) => {
     const userId = Number(req.params.userId);
     const usuario = await db_1.db
         .selectFrom('users')

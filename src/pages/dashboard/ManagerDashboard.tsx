@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import {
   LayoutDashboard, ClipboardCheck, Flag, History, CheckCircle2, XCircle,
-  MapPin, ShieldAlert, AlertCircle, Images, FileText, Eye, Radio, PauseCircle, PlayCircle, ShieldCheck, Users,
+  MapPin, ShieldAlert, AlertCircle, Images, FileText, Eye, Radio, PauseCircle, PlayCircle, ShieldCheck, Users, Wallet,
 } from 'lucide-react';
 import { DashboardLayout } from '../../layouts/DashboardLayout';
 import { RequireRole } from '../../components/RequireRole';
@@ -10,6 +10,7 @@ import {
   buscarArquivoDocumento, buscarArquivoSelfie, listarAssinaturas, listarClientes, ApiError,
   type PendingMedia, type PendingDocument, type PendingSelfie, type SubscriptionRow, type ClienteRow,
 } from '../../lib/api';
+import { FinancePanel } from './FinancePanel';
 
 const NAV = [
   { key: 'painel', label: 'Painel', icon: <LayoutDashboard className="w-4 h-4" /> },
@@ -17,6 +18,7 @@ const NAV = [
   { key: 'ativos', label: 'Anúncios no ar', icon: <Radio className="w-4 h-4" /> },
   { key: 'verificacoes', label: 'Verificações', icon: <ShieldCheck className="w-4 h-4" /> },
   { key: 'cadastros', label: 'Cadastros', icon: <Users className="w-4 h-4" /> },
+  { key: 'financeiro', label: 'Financeiro', icon: <Wallet className="w-4 h-4" /> },
   { key: 'denuncias', label: 'Denúncias', icon: <Flag className="w-4 h-4" /> },
   { key: 'historico', label: 'Histórico', icon: <History className="w-4 h-4" /> },
 ];
@@ -375,6 +377,8 @@ function ManagerDashboardContent() {
           )}
         </div>
       )}
+
+      {tab === 'financeiro' && <FinancePanel />}
 
       {tab === 'denuncias' && (
         <div className="space-y-3 max-w-3xl">

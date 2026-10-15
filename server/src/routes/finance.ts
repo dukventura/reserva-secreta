@@ -65,7 +65,11 @@ cadastrosRouter.get('/clientes', async (_req, res) => {
 // Pagamento ainda e' conciliado fora do site (PIX manual) - estas rotas
 // registram o que ja foi recebido. Tudo restrito ao Admin Master.
 export const financeRouter = Router();
-financeRouter.use(autenticar, exigirPapel('master'));
+// Gerente tambem usa o financeiro no dia a dia (planos, assinaturas,
+// pedidos, pagamentos) - so' a exclusao definitiva de conta
+// (profissional/cliente, la embaixo) fica travada so' pro Master, por
+// ser irreversivel.
+financeRouter.use(autenticar, exigirPapel('master', 'gerente'));
 
 const planoSchema = z.object({
   nome: z.string().trim().min(2).max(60),
@@ -400,7 +404,7 @@ financeRouter.post('/plan-requests/:id/recusar', async (req, res) => {
 // role='profissional' (guarda extra pra nunca apagar staff/cliente
 // por engano via esta rota). Atende tanto limpeza de dados de teste
 // quanto pedido real de exclusao (direito ao esquecimento, LGPD).
-financeRouter.delete('/professionals/:userId', async (req, res) => {
+financeRouter.delete('/professionals/:userId', exigirPapel('master'), async (req, res) => {
   const userId = Number(req.params.userId);
   const usuario = await db
     .selectFrom('users')
@@ -443,7 +447,7 @@ financeRouter.delete('/professionals/:userId', async (req, res) => {
 // Exclusao definitiva de conta de cliente (contratante) - mais simples
 // que a de profissional: sem foto/documento/assinatura, so' favoritos
 // (cascade) e denuncias feitas por ela (viram anonimas via SET NULL).
-financeRouter.delete('/clientes/:userId', async (req, res) => {
+financeRouter.delete('/clientes/:userId', exigirPapel('master'), async (req, res) => {
   const userId = Number(req.params.userId);
   const usuario = await db
     .selectFrom('users')

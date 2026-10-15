@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useCallback } from 'react';
+import { useSession } from '../../context/SessionContext';
 import {
   AlertCircle, CheckCircle2, XCircle, Clock, Zap, Plus, Pencil, History, Search, Power, Trash2, Eye,
 } from 'lucide-react';
@@ -262,6 +263,8 @@ function HistoricoProfissional({ userId }: { userId: number }) {
 }
 
 function LinhaAssinatura({ a, planos, onAtualizar }: { a: SubscriptionRow; planos: Plan[]; onAtualizar: () => void }) {
+  const { session } = useSession();
+  const souMaster = session?.role === 'master';
   const [painel, setPainel] = useState<'nenhum' | 'ativar' | 'impulso' | 'historico'>('nenhum');
   const [confirmandoCancelar, setConfirmandoCancelar] = useState(false);
   const [excluindoAberto, setExcluindoAberto] = useState(false);
@@ -352,15 +355,17 @@ function LinhaAssinatura({ a, planos, onAtualizar }: { a: SubscriptionRow; plano
               </button>
             )
           )}
-          <button onClick={() => setExcluindoAberto((v) => !v)} className={btnPerigo}>
-            <Trash2 className="w-3.5 h-3.5" /><span>Excluir conta</span>
-          </button>
+          {souMaster && (
+            <button onClick={() => setExcluindoAberto((v) => !v)} className={btnPerigo}>
+              <Trash2 className="w-3.5 h-3.5" /><span>Excluir conta</span>
+            </button>
+          )}
         </div>
       </div>
 
       <Erro texto={erro} />
 
-      {excluindoAberto && (
+      {excluindoAberto && souMaster && (
         <div className="bg-red-500/10 border border-red-500/30 p-3.5 space-y-3">
           <p className="text-xs text-red-200">
             Isso apaga a conta de <strong>{a.stage_name}</strong> pra sempre: login, perfil, fotos, documento, selfie, assinaturas e histórico de pagamento. Não tem como desfazer.
@@ -622,6 +627,8 @@ function AbaPagamentos() {
 // ---------- Pedidos ----------
 
 function LinhaCliente({ c, onAtualizar }: { c: ClienteRow; onAtualizar: () => void }) {
+  const { session } = useSession();
+  const souMaster = session?.role === 'master';
   const [confirmando, setConfirmando] = useState(false);
   const [processando, setProcessando] = useState(false);
   const [erro, setErro] = useState('');
@@ -647,17 +654,19 @@ function LinhaCliente({ c, onAtualizar }: { c: ClienteRow; onAtualizar: () => vo
         </div>
         <div className="flex items-center gap-2 shrink-0">
           <div className="text-[11px] text-nevoa font-mono">Cadastrado em {fmtData(c.created_at)}</div>
-          {confirmando ? (
-            <>
-              <button onClick={excluir} disabled={processando} className="flex items-center space-x-1.5 px-3 py-1.5 rounded-campo bg-red-500/20 border border-red-500/40 text-red-200 text-xs font-bold disabled:opacity-50">
-                <span>{processando ? 'Excluindo...' : 'Confirmar exclusão'}</span>
+          {souMaster && (
+            confirmando ? (
+              <>
+                <button onClick={excluir} disabled={processando} className="flex items-center space-x-1.5 px-3 py-1.5 rounded-campo bg-red-500/20 border border-red-500/40 text-red-200 text-xs font-bold disabled:opacity-50">
+                  <span>{processando ? 'Excluindo...' : 'Confirmar exclusão'}</span>
+                </button>
+                <button onClick={() => setConfirmando(false)} className={btnSecundario}>Voltar</button>
+              </>
+            ) : (
+              <button onClick={() => setConfirmando(true)} className={btnPerigo}>
+                <Trash2 className="w-3.5 h-3.5" /><span>Excluir</span>
               </button>
-              <button onClick={() => setConfirmando(false)} className={btnSecundario}>Voltar</button>
-            </>
-          ) : (
-            <button onClick={() => setConfirmando(true)} className={btnPerigo}>
-              <Trash2 className="w-3.5 h-3.5" /><span>Excluir</span>
-            </button>
+            )
           )}
         </div>
       </div>
