@@ -732,7 +732,7 @@ function AbaPedidos({ pedidos, onAtualizar }: { pedidos: PlanRequestRow[]; onAtu
 
   return (
     <div className="space-y-3">
-      <p className="text-xs text-nevoa">Pedidos feitos pela própria profissional na aba "Plano" do painel dela. Confirme o PIX fora do site antes de atender.</p>
+      <p className="text-xs text-nevoa">Pedidos feitos pela própria profissional na aba "Plano" do painel dela. Quando ela envia o comprovante, o plano é liberado na hora — confira o PIX no extrato e clique em "Confirmar PIX". Se o dinheiro não caiu, "Recusar e desfazer" volta o anúncio ao que era antes. Quem já teve uma liberação desfeita não recebe mais liberação automática.</p>
       <Erro texto={erro} />
       <div className="border border-white/10 divide-y divide-white/10">
         {pedidos.length === 0 && <p className="text-sm text-nevoa p-4">Nenhum pedido pendente.</p>}
@@ -741,7 +741,9 @@ function AbaPedidos({ pedidos, onAtualizar }: { pedidos: PlanRequestRow[]; onAtu
             <div className="flex-1 min-w-0">
               <div className="flex items-center gap-2">
                 <div className="text-sm font-semibold text-marfim">{p.stage_name}</div>
-                {p.tem_comprovante ? (
+                {p.liberado ? (
+                  <span className="text-[10px] px-2 py-0.5 rounded-campo bg-ouro/15 border border-ouro/30 text-ouro font-bold uppercase">Liberado · conferir PIX</span>
+                ) : p.tem_comprovante ? (
                   <span className="text-[10px] px-2 py-0.5 rounded-campo bg-verificado/15 border border-verificado/30 text-verificado-texto font-bold uppercase">Comprovante enviado</span>
                 ) : (
                   <span className="text-[10px] px-2 py-0.5 rounded-campo bg-white/5 border border-white/10 text-nevoa uppercase">Sem comprovante ainda</span>
@@ -754,10 +756,10 @@ function AbaPedidos({ pedidos, onAtualizar }: { pedidos: PlanRequestRow[]; onAtu
             <div className="flex gap-2 shrink-0">
               {p.tem_comprovante && <VerComprovanteButton pedidoId={p.id} />}
               <button onClick={() => executar(p.id, () => atenderPedidoPlano(p.id))} disabled={processandoId === p.id} className={btnPrimario}>
-                <CheckCircle2 className="w-3.5 h-3.5" /><span>Atender</span>
+                <CheckCircle2 className="w-3.5 h-3.5" /><span>{p.liberado ? 'Confirmar PIX' : 'Atender'}</span>
               </button>
               <button onClick={() => executar(p.id, () => recusarPedidoPlano(p.id))} disabled={processandoId === p.id} className={btnPerigo}>
-                <XCircle className="w-3.5 h-3.5" /><span>Recusar</span>
+                <XCircle className="w-3.5 h-3.5" /><span>{p.liberado ? 'Recusar e desfazer' : 'Recusar'}</span>
               </button>
             </div>
           </div>

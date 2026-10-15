@@ -126,6 +126,10 @@ interface PlanRequestsTable {
   user_id: number;
   plan_id: number;
   comprovante_url: string | null;
+  liberado_em: Date | null;
+  liberacao_payment_id: number | null;
+  /** JSON com a assinatura e o destaque do perfil antes da liberacao automatica - usado pra desfazer se o PIX nao cair. */
+  assinatura_anterior: string | null;
   status: Generated<PlanRequestStatus>;
   created_at: Generated<Date>;
   resolved_at: Date | null;

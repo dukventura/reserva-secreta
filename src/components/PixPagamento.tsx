@@ -55,7 +55,7 @@ export const PixPagamento: React.FC<PixPagamentoProps> = ({ valorCentavos, refer
             <span>{copiado ? 'Código copiado!' : 'Copiar código PIX'}</span>
           </button>
           <p className="text-[10px] text-nevoa/70 font-mono break-all select-all bg-white/5 border border-white/10 rounded-campo px-2 py-1.5">{payload}</p>
-          <p className="text-[11px] text-nevoa">Assim que o pagamento cair, nossa equipe confirma e o plano é ativado no seu anúncio.</p>
+          <p className="text-[11px] text-nevoa">Depois de pagar, envie o comprovante logo abaixo: o plano é ativado na hora.</p>
         </div>
       </div>
     </div>
