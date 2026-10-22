@@ -66,40 +66,65 @@ export const ModerationProvider: React.FC<{ children: React.ReactNode }> = ({ ch
     }
   }, []);
 
+  // O botao de decidir (aprovar/reprovar/suspender) as vezes falha por
+  // regra do servidor (ex: perfil sem documento/selfie aprovados ainda)
+  // - sem isso, a chamada rejeitava sem nenhum feedback visivel, dando
+  // a impressao de botao travado/sem efeito.
+  const comErroVisivel = useCallback(async (acao: () => Promise<unknown>) => {
+    setErro('');
+    try {
+      await acao();
+    } catch (err) {
+      setErro(err instanceof api.ApiError ? err.message : 'Não foi possível concluir a ação.');
+    }
+  }, []);
+
   const decideProfile = useCallback(async (id: number, status: 'aprovado' | 'reprovado') => {
-    await api.decidirPerfil(id, status);
-    setPendingProfiles((prev) => prev.filter((p) => p.id !== id));
-    await refresh();
-  }, [refresh]);
+    await comErroVisivel(async () => {
+      await api.decidirPerfil(id, status);
+      setPendingProfiles((prev) => prev.filter((p) => p.id !== id));
+      await refresh();
+    });
+  }, [refresh, comErroVisivel]);
 
   const setProfileStatus = useCallback(async (id: number, status: 'aprovado' | 'suspenso') => {
-    await api.alterarStatusPerfil(id, status);
-    await refresh();
-  }, [refresh]);
+    await comErroVisivel(async () => {
+      await api.alterarStatusPerfil(id, status);
+      await refresh();
+    });
+  }, [refresh, comErroVisivel]);
 
   const decideReport = useCallback(async (id: number, status: 'aprovado' | 'reprovado') => {
-    await api.decidirDenuncia(id, status);
-    setReports((prev) => prev.filter((r) => r.id !== id));
-    await refresh();
-  }, [refresh]);
+    await comErroVisivel(async () => {
+      await api.decidirDenuncia(id, status);
+      setReports((prev) => prev.filter((r) => r.id !== id));
+      await refresh();
+    });
+  }, [refresh, comErroVisivel]);
 
   const decideMedia = useCallback(async (id: number, status: 'aprovado' | 'reprovado') => {
-    await api.decidirFoto(id, status);
-    setPendingMedia((prev) => prev.filter((m) => m.id !== id));
-    await refresh();
-  }, [refresh]);
+    await comErroVisivel(async () => {
+      await api.decidirFoto(id, status);
+      setPendingMedia((prev) => prev.filter((m) => m.id !== id));
+      await refresh();
+    });
+  }, [refresh, comErroVisivel]);
 
   const decideDocument = useCallback(async (userId: number, status: 'aprovado' | 'reprovado') => {
-    await api.decidirDocumento(userId, status);
-    setPendingDocuments((prev) => prev.filter((d) => d.user_id !== userId));
-    await refresh();
-  }, [refresh]);
+    await comErroVisivel(async () => {
+      await api.decidirDocumento(userId, status);
+      setPendingDocuments((prev) => prev.filter((d) => d.user_id !== userId));
+      await refresh();
+    });
+  }, [refresh, comErroVisivel]);
 
   const decideSelfie = useCallback(async (userId: number, status: 'aprovado' | 'reprovado') => {
-    await api.decidirSelfie(userId, status);
-    setPendingSelfies((prev) => prev.filter((s) => s.user_id !== userId));
-    await refresh();
-  }, [refresh]);
+    await comErroVisivel(async () => {
+      await api.decidirSelfie(userId, status);
+      setPendingSelfies((prev) => prev.filter((s) => s.user_id !== userId));
+      await refresh();
+    });
+  }, [refresh, comErroVisivel]);
 
   return (
     <ModerationContext.Provider value={{ pendingProfiles, activeProfiles, reports, pendingMedia, pendingDocuments, pendingSelfies, auditLog, carregando, erro, refresh, decideProfile, setProfileStatus, decideReport, decideMedia, decideDocument, decideSelfie }}>
