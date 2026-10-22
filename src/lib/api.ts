@@ -170,6 +170,11 @@ export interface MyProfile {
 }
 
 export interface PendingModerationProfile {
+  user_id: number;
+  documento_status: 'pendente' | 'aprovado' | 'reprovado' | null;
+  selfie_status: 'pendente' | 'aprovado' | 'reprovado' | null;
+  documento_enviado: boolean;
+  selfie_enviada: boolean;
   id: number;
   slug: string;
   stage_name: string;

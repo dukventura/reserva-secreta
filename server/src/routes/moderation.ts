@@ -51,7 +51,12 @@ moderationRouter.get('/profiles/pending', async (_req, res) => {
   // surpreender no clique.
   const perfis = await db
     .selectFrom('professional_profiles')
+    .leftJoin('verifications', 'verifications.user_id', 'professional_profiles.user_id')
     .select((eb) => [
+      'professional_profiles.user_id',
+      'verifications.documento_status', 'verifications.selfie_status',
+      eb('verifications.documento_url', 'is not', null).as('documento_enviado'),
+      eb('verifications.selfie_url', 'is not', null).as('selfie_enviada'),
       'professional_profiles.id', 'professional_profiles.slug', 'professional_profiles.stage_name',
       'professional_profiles.age', 'professional_profiles.city', 'professional_profiles.category',
       'professional_profiles.whatsapp', 'professional_profiles.submitted_at',
@@ -71,7 +76,14 @@ moderationRouter.get('/profiles/pending', async (_req, res) => {
     .where('professional_profiles.status', '=', 'pendente')
     .orderBy('professional_profiles.submitted_at', 'asc')
     .execute();
-  res.json({ perfis: perfis.map((p) => ({ ...p, approved_photos: Number(p.approved_photos) })) });
+  res.json({
+    perfis: perfis.map((p) => ({
+      ...p,
+      approved_photos: Number(p.approved_photos),
+      documento_enviado: Boolean(p.documento_enviado),
+      selfie_enviada: Boolean(p.selfie_enviada),
+    })),
+  });
 });
 
 const decisaoSchema = z.object({ status: z.enum(['aprovado', 'reprovado']) });
