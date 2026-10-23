@@ -127,6 +127,7 @@ interface PlanRequestsTable {
   plan_id: number;
   comprovante_url: string | null;
   mercadopago_payment_id: string | null;
+  sicredi_txid: string | null;
   status: Generated<PlanRequestStatus>;
   created_at: Generated<Date>;
   resolved_at: Date | null;

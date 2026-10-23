@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useCallback } from 'react';
 import {
   LayoutDashboard, UserRound, Images, ShieldCheck, BarChart3, CreditCard,
   Heart, CheckCircle2, Circle, Clock, Upload, Check, AlertCircle, Send, XCircle, Trash2, Crown, X,
@@ -6,7 +6,7 @@ import {
 import { DashboardLayout } from '../../layouts/DashboardLayout';
 import { RequireRole } from '../../components/RequireRole';
 import { PixPagamento } from '../../components/PixPagamento';
-import { PagamentoMercadoPago } from '../../components/PagamentoMercadoPago';
+import { PagamentoAutomatico } from '../../components/PagamentoAutomatico';
 import {
   buscarMeuPerfil, listarPlanosPublicos, atualizarMeuPerfil, enviarPerfilParaAprovacao, enviarFoto, removerFoto,
   enviarDocumento, enviarSelfie, solicitarPlano, cancelarPedidoPlano, enviarComprovantePedido, ApiError,
@@ -52,6 +52,7 @@ function ProfessionalDashboardContent() {
   const [cancelandoPedido, setCancelandoPedido] = useState(false);
   const [enviandoComprovante, setEnviandoComprovante] = useState(false);
   const [mostrarPixManual, setMostrarPixManual] = useState(false);
+  const irParaPixManual = useCallback(() => setMostrarPixManual(true), []);
   const [bannerPlanoFechado, setBannerPlanoFechado] = useState(() => {
     try { return localStorage.getItem('reservasecreta_banner_plano_fechado') === 'true'; } catch { return false; }
   });
@@ -91,6 +92,8 @@ function ProfessionalDashboardContent() {
   };
 
   useEffect(carregar, []);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  const recarregarAposPagamento = useCallback(() => carregar(), []);
 
   // Enquanto tem pedido de plano pendente, confere de tempos em tempos
   // se ja' foi confirmado - cobre tanto o PIX automatico (webhook do
@@ -729,7 +732,7 @@ function ProfessionalDashboardContent() {
                 </>
               ) : (
                 <>
-                  <PagamentoMercadoPago pedidoId={perfil.pedido_plano_pendente.id} />
+                  <PagamentoAutomatico pedidoId={perfil.pedido_plano_pendente.id} onIndisponivel={irParaPixManual} onPago={recarregarAposPagamento} />
                   <button onClick={() => setMostrarPixManual(true)} className="text-xs text-nevoa hover:text-ouro underline transition-colors">
                     Prefere pagar direto?
                   </button>

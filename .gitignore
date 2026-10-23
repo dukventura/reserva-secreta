@@ -45,3 +45,6 @@ server/private/comprovantes/*
 *.njsproj
 *.sln
 *.sw?
+
+# Certificado/chave do Sicredi (mTLS) - segredo, nunca commitar.
+server/private/sicredi/*

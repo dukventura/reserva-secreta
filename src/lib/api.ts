@@ -375,8 +375,12 @@ export function enviarComprovantePedido(id: number, arquivo: File) {
   return request<{ ok: true }>(`/api/profiles/me/plan-requests/${id}/comprovante`, { method: 'POST', body: form, auth: true });
 }
 
-export function criarPixMercadoPago(pedidoId: number) {
-  return request<{ qr_code_base64: string; qr_code: string }>(`/api/profiles/me/plan-requests/${pedidoId}/mercadopago`, { method: 'POST', auth: true });
+export function criarPixAutomatico(pedidoId: number) {
+  return request<{ pix_copia_e_cola: string }>(`/api/profiles/me/plan-requests/${pedidoId}/pix-automatico`, { method: 'POST', auth: true });
+}
+
+export function consultarPixAutomatico(pedidoId: number) {
+  return request<{ status: 'pago' | 'aguardando' | 'expirado' | 'resolvido' }>(`/api/profiles/me/plan-requests/${pedidoId}/pix-automatico/status`, { auth: true });
 }
 
 // ---- moderacao ----

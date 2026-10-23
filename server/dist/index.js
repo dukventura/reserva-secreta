@@ -13,7 +13,6 @@ const reports_1 = require("./routes/reports");
 const cities_1 = require("./routes/cities");
 const finance_1 = require("./routes/finance");
 const client_1 = require("./routes/client");
-const webhooks_1 = require("./routes/webhooks");
 const sitemap_1 = require("./routes/sitemap");
 const uploads_1 = require("./lib/uploads");
 const app = (0, express_1.default)();
@@ -38,7 +37,6 @@ app.use('/api/plans', finance_1.plansPublicRouter);
 app.use('/api/finance', finance_1.cadastrosRouter);
 app.use('/api/finance', finance_1.financeRouter);
 app.use('/api/client', client_1.clientRouter);
-app.use('/api/webhooks', webhooks_1.webhooksRouter);
 // eslint-disable-next-line @typescript-eslint/no-unused-vars
 app.use((err, _req, res, _next) => {
     console.error(err);

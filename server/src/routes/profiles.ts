@@ -10,7 +10,8 @@ import { uploadDocumento, removerDocumento } from '../lib/documentUploads';
 import { uploadSelfie, removerSelfie } from '../lib/selfieUploads';
 import { uploadComprovante, removerComprovante } from '../lib/comprovanteUploads';
 import { comVerificacao, parseJsonArray, paraPerfilPublico } from '../lib/publicProfile';
-import { criarPixMercadoPago, buscarPagamentoMercadoPago, mercadoPagoConfigurado } from '../lib/mercadopago';
+import { criarCobranca, consultarCobranca, gerarTxid, sicrediConfigurado } from '../lib/sicredi';
+import { verificarPedidoSicredi } from '../lib/pixAutomatico';
 
 export const profilesRouter = Router();
 
@@ -182,25 +183,19 @@ profilesRouter.post('/me/plan-requests/:id/comprovante', autenticar, exigirPapel
   });
 });
 
-// Gera a cobranca PIX pela API do Mercado Pago pra esse pedido -
-// alternativa automatica ao PIX manual (o webhook em routes/webhooks.ts
-// confirma e ativa o plano sozinho quando o pagamento aprova). Se o
-// pedido ja tem um pagamento MP em aberto, devolve o mesmo QR Code em
-// vez de criar outro - evita cobranca duplicada ao reabrir a tela.
-profilesRouter.post('/me/plan-requests/:id/mercadopago', autenticar, exigirPapel('profissional'), async (req, res) => {
-  if (!mercadoPagoConfigurado()) {
-    res.status(503).json({ erro: 'Pagamento automático ainda não está disponível. Use o PIX manual.' });
+// PIX automatico pela API do Sicredi (banco da propria cliente). Se o
+// pedido ja tem uma cobranca ainda valida, devolve a mesma em vez de
+// criar outra - reabrir a tela nao gera cobranca duplicada.
+profilesRouter.post('/me/plan-requests/:id/pix-automatico', autenticar, exigirPapel('profissional'), async (req, res) => {
+  if (!sicrediConfigurado()) {
+    res.status(503).json({ erro: 'Pagamento automático ainda não está disponível. Use o PIX direto.' });
     return;
   }
   const id = Number(req.params.id);
   const pedido = await db
     .selectFrom('plan_requests')
     .innerJoin('plans', 'plans.id', 'plan_requests.plan_id')
-    .innerJoin('users', 'users.id', 'plan_requests.user_id')
-    .select([
-      'plan_requests.id', 'plan_requests.user_id', 'plan_requests.status', 'plan_requests.mercadopago_payment_id',
-      'plans.nome as plano_nome', 'plans.preco_centavos', 'users.email',
-    ])
+    .select(['plan_requests.id', 'plan_requests.status', 'plan_requests.sicredi_txid', 'plans.nome as plano_nome', 'plans.preco_centavos'])
     .where('plan_requests.id', '=', id)
     .where('plan_requests.user_id', '=', req.user!.sub)
     .executeTakeFirst();
@@ -210,27 +205,39 @@ profilesRouter.post('/me/plan-requests/:id/mercadopago', autenticar, exigirPapel
   }
 
   try {
-    if (pedido.mercadopago_payment_id) {
-      const existente = await buscarPagamentoMercadoPago(pedido.mercadopago_payment_id);
-      const dados = existente.point_of_interaction?.transaction_data;
-      if (existente.status === 'pending' && dados?.qr_code && dados?.qr_code_base64) {
-        res.json({ qr_code_base64: dados.qr_code_base64, qr_code: dados.qr_code });
+    if (pedido.sicredi_txid) {
+      const existente = await consultarCobranca(pedido.sicredi_txid);
+      if (existente.status === 'ATIVA' && existente.pixCopiaECola) {
+        res.json({ pix_copia_e_cola: existente.pixCopiaECola });
         return;
       }
-      // Pagamento anterior expirou/foi cancelado/rejeitado - gera um novo abaixo.
     }
-
-    const pix = await criarPixMercadoPago({
+    const txid = gerarTxid(pedido.id);
+    const cobranca = await criarCobranca({
+      txid,
       valorCentavos: pedido.preco_centavos,
       descricao: `Plano ${pedido.plano_nome} - Reserva Secreta`,
-      referenciaExterna: `plano-${pedido.id}-${Date.now()}`,
-      payerEmail: pedido.email,
     });
-    await db.updateTable('plan_requests').set({ mercadopago_payment_id: pix.paymentId }).where('id', '=', id).execute();
-    res.json({ qr_code_base64: pix.qrCodeBase64, qr_code: pix.qrCode });
+    await db.updateTable('plan_requests').set({ sicredi_txid: txid }).where('id', '=', id).execute();
+    res.json({ pix_copia_e_cola: cobranca.pixCopiaECola });
   } catch (err) {
-    console.error('Erro ao criar PIX no Mercado Pago:', err);
-    res.status(502).json({ erro: 'Não foi possível gerar o PIX automático agora. Tente o PIX manual.' });
+    console.error('Erro ao criar cobranca no Sicredi:', err);
+    res.status(502).json({ erro: 'Não foi possível gerar o PIX automático agora. Use o PIX direto.' });
+  }
+});
+
+profilesRouter.get('/me/plan-requests/:id/pix-automatico/status', autenticar, exigirPapel('profissional'), async (req, res) => {
+  const id = Number(req.params.id);
+  const dono = await db.selectFrom('plan_requests').select('id').where('id', '=', id).where('user_id', '=', req.user!.sub).executeTakeFirst();
+  if (!dono) {
+    res.status(404).json({ erro: 'Pedido não encontrado.' });
+    return;
+  }
+  try {
+    res.json({ status: await verificarPedidoSicredi(id) });
+  } catch (err) {
+    console.error('Erro consultando cobranca no Sicredi:', err);
+    res.json({ status: 'aguardando' });
   }
 });
 
