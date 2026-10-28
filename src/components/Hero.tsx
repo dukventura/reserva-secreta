@@ -3,7 +3,7 @@ import { Link } from 'react-router-dom';
 import { Search, MapPin, Sparkles, Filter, ShieldCheck, HeartHandshake, UserPlus, Crown, ChevronDown } from 'lucide-react';
 import type { Category, FilterState } from '../types';
 import { rotuloCidade, semAcento } from '../data/cities';
-import { listarCidadesComPerfis, type CityWithProfiles } from '../lib/api';
+import { listarCidades, listarCidadesComPerfis, type CityOption, type CityWithProfiles } from '../lib/api';
 import { Monograma } from './Logo';
 import { WhatsAppIcon } from './WhatsAppIcon';
 
@@ -18,9 +18,11 @@ export const Hero: React.FC<HeroProps> = ({ filters, onFilterChange, totalProfil
   const [cityInput, setCityInput] = useState(filters.city === 'Todas' ? '' : rotuloCidade(filters.city));
   const [isCityDropdownOpen, setIsCityDropdownOpen] = useState(false);
   const cityDropdownRef = useRef<HTMLDivElement>(null);
-  // So' cidades com anuncio no ar - o Brasil inteiro aqui daria busca
-  // vazia na maioria das opcoes.
+  // Sem digitar, a lista mostra so' as cidades com anuncio no ar; ao
+  // digitar, busca em todos os municipios do Brasil (carregados so'
+  // nessa hora, pra nao pesar a home).
   const [cidadesComPerfis, setCidadesComPerfis] = useState<CityWithProfiles[]>([]);
+  const [todasCidades, setTodasCidades] = useState<CityOption[]>([]);
 
   useEffect(() => {
     listarCidadesComPerfis()
@@ -34,8 +36,22 @@ export const Hero: React.FC<HeroProps> = ({ filters, onFilterChange, totalProfil
   }, [filters.city]);
 
   const termoCidade = semAcento(cityInput.trim());
-  const filteredCities = cidadesComPerfis.filter((c) => semAcento(rotuloCidade(c)).includes(termoCidade));
-  const cidadeSelecionada = (c: CityWithProfiles) =>
+
+  useEffect(() => {
+    if (!termoCidade || todasCidades.length > 0) return;
+    listarCidades()
+      .then(({ cidades }) => setTodasCidades(cidades))
+      .catch(() => {});
+  }, [termoCidade, todasCidades.length]);
+
+  const comPerfis = new Set(cidadesComPerfis.map((c) => c.slug));
+  const filteredCities: CityOption[] = termoCidade
+    ? [
+        ...cidadesComPerfis.filter((c) => semAcento(rotuloCidade(c)).includes(termoCidade)),
+        ...todasCidades.filter((c) => !comPerfis.has(c.slug) && semAcento(rotuloCidade(c)).includes(termoCidade)),
+      ].slice(0, 30)
+    : cidadesComPerfis;
+  const cidadeSelecionada = (c: CityOption) =>
     filters.city !== 'Todas' && filters.city.name === c.name && filters.city.uf === c.uf;
   // Atalhos: as 3 cidades com mais anuncios.
   const cidadesAtalho = cidadesComPerfis.slice(0, 3);
@@ -50,7 +66,7 @@ export const Hero: React.FC<HeroProps> = ({ filters, onFilterChange, totalProfil
     return () => document.removeEventListener('mousedown', handleClickOutside);
   }, []);
 
-  const handleSelectCity = (cidade: CityWithProfiles | 'Todas') => {
+  const handleSelectCity = (cidade: CityOption | 'Todas') => {
     onFilterChange({ city: cidade === 'Todas' ? 'Todas' : { name: cidade.name, uf: cidade.uf } });
     setCityInput(cidade === 'Todas' ? '' : rotuloCidade(cidade));
     setIsCityDropdownOpen(false);
