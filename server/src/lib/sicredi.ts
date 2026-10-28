@@ -1,4 +1,5 @@
 import https from 'node:https';
+import tls from 'node:tls';
 import fs from 'node:fs';
 import { randomBytes } from 'node:crypto';
 
@@ -18,6 +19,16 @@ interface ConfigSicredi {
 
 let config: ConfigSicredi | null = null;
 
+// O portal entrega os .CER as vezes em PEM, as vezes em DER (binario) -
+// o guia manda converter na mao com openssl; aqui converte sozinho.
+function lerCertificado(caminho: string): string {
+  const conteudo = fs.readFileSync(caminho);
+  const texto = conteudo.toString('utf8');
+  if (texto.includes('-----BEGIN')) return texto;
+  const base64 = conteudo.toString('base64').match(/.{1,64}/g)!.join('\n');
+  return `-----BEGIN CERTIFICATE-----\n${base64}\n-----END CERTIFICATE-----\n`;
+}
+
 export function sicrediConfigurado(): boolean {
   return Boolean(
     process.env.SICREDI_CLIENT_ID && process.env.SICREDI_CLIENT_SECRET &&
@@ -34,9 +45,13 @@ function cfg(): ConfigSicredi {
     clientSecret: process.env.SICREDI_CLIENT_SECRET!,
     chavePix: process.env.SICREDI_CHAVE_PIX!,
     agent: new https.Agent({
-      cert: fs.readFileSync(process.env.SICREDI_CERT_PATH!),
+      cert: lerCertificado(process.env.SICREDI_CERT_PATH!),
+      // Chave SEM frase secreta (o portal oferece as duas versoes).
       key: fs.readFileSync(process.env.SICREDI_KEY_PATH!),
-      ...(process.env.SICREDI_CA_PATH && { ca: fs.readFileSync(process.env.SICREDI_CA_PATH) }),
+      // Cadeia Sicredi somada as CAs publicas: o guia manda confiar na
+      // cadeia deles, mas substituir as CAs padrao quebraria se o
+      // servidor deles usar certificado de CA publica.
+      ...(process.env.SICREDI_CA_PATH && { ca: [...tls.rootCertificates, lerCertificado(process.env.SICREDI_CA_PATH)] }),
     }),
   };
   return config;
@@ -87,6 +102,11 @@ async function token(): Promise<string> {
   return resp.access_token;
 }
 
+// Guia Tecnico Sicredi v2.1 usa /api/v3/cob nos exemplos.
+function caminhoCob(): string {
+  return process.env.SICREDI_COB_PATH || '/api/v3/cob';
+}
+
 // txid do padrao Bacen: 26 a 35 caracteres alfanumericos.
 export function gerarTxid(pedidoId: number): string {
   const prefixo = `RS${pedidoId}`;
@@ -103,11 +123,12 @@ export interface CobrancaSicredi {
 export async function criarCobranca(params: { txid: string; valorCentavos: number; descricao: string }): Promise<CobrancaSicredi> {
   const corpo = JSON.stringify({
     calendario: { expiracao: 3600 },
-    valor: { original: (params.valorCentavos / 100).toFixed(2) },
+    // modalidadeAlteracao 0 = pagador nao pode mudar o valor (recomendacao do guia Sicredi).
+    valor: { original: (params.valorCentavos / 100).toFixed(2), modalidadeAlteracao: 0 },
     chave: cfg().chavePix,
     solicitacaoPagador: params.descricao.slice(0, 140),
   });
-  return requisicao<CobrancaSicredi>('PUT', `/api/v2/cob/${params.txid}`, {
+  return requisicao<CobrancaSicredi>('PUT', `${caminhoCob()}/${params.txid}`, {
     Authorization: `Bearer ${await token()}`,
     'Content-Type': 'application/json',
     'Content-Length': String(Buffer.byteLength(corpo)),
@@ -115,5 +136,5 @@ export async function criarCobranca(params: { txid: string; valorCentavos: numbe
 }
 
 export async function consultarCobranca(txid: string): Promise<CobrancaSicredi> {
-  return requisicao<CobrancaSicredi>('GET', `/api/v2/cob/${txid}`, { Authorization: `Bearer ${await token()}` });
+  return requisicao<CobrancaSicredi>('GET', `${caminhoCob()}/${txid}`, { Authorization: `Bearer ${await token()}` });
 }

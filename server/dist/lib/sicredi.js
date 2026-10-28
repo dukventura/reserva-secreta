@@ -8,9 +8,20 @@ exports.gerarTxid = gerarTxid;
 exports.criarCobranca = criarCobranca;
 exports.consultarCobranca = consultarCobranca;
 const node_https_1 = __importDefault(require("node:https"));
+const node_tls_1 = __importDefault(require("node:tls"));
 const node_fs_1 = __importDefault(require("node:fs"));
 const node_crypto_1 = require("node:crypto");
 let config = null;
+// O portal entrega os .CER as vezes em PEM, as vezes em DER (binario) -
+// o guia manda converter na mao com openssl; aqui converte sozinho.
+function lerCertificado(caminho) {
+    const conteudo = node_fs_1.default.readFileSync(caminho);
+    const texto = conteudo.toString('utf8');
+    if (texto.includes('-----BEGIN'))
+        return texto;
+    const base64 = conteudo.toString('base64').match(/.{1,64}/g).join('\n');
+    return `-----BEGIN CERTIFICATE-----\n${base64}\n-----END CERTIFICATE-----\n`;
+}
 function sicrediConfigurado() {
     return Boolean(process.env.SICREDI_CLIENT_ID && process.env.SICREDI_CLIENT_SECRET &&
         process.env.SICREDI_CERT_PATH && process.env.SICREDI_KEY_PATH && process.env.SICREDI_CHAVE_PIX);
@@ -26,9 +37,13 @@ function cfg() {
         clientSecret: process.env.SICREDI_CLIENT_SECRET,
         chavePix: process.env.SICREDI_CHAVE_PIX,
         agent: new node_https_1.default.Agent({
-            cert: node_fs_1.default.readFileSync(process.env.SICREDI_CERT_PATH),
+            cert: lerCertificado(process.env.SICREDI_CERT_PATH),
+            // Chave SEM frase secreta (o portal oferece as duas versoes).
             key: node_fs_1.default.readFileSync(process.env.SICREDI_KEY_PATH),
-            ...(process.env.SICREDI_CA_PATH && { ca: node_fs_1.default.readFileSync(process.env.SICREDI_CA_PATH) }),
+            // Cadeia Sicredi somada as CAs publicas: o guia manda confiar na
+            // cadeia deles, mas substituir as CAs padrao quebraria se o
+            // servidor deles usar certificado de CA publica.
+            ...(process.env.SICREDI_CA_PATH && { ca: [...node_tls_1.default.rootCertificates, lerCertificado(process.env.SICREDI_CA_PATH)] }),
         }),
     };
     return config;
@@ -74,6 +89,10 @@ async function token() {
     tokenCache = { token: resp.access_token, expiraEm: Date.now() + resp.expires_in * 1000 };
     return resp.access_token;
 }
+// Guia Tecnico Sicredi v2.1 usa /api/v3/cob nos exemplos.
+function caminhoCob() {
+    return process.env.SICREDI_COB_PATH || '/api/v3/cob';
+}
 // txid do padrao Bacen: 26 a 35 caracteres alfanumericos.
 function gerarTxid(pedidoId) {
     const prefixo = `RS${pedidoId}`;
@@ -83,16 +102,17 @@ function gerarTxid(pedidoId) {
 async function criarCobranca(params) {
     const corpo = JSON.stringify({
         calendario: { expiracao: 3600 },
-        valor: { original: (params.valorCentavos / 100).toFixed(2) },
+        // modalidadeAlteracao 0 = pagador nao pode mudar o valor (recomendacao do guia Sicredi).
+        valor: { original: (params.valorCentavos / 100).toFixed(2), modalidadeAlteracao: 0 },
         chave: cfg().chavePix,
         solicitacaoPagador: params.descricao.slice(0, 140),
     });
-    return requisicao('PUT', `/api/v2/cob/${params.txid}`, {
+    return requisicao('PUT', `${caminhoCob()}/${params.txid}`, {
         Authorization: `Bearer ${await token()}`,
         'Content-Type': 'application/json',
         'Content-Length': String(Buffer.byteLength(corpo)),
     }, corpo);
 }
 async function consultarCobranca(txid) {
-    return requisicao('GET', `/api/v2/cob/${txid}`, { Authorization: `Bearer ${await token()}` });
+    return requisicao('GET', `${caminhoCob()}/${txid}`, { Authorization: `Bearer ${await token()}` });
 }
