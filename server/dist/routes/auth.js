@@ -25,6 +25,8 @@ const cadastroSchema = zod_1.z.discriminatedUnion('role', [
     cadastroBase.extend({
         role: zod_1.z.literal('profissional'),
         city: zod_1.z.string().trim().min(1),
+        // Opcional so' pra nao quebrar o front antigo durante o deploy.
+        uf: zod_1.z.string().trim().length(2).toUpperCase().default('MG'),
         category: zod_1.z.enum(['Mulheres', 'Trans']),
         age: zod_1.z.number().int().min(18).max(99),
         whatsapp: zod_1.z.string().trim().min(10).max(20),
@@ -44,6 +46,7 @@ exports.authRouter.post('/register', rateLimit_1.registerLimiter, async (req, re
             .selectFrom('cities')
             .select('id')
             .where('name', '=', dados.city)
+            .where('uf', '=', dados.uf)
             .where('active', '=', 1)
             .executeTakeFirst();
         if (!cidade) {
@@ -73,6 +76,7 @@ exports.authRouter.post('/register', rateLimit_1.registerLimiter, async (req, re
                 stage_name: dados.name,
                 age: dados.age,
                 city: dados.city,
+                uf: dados.uf,
                 category: dados.category,
                 whatsapp: dados.whatsapp.replace(/\D/g, ''),
                 status: 'rascunho',

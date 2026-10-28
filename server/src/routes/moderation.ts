@@ -58,7 +58,7 @@ moderationRouter.get('/profiles/pending', async (_req, res) => {
       eb('verifications.documento_url', 'is not', null).as('documento_enviado'),
       eb('verifications.selfie_url', 'is not', null).as('selfie_enviada'),
       'professional_profiles.id', 'professional_profiles.slug', 'professional_profiles.stage_name',
-      'professional_profiles.age', 'professional_profiles.city', 'professional_profiles.category',
+      'professional_profiles.age', 'professional_profiles.city', 'professional_profiles.uf', 'professional_profiles.category',
       'professional_profiles.whatsapp', 'professional_profiles.submitted_at',
       eb.selectFrom('media')
         .select('media.url')
@@ -126,7 +126,7 @@ moderationRouter.get('/profiles/active', async (_req, res) => {
     .selectFrom('professional_profiles')
     .select((eb) => [
       'professional_profiles.id', 'professional_profiles.slug', 'professional_profiles.stage_name',
-      'professional_profiles.age', 'professional_profiles.city', 'professional_profiles.category',
+      'professional_profiles.age', 'professional_profiles.city', 'professional_profiles.uf', 'professional_profiles.category',
       'professional_profiles.whatsapp', 'professional_profiles.status',
       eb.selectFrom('media')
         .select('media.url')

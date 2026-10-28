@@ -219,7 +219,7 @@ function CardAprovacao({ perfil: p, fotos, documento, selfie, acoes, onPublicar,
             <span className="text-base font-semibold text-marfim">{p.stage_name}, {p.age}</span>
             <span className="text-[10px] px-2 py-0.5 rounded-campo bg-white/5 border border-white/10 text-nevoa uppercase">{p.category}</span>
           </div>
-          <div className="flex items-center space-x-1.5 text-xs text-nevoa"><MapPin className="w-3 h-3 text-ouro" /><span>{p.city}</span></div>
+          <div className="flex items-center space-x-1.5 text-xs text-nevoa"><MapPin className="w-3 h-3 text-ouro" /><span>{p.city} - {p.uf}</span></div>
           <div className="text-[11px] text-nevoa">WhatsApp: {p.whatsapp} · Enviado em {fmtData(p.submitted_at)}</div>
         </div>
       </div>
@@ -373,7 +373,7 @@ function ManagerDashboardContent() {
                       {suspenso ? 'Fora do ar' : 'No ar'}
                     </span>
                   </div>
-                  <div className="flex items-center space-x-1.5 text-xs text-nevoa"><MapPin className="w-3 h-3 text-ouro" /><span>{p.city}</span></div>
+                  <div className="flex items-center space-x-1.5 text-xs text-nevoa"><MapPin className="w-3 h-3 text-ouro" /><span>{p.city} - {p.uf}</span></div>
                   <div className="text-[11px] text-nevoa">WhatsApp: {p.whatsapp}</div>
                 </div>
                 <div className="flex sm:flex-col gap-2 shrink-0">

@@ -14,7 +14,7 @@ export const Footer: React.FC = () => {
           <div className="md:col-span-6 space-y-2">
             <Logotipo size={36} />
             <p className="text-xs text-nevoa max-w-md">
-              O catálogo mais exclusivo e discreto de acompanhantes VIP do Sul de Minas.
+              O catálogo mais exclusivo e discreto de acompanhantes VIP do Brasil.
             </p>
             <p className="text-[11px] text-ouro/80 font-mono">
               reservasecreta.com.br

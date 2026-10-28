@@ -4,6 +4,7 @@ import { ProfileGrid } from '../components/ProfileGrid';
 import { useProfileFilters } from '../hooks/useProfileFilters';
 import { listarPerfis, ApiError, type PublicProfile } from '../lib/api';
 import { useSeo } from '../hooks/useSeo';
+import { filtroCidade } from '../data/cities';
 
 export const HomePage: React.FC = () => {
   useSeo();
@@ -15,7 +16,7 @@ export const HomePage: React.FC = () => {
   useEffect(() => {
     setCarregando(true);
     setErro('');
-    listarPerfis({ city: filters.city, category: filters.category })
+    listarPerfis({ ...filtroCidade(filters.city), category: filters.category })
       .then(({ perfis }) => setProfiles(perfis))
       .catch((err) => setErro(err instanceof ApiError ? err.message : 'Não foi possível carregar os perfis.'))
       .finally(() => setCarregando(false));

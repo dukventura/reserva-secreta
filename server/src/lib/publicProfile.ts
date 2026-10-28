@@ -2,7 +2,7 @@ import { db } from './db';
 
 export const CAMPOS_PUBLICOS = [
   'professional_profiles.id', 'professional_profiles.slug', 'professional_profiles.stage_name',
-  'professional_profiles.age', 'professional_profiles.city', 'professional_profiles.neighborhood',
+  'professional_profiles.age', 'professional_profiles.city', 'professional_profiles.uf', 'professional_profiles.neighborhood',
   'professional_profiles.height', 'professional_profiles.weight', 'professional_profiles.eyes',
   'professional_profiles.hair', 'professional_profiles.languages', 'professional_profiles.silicone',
   'professional_profiles.tattoos', 'professional_profiles.services', 'professional_profiles.locations',

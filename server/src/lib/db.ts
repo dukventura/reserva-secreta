@@ -29,6 +29,7 @@ interface ProfessionalProfilesTable {
   stage_name: string;
   age: number;
   city: string;
+  uf: Generated<string>;
   neighborhood: string | null;
   height: string | null;
   weight: string | null;
@@ -165,6 +166,7 @@ interface CitiesTable {
   id: Generated<number>;
   slug: string;
   name: string;
+  uf: Generated<string>;
   active: Generated<number>; // MySQL BOOLEAN = TINYINT(1)
 }
 

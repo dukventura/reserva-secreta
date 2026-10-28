@@ -2,9 +2,9 @@ import { useEffect } from 'react';
 import { useLocation } from 'react-router-dom';
 
 export const SITE_URL = 'https://reservasecreta.com.br';
-const TITULO_PADRAO = 'Reserva Secreta | Acompanhantes VIP e de Luxo no Sul de Minas';
+const TITULO_PADRAO = 'Reserva Secreta | Acompanhantes VIP e de Luxo';
 const DESCRICAO_PADRAO =
-  'Guia exclusivo e discreto de acompanhantes de luxo em Ilicínea, Boa Esperança e região do Sul de Minas. Perfis verificados com fotos reais e contato direto.';
+  'Guia exclusivo e discreto de acompanhantes de luxo em todo o Brasil. Perfis verificados com fotos reais e contato direto.';
 const IMAGEM_PADRAO = `${SITE_URL}/brand/logo-completa.png`;
 
 interface SeoOptions {

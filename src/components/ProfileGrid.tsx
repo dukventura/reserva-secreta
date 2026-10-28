@@ -2,6 +2,7 @@ import React from 'react';
 import type { FilterState } from '../types';
 import type { PublicProfile } from '../lib/api';
 import { ProfileCard } from './ProfileCard';
+import { rotuloCidade } from '../data/cities';
 import { SearchX, RotateCcw } from 'lucide-react';
 
 interface ProfileGridProps {
@@ -41,7 +42,7 @@ export const ProfileGrid: React.FC<ProfileGridProps> = ({
           <h2 className="text-xl sm:text-2xl font-display font-normal text-marfim tracking-tight flex items-center space-x-2">
             <span>Acompanhantes em Destaque</span>
             {filters.city !== 'Todas' && (
-              <span className="text-ouro font-normal">em {filters.city}</span>
+              <span className="text-ouro font-normal">em {rotuloCidade(filters.city)}</span>
             )}
           </h2>
           <p className="text-xs sm:text-sm text-nevoa mt-1">

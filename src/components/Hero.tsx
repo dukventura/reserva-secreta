@@ -1,8 +1,9 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { Search, MapPin, Sparkles, Filter, ShieldCheck, HeartHandshake, UserPlus, Crown, ChevronDown } from 'lucide-react';
-import type { City, Category, FilterState } from '../types';
-import { CIDADES, slugDaCidade } from '../data/cities';
+import type { Category, FilterState } from '../types';
+import { rotuloCidade, semAcento } from '../data/cities';
+import { listarCidadesComPerfis, type CityWithProfiles } from '../lib/api';
 import { Monograma } from './Logo';
 import { WhatsAppIcon } from './WhatsAppIcon';
 
@@ -14,16 +15,30 @@ interface HeroProps {
 
 export const Hero: React.FC<HeroProps> = ({ filters, onFilterChange, totalProfiles }) => {
   // Autocomplete state for city search
-  const [cityInput, setCityInput] = useState(filters.city === 'Todas' ? '' : filters.city);
+  const [cityInput, setCityInput] = useState(filters.city === 'Todas' ? '' : rotuloCidade(filters.city));
   const [isCityDropdownOpen, setIsCityDropdownOpen] = useState(false);
   const cityDropdownRef = useRef<HTMLDivElement>(null);
+  // So' cidades com anuncio no ar - o Brasil inteiro aqui daria busca
+  // vazia na maioria das opcoes.
+  const [cidadesComPerfis, setCidadesComPerfis] = useState<CityWithProfiles[]>([]);
 
-  // Available cities list including "Todas as Cidades"
-  const allCityOptions = ['Todas as Cidades', ...CIDADES.map(c => c.nome)];
+  useEffect(() => {
+    listarCidadesComPerfis()
+      .then(({ cidades }) => setCidadesComPerfis(cidades))
+      .catch(() => {});
+  }, []);
 
-  const filteredCities = allCityOptions.filter(cidade =>
-    cidade.toLowerCase().includes(cityInput.toLowerCase())
-  );
+  // Pagina de cidade define o filtro depois de carregar a cidade da URL.
+  useEffect(() => {
+    setCityInput(filters.city === 'Todas' ? '' : rotuloCidade(filters.city));
+  }, [filters.city]);
+
+  const termoCidade = semAcento(cityInput.trim());
+  const filteredCities = cidadesComPerfis.filter((c) => semAcento(rotuloCidade(c)).includes(termoCidade));
+  const cidadeSelecionada = (c: CityWithProfiles) =>
+    filters.city !== 'Todas' && filters.city.name === c.name && filters.city.uf === c.uf;
+  // Atalhos: as 3 cidades com mais anuncios.
+  const cidadesAtalho = cidadesComPerfis.slice(0, 3);
 
   useEffect(() => {
     function handleClickOutside(event: MouseEvent) {
@@ -35,10 +50,9 @@ export const Hero: React.FC<HeroProps> = ({ filters, onFilterChange, totalProfil
     return () => document.removeEventListener('mousedown', handleClickOutside);
   }, []);
 
-  const handleSelectCity = (cityName: string) => {
-    const selectedCity = cityName === 'Todas as Cidades' ? 'Todas' : (cityName as City);
-    onFilterChange({ city: selectedCity });
-    setCityInput(selectedCity === 'Todas' ? '' : selectedCity);
+  const handleSelectCity = (cidade: CityWithProfiles | 'Todas') => {
+    onFilterChange({ city: cidade === 'Todas' ? 'Todas' : { name: cidade.name, uf: cidade.uf } });
+    setCityInput(cidade === 'Todas' ? '' : rotuloCidade(cidade));
     setIsCityDropdownOpen(false);
   };
 
@@ -58,13 +72,13 @@ export const Hero: React.FC<HeroProps> = ({ filters, onFilterChange, totalProfil
           <h1 className="text-3xl sm:text-5xl lg:text-6xl font-display font-normal text-white tracking-tight leading-tight">
             O guia mais <span className="text-ouro">exclusivo</span>{' '}
             <br className="hidden sm:inline" />
-            do Sul de Minas
+            do Brasil
           </h1>
 
           <img src="/brand/arabesco-divisor.png" alt="" className="h-3.5 sm:h-4 mx-auto opacity-90" />
 
           <p className="text-[11px] sm:text-xs text-ouro max-w-2xl mx-auto font-medium leading-relaxed uppercase tracking-wider">
-            Experiências únicas com acompanhantes de <strong className="font-bold">alto padrão</strong> no Sul de Minas.
+            Experiências únicas com acompanhantes de <strong className="font-bold">alto padrão</strong> em todo o Brasil.
             <br />
             <strong className="font-bold">Perfis 100% verificados</strong>, com contato direto e <strong className="font-bold">total discrição</strong>.
           </p>
@@ -138,23 +152,38 @@ export const Hero: React.FC<HeroProps> = ({ filters, onFilterChange, totalProfil
                 {/* Dropdown com sugestões filtradas */}
                 {isCityDropdownOpen && (
                   <div className="absolute left-0 right-0 top-full mt-1.5 bg-[#250D15] border border-ouro/40 rounded-lg shadow-2xl z-50 overflow-hidden max-h-60 overflow-y-auto">
+                    {!termoCidade && (
+                      <button
+                        type="button"
+                        onClick={() => handleSelectCity('Todas')}
+                        className={`w-full text-left px-4 py-2.5 text-sm transition-colors border-b border-white/5 flex items-center justify-between ${
+                          filters.city === 'Todas' ? 'bg-ouro/20 text-white font-bold' : 'text-gray-200 hover:bg-white/10 hover:text-white'
+                        }`}
+                      >
+                        <span className="flex items-center space-x-2">
+                          <MapPin className="w-3.5 h-3.5 text-ouro" />
+                          <span>Todas as Cidades</span>
+                        </span>
+                        {filters.city === 'Todas' && <span className="text-xs text-ouro">✓ Selecionada</span>}
+                      </button>
+                    )}
                     {filteredCities.length > 0 ? (
                       filteredCities.map((cidade) => (
                         <button
-                          key={cidade}
+                          key={cidade.slug}
                           type="button"
                           onClick={() => handleSelectCity(cidade)}
                           className={`w-full text-left px-4 py-2.5 text-sm transition-colors border-b border-white/5 flex items-center justify-between ${
-                            (filters.city === cidade || (cidade === 'Todas as Cidades' && filters.city === 'Todas'))
+                            cidadeSelecionada(cidade)
                               ? 'bg-ouro/20 text-white font-bold'
                               : 'text-gray-200 hover:bg-white/10 hover:text-white'
                           }`}
                         >
                           <span className="flex items-center space-x-2">
                             <MapPin className="w-3.5 h-3.5 text-ouro" />
-                            <span>{cidade}</span>
+                            <span>{rotuloCidade(cidade)}</span>
                           </span>
-                          {(filters.city === cidade || (cidade === 'Todas as Cidades' && filters.city === 'Todas')) && (
+                          {cidadeSelecionada(cidade) && (
                             <span className="text-xs text-ouro">✓ Selecionada</span>
                           )}
                         </button>
@@ -235,35 +264,20 @@ export const Hero: React.FC<HeroProps> = ({ filters, onFilterChange, totalProfil
                 Todos Perfis
               </button>
 
-              <Link
-                to={`/cidade/${slugDaCidade('Ilicínea')}`}
-                onClick={() => {
-                  onFilterChange({ city: 'Ilicínea' });
-                  setCityInput('Ilicínea');
-                }}
-                className={`px-3 py-1.5 rounded-md border transition-all ${
-                  filters.city === 'Ilicínea'
-                    ? 'bg-ouro/25 border-ouro text-white font-bold'
-                    : 'bg-white/5 border-white/10 text-gray-300 hover:border-white/30 hover:text-white'
-                }`}
-              >
-                Ilicínea
-              </Link>
-
-              <Link
-                to={`/cidade/${slugDaCidade('Boa Esperança')}`}
-                onClick={() => {
-                  onFilterChange({ city: 'Boa Esperança' });
-                  setCityInput('Boa Esperança');
-                }}
-                className={`px-3 py-1.5 rounded-md border transition-all ${
-                  filters.city === 'Boa Esperança'
-                    ? 'bg-ouro/25 border-ouro text-white font-bold'
-                    : 'bg-white/5 border-white/10 text-gray-300 hover:border-white/30 hover:text-white'
-                }`}
-              >
-                Boa Esperança
-              </Link>
+              {cidadesAtalho.map((cidade) => (
+                <Link
+                  key={cidade.slug}
+                  to={`/cidade/${cidade.slug}`}
+                  onClick={() => handleSelectCity(cidade)}
+                  className={`px-3 py-1.5 rounded-md border transition-all ${
+                    cidadeSelecionada(cidade)
+                      ? 'bg-ouro/25 border-ouro text-white font-bold'
+                      : 'bg-white/5 border-white/10 text-gray-300 hover:border-white/30 hover:text-white'
+                  }`}
+                >
+                  {cidade.name}
+                </Link>
+              ))}
             </div>
 
           </div>

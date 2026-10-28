@@ -96,6 +96,11 @@ export interface AuthResponse {
 export interface CityOption {
   slug: string;
   name: string;
+  uf: string;
+}
+
+export interface CityWithProfiles extends CityOption {
+  total: number;
 }
 
 export interface PublicProfile {
@@ -103,6 +108,7 @@ export interface PublicProfile {
   stage_name: string;
   age: number;
   city: string;
+  uf: string;
   neighborhood: string | null;
   height: string | null;
   weight: string | null;
@@ -135,6 +141,7 @@ export interface MyProfile {
   stage_name: string;
   age: number;
   city: string;
+  uf: string;
   neighborhood: string | null;
   height: string | null;
   weight: string | null;
@@ -180,6 +187,7 @@ export interface PendingModerationProfile {
   stage_name: string;
   age: number;
   city: string;
+  uf: string;
   category: 'Mulheres' | 'Trans';
   whatsapp: string;
   thumbnail_url: string | null;
@@ -193,6 +201,7 @@ export interface ActiveProfile {
   stage_name: string;
   age: number;
   city: string;
+  uf: string;
   category: 'Mulheres' | 'Trans';
   whatsapp: string;
   status: 'aprovado' | 'suspenso';
@@ -242,6 +251,7 @@ export function registrarProfissional(dados: {
   email: string;
   password: string;
   city: string;
+  uf: string;
   category: 'Mulheres' | 'Trans';
   age: number;
   whatsapp: string;
@@ -293,11 +303,20 @@ export function listarCidades() {
   return request<{ cidades: CityOption[] }>('/api/cities');
 }
 
+export function listarCidadesComPerfis() {
+  return request<{ cidades: CityWithProfiles[] }>('/api/cities/com-perfis');
+}
+
+export function buscarCidadePorSlug(slug: string) {
+  return request<{ cidade: CityOption }>(`/api/cities/${encodeURIComponent(slug)}`);
+}
+
 // ---- perfis ----
 
-export function listarPerfis(filtros: { city?: string; category?: string } = {}) {
+export function listarPerfis(filtros: { city?: string; uf?: string; category?: string } = {}) {
   const params = new URLSearchParams();
   if (filtros.city) params.set('city', filtros.city);
+  if (filtros.uf) params.set('uf', filtros.uf);
   if (filtros.category) params.set('category', filtros.category);
   const query = params.toString();
   return request<{ perfis: PublicProfile[] }>(`/api/profiles${query ? `?${query}` : ''}`);

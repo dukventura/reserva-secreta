@@ -12,6 +12,7 @@ interface SessionContextValue {
     email: string;
     password: string;
     city: string;
+    uf: string;
     category: 'Mulheres' | 'Trans';
     age: number;
     whatsapp: string;
@@ -67,6 +68,7 @@ export const SessionProvider: React.FC<{ children: React.ReactNode }> = ({ child
       email: string;
       password: string;
       city: string;
+      uf: string;
       category: 'Mulheres' | 'Trans';
       age: number;
       whatsapp: string;

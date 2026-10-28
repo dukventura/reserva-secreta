@@ -7,6 +7,7 @@ import {
 import { useSession } from '../context/SessionContext';
 import { ApiError, enviarPerfilParaAprovacao, enviarDocumento, enviarSelfie, listarCidades, type CityOption } from '../lib/api';
 import { Monograma } from '../components/Logo';
+import { rotuloCidade, semAcento } from '../data/cities';
 import { useSeo } from '../hooks/useSeo';
 
 type Etapa = 'dados' | 'verificacao' | 'sucesso';
@@ -34,6 +35,7 @@ export const AdvertisePage: React.FC = () => {
     password: '',
     age: '',
     city: '',
+    uf: '',
     category: 'Mulheres' as Categoria,
     whatsapp: '',
   });
@@ -59,9 +61,8 @@ export const AdvertisePage: React.FC = () => {
   }, [etapa]);
 
   useEffect(() => {
-    // Lista completa dos 853 municipios de MG (nao so as 2 cidades que
-    // ja tinham anuncio) - o autocomplete filtra conforme digita, em
-    // vez de um <select> gigante ou travado numa lista curta.
+    // Lista completa dos municipios do Brasil (IBGE) - o autocomplete
+    // filtra conforme digita, em vez de um <select> gigante.
     listarCidades()
       .then(({ cidades }) => setCidades(cidades))
       .catch(() => setErro('Não foi possível carregar a lista de cidades. Recarregue a página.'));
@@ -77,13 +78,14 @@ export const AdvertisePage: React.FC = () => {
     return () => document.removeEventListener('mousedown', handleClickOutside);
   }, []);
 
-  const cidadesFiltradas = cityQuery.trim()
-    ? cidades.filter((c) => c.name.toLowerCase().includes(cityQuery.trim().toLowerCase())).slice(0, MAX_SUGESTOES)
+  const termoCidade = semAcento(cityQuery.trim());
+  const cidadesFiltradas = termoCidade
+    ? cidades.filter((c) => semAcento(rotuloCidade(c)).includes(termoCidade)).slice(0, MAX_SUGESTOES)
     : [];
 
   const handleSelecionarCidade = (cidade: CityOption) => {
-    setFormData((prev) => ({ ...prev, city: cidade.name }));
-    setCityQuery(cidade.name);
+    setFormData((prev) => ({ ...prev, city: cidade.name, uf: cidade.uf }));
+    setCityQuery(rotuloCidade(cidade));
     setCityDropdownAberto(false);
     setErroCidade('');
   };
@@ -95,7 +97,7 @@ export const AdvertisePage: React.FC = () => {
     // Cidade so' e' valida se veio de um clique na sugestao (garante
     // que bate com uma cidade real da lista, nao texto livre digitado
     // e nunca selecionado).
-    if (!formData.city || formData.city !== cityQuery) {
+    if (!formData.city || rotuloCidade({ name: formData.city, uf: formData.uf }) !== cityQuery) {
       setErroCidade('Digite o nome da sua cidade e selecione uma opção da lista.');
       return;
     }
@@ -106,6 +108,7 @@ export const AdvertisePage: React.FC = () => {
         email: formData.email,
         password: formData.password,
         city: formData.city,
+        uf: formData.uf,
         category: formData.category,
         age: Number(formData.age),
         whatsapp: formData.whatsapp.replace(/\D/g, ''),
@@ -284,7 +287,7 @@ export const AdvertisePage: React.FC = () => {
                   onChange={(e) => {
                     setCityQuery(e.target.value);
                     setCityDropdownAberto(true);
-                    if (formData.city) setFormData((prev) => ({ ...prev, city: '' }));
+                    if (formData.city) setFormData((prev) => ({ ...prev, city: '', uf: '' }));
                   }}
                   onFocus={() => setCityDropdownAberto(true)}
                   placeholder={cidades.length === 0 ? 'Carregando cidades...' : 'Digite o nome da sua cidade'}
@@ -305,7 +308,7 @@ export const AdvertisePage: React.FC = () => {
                         onClick={() => handleSelecionarCidade(c)}
                         className="w-full text-left px-4 py-2.5 text-sm text-marfim hover:bg-ouro/15 transition-colors border-b border-white/5 last:border-b-0"
                       >
-                        {c.name}
+                        {rotuloCidade(c)}
                       </button>
                     ))
                   ) : (

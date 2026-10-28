@@ -30,9 +30,9 @@ export const ProfilePage: React.FC = () => {
   const [activeImageIndex, setActiveImageIndex] = useState(0);
   useSeo(profile
     ? {
-        title: `${profile.stage_name}, acompanhante em ${profile.city}`,
+        title: `${profile.stage_name}, acompanhante em ${profile.city} - ${profile.uf}`,
         description: profile.tagline || profile.bio?.slice(0, 155)
-          || `${profile.stage_name}, ${profile.age} anos, acompanhante em ${profile.city} - MG. Fotos reais e contato direto pelo WhatsApp.`,
+          || `${profile.stage_name}, ${profile.age} anos, acompanhante em ${profile.city} - ${profile.uf}. Fotos reais e contato direto pelo WhatsApp.`,
         image: profile.gallery[0] ?? profile.cover_image,
       }
     : { noindex: naoEncontrado });
@@ -190,7 +190,7 @@ export const ProfilePage: React.FC = () => {
             <div className="flex flex-wrap items-center gap-2">
               <span className="flex items-center space-x-1.5 text-xs font-bold px-3.5 py-1.5 rounded-lg bg-ouro/20 border border-ouro/40 text-white">
                 <MapPin className="w-4 h-4 text-ouro" />
-                <span>{profile.city} ({profile.neighborhood || 'Centro'})</span>
+                <span>{profile.city} - {profile.uf} ({profile.neighborhood || 'Centro'})</span>
               </span>
               <span className="px-3.5 py-1.5 rounded-lg bg-white/10 border border-white/15 text-gray-200 text-xs font-semibold">
                 Categoria: {profile.category}

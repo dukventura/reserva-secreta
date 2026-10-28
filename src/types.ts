@@ -1,4 +1,6 @@
-export type City = 'Todas' | 'Ilicínea' | 'Boa Esperança';
+// 'Todas' ou uma cidade especifica (nome + UF, ja que o nome se repete
+// entre estados).
+export type City = 'Todas' | { name: string; uf: string };
 export type Category = 'Todas' | 'Mulheres' | 'Trans';
 
 export interface FilterState {

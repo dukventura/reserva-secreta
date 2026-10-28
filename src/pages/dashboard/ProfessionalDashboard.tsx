@@ -303,7 +303,7 @@ function ProfessionalDashboardContent() {
             {[
               { label: 'Status do anúncio', value: ROTULO_STATUS[perfil.status], icon: <CheckCircle2 className="w-4 h-4 text-verificado-texto" /> },
               { label: 'Categoria', value: perfil.category, icon: <CreditCard className="w-4 h-4 text-ouro" /> },
-              { label: 'Cidade', value: perfil.city, icon: <UserRound className="w-4 h-4 text-ouro" /> },
+              { label: 'Cidade', value: `${perfil.city} - ${perfil.uf}`, icon: <UserRound className="w-4 h-4 text-ouro" /> },
               { label: 'Verificação', value: `${percentualVerificado}%`, icon: <ShieldCheck className="w-4 h-4 text-ouro" /> },
             ].map((s) => (
               <div key={s.label} className="bg-grafite border border-white/10 p-4 space-y-2">

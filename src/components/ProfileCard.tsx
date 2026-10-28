@@ -98,7 +98,7 @@ export const ProfileCard: React.FC<ProfileCardProps> = ({ profile }) => {
           {/* Localização */}
           <div className="mt-1 flex items-center space-x-1.5 text-xs text-ouro font-semibold">
             <MapPin className="w-3.5 h-3.5 shrink-0 text-ouro" />
-            <span>{profile.city} {profile.neighborhood ? `• ${profile.neighborhood}` : ''}</span>
+            <span>{profile.city} - {profile.uf} {profile.neighborhood ? `• ${profile.neighborhood}` : ''}</span>
           </div>
 
           {/* Chamada / Tagline */}

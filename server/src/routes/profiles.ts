@@ -20,9 +20,11 @@ const categoriaQuerySchema = z.enum(['Mulheres', 'Trans']);
 // Diretorio publico: only 'aprovado' aparece. E' o portao central do
 // produto - nada entra aqui sem passar pela fila do gerente.
 profilesRouter.get('/', async (req, res) => {
-  const { city, category } = req.query;
+  const { city, uf, category } = req.query;
   let query = comVerificacao();
   if (typeof city === 'string' && city !== 'Todas') query = query.where('professional_profiles.city', '=', city);
+  // Mesmo nome existe em mais de um estado - com UF o filtro fica exato.
+  if (typeof uf === 'string' && uf) query = query.where('professional_profiles.uf', '=', uf.toUpperCase());
   if (typeof category === 'string' && category !== 'Todas') {
     const parsed = categoriaQuerySchema.safeParse(category);
     if (!parsed.success) {
