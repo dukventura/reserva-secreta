@@ -678,14 +678,14 @@ function ProfessionalDashboardContent() {
               <div className="text-xs text-amber-300 font-semibold">Impulso ativo até {impulsoAte.toLocaleString('pt-BR', { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' })} — seu perfil está no topo da cidade.</div>
             )}
           </div>
-          <p className="text-xs text-nevoa">Pague por PIX direto aqui no site. Assim que o pagamento cair, nossa equipe confirma e o plano é ativado no seu anúncio.</p>
+          <p className="text-xs text-nevoa">Escolha um plano e pague pelo PIX aqui mesmo. Assim que o banco confirmar, o plano é ativado no seu anúncio automaticamente.</p>
 
           {perfil.pedido_plano_pendente && (
             <div className="space-y-3 bg-ouro/10 border border-ouro/30 p-4">
               <div className="flex items-center justify-between gap-3">
                 <div>
                   <div className="text-sm font-semibold text-marfim">Pedido enviado: plano {perfil.pedido_plano_pendente.plano_nome}</div>
-                  <div className="text-xs text-nevoa">Em {new Date(perfil.pedido_plano_pendente.created_at).toLocaleString('pt-BR')} — aguardando confirmação da equipe.</div>
+                  <div className="text-xs text-nevoa">Em {new Date(perfil.pedido_plano_pendente.created_at).toLocaleString('pt-BR')} — aguardando pagamento.</div>
                 </div>
                 <button
                   onClick={() => handleCancelarPedido(perfil.pedido_plano_pendente!.id)}

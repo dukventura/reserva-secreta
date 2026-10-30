@@ -660,7 +660,9 @@ export interface PlanRequestRow {
   plan_id: number;
   plano_nome: string;
   preco_centavos: number;
+  whatsapp: string;
   tem_comprovante: boolean;
+  pix_automatico: boolean;
 }
 
 export function listarPedidosPlano() {

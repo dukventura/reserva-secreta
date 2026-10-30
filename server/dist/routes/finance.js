@@ -12,6 +12,8 @@ const uploads_1 = require("../lib/uploads");
 const documentUploads_1 = require("../lib/documentUploads");
 const selfieUploads_1 = require("../lib/selfieUploads");
 const comprovanteUploads_1 = require("../lib/comprovanteUploads");
+const pixAutomatico_1 = require("../lib/pixAutomatico");
+const sicredi_1 = require("../lib/sicredi");
 // Catalogo publico (so planos ativos) - a profissional ve no proprio
 // painel o que cada plano oferece.
 exports.plansPublicRouter = (0, express_1.Router)();
@@ -290,18 +292,38 @@ exports.financeRouter.get('/summary', async (_req, res) => {
     });
 });
 exports.financeRouter.get('/plan-requests', async (_req, res) => {
+    // Antes de listar, confere no banco os PIX automaticos ainda em
+    // aberto - quem ja pagou some da fila na hora, sem esperar o cron.
+    if ((0, sicredi_1.sicrediConfigurado)()) {
+        const comPix = await db_1.db
+            .selectFrom('plan_requests')
+            .select('id')
+            .where('status', '=', 'pendente')
+            .where('sicredi_txid', 'is not', null)
+            .where('created_at', '>', new Date(Date.now() - 24 * 60 * 60 * 1000))
+            .execute();
+        await Promise.all(comPix.map(({ id }) => (0, pixAutomatico_1.verificarPedidoSicredi)(id).catch((err) => {
+            console.error(`Pedido ${id}: erro consultando Sicredi:`, err);
+        })));
+    }
     const pedidos = await db_1.db
         .selectFrom('plan_requests')
         .innerJoin('professional_profiles', 'professional_profiles.user_id', 'plan_requests.user_id')
         .innerJoin('plans', 'plans.id', 'plan_requests.plan_id')
         .select([
         'plan_requests.id', 'plan_requests.user_id', 'plan_requests.created_at', 'plan_requests.comprovante_url',
-        'professional_profiles.stage_name', 'plans.id as plan_id', 'plans.nome as plano_nome', 'plans.preco_centavos',
+        'plan_requests.sicredi_txid', 'professional_profiles.stage_name', 'professional_profiles.whatsapp', 'plans.id as plan_id', 'plans.nome as plano_nome', 'plans.preco_centavos',
     ])
         .where('plan_requests.status', '=', 'pendente')
         .orderBy('plan_requests.created_at', 'asc')
         .execute();
-    res.json({ pedidos: pedidos.map(({ comprovante_url, ...p }) => ({ ...p, tem_comprovante: comprovante_url !== null })) });
+    res.json({
+        pedidos: pedidos.map(({ comprovante_url, sicredi_txid, ...p }) => ({
+            ...p,
+            tem_comprovante: comprovante_url !== null,
+            pix_automatico: sicredi_txid !== null,
+        })),
+    });
 });
 // Nunca serve o comprovante por URL publica - mesma logica do
 // documento/selfie, so' essa rota autenticada le do disco privado.
@@ -331,12 +353,20 @@ exports.financeRouter.post('/plan-requests/:id/atender', async (req, res) => {
         res.status(400).json({ erro: 'Este plano não está mais disponível. Recuse o pedido e oriente a profissional a escolher outro.' });
         return;
     }
-    const { venceEm } = await (0, plans_1.ativarPlanoParaUsuario)({ userId: pedido.user_id, plano, registradoPor: req.user.sub });
-    await db_1.db
+    // Marca antes de ativar e so' se ainda estiver pendente: se o PIX
+    // automatico confirmar no mesmo instante, o plano nao e' ativado (nem
+    // o pagamento registrado) duas vezes.
+    const marcado = await db_1.db
         .updateTable('plan_requests')
         .set({ status: 'atendido', resolved_at: new Date(), resolved_by: req.user.sub })
         .where('id', '=', id)
-        .execute();
+        .where('status', '=', 'pendente')
+        .executeTakeFirst();
+    if (Number(marcado.numUpdatedRows) === 0) {
+        res.status(409).json({ erro: 'Este pedido acabou de ser resolvido (provavelmente pelo PIX automático). Atualize a página.' });
+        return;
+    }
+    const { venceEm } = await (0, plans_1.ativarPlanoParaUsuario)({ userId: pedido.user_id, plano, registradoPor: req.user.sub });
     await (0, audit_1.registrarAuditoria)(req.user.sub, `Atendeu pedido de plano ${plano.nome}`, pedido.stage_name);
     res.json({ ok: true, vence_em: venceEm.toISOString().slice(0, 10) });
 });
@@ -352,11 +382,16 @@ exports.financeRouter.post('/plan-requests/:id/recusar', async (req, res) => {
         res.status(404).json({ erro: 'Pedido não encontrado ou já resolvido.' });
         return;
     }
-    await db_1.db
+    const marcado = await db_1.db
         .updateTable('plan_requests')
         .set({ status: 'recusado', resolved_at: new Date(), resolved_by: req.user.sub })
         .where('id', '=', id)
-        .execute();
+        .where('status', '=', 'pendente')
+        .executeTakeFirst();
+    if (Number(marcado.numUpdatedRows) === 0) {
+        res.status(409).json({ erro: 'Este pedido acabou de ser resolvido (provavelmente pelo PIX automático). Atualize a página.' });
+        return;
+    }
     await (0, audit_1.registrarAuditoria)(req.user.sub, 'Recusou pedido de plano', pedido.stage_name);
     res.json({ ok: true });
 });

@@ -1,7 +1,7 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { useSession } from '../../context/SessionContext';
 import {
-  AlertCircle, CheckCircle2, XCircle, Clock, Zap, Plus, Pencil, History, Search, Power, Trash2, Eye,
+  AlertCircle, CheckCircle2, XCircle, Clock, Zap, Plus, Pencil, History, Search, Power, Trash2, Eye, Circle, MessageCircle,
 } from 'lucide-react';
 import {
   listarAssinaturas, listarPlanos, criarPlano, editarPlano, excluirPlano, ativarPlano, cancelarAssinatura,
@@ -252,7 +252,7 @@ function HistoricoProfissional({ userId }: { userId: number }) {
     <div className="bg-onix border border-white/10 divide-y divide-white/5">
       {pagamentos.map((p) => (
         <div key={p.id} className="flex flex-wrap items-center justify-between gap-2 px-3 py-2 text-xs">
-          <span className="text-nevoa font-mono">{fmtDataHora(p.created_at)}</span>
+          <span className="text-nevoa font-mono">{fmtDataHora(p.created_at)}{!p.registrado_por_nome && ' · automático'}</span>
           <span className="text-marfim">{p.tipo === 'impulso' ? 'Impulso' : `Plano ${p.plano_nome ?? '—'}`} · {p.dias} dias</span>
           <span className="text-ouro font-semibold">{fmtReais(p.valor_centavos)}</span>
           {p.observacao && <span className="w-full text-nevoa italic">{p.observacao}</span>}
@@ -615,7 +615,7 @@ function AbaPagamentos() {
             <span className="text-nevoa">{p.tipo === 'impulso' ? 'Impulso' : `Plano ${p.plano_nome ?? '—'}`}</span>
             <span className="text-nevoa">{p.dias} dias</span>
             <span className="text-ouro font-semibold">{fmtReais(p.valor_centavos)}</span>
-            <span className="text-nevoa truncate">por {p.registrado_por_nome ?? '—'}</span>
+            <span className="text-nevoa truncate">{p.registrado_por_nome ? `por ${p.registrado_por_nome}` : 'PIX automático'}</span>
             {p.observacao && <span className="col-span-2 sm:col-span-6 text-nevoa italic">{p.observacao}</span>}
           </div>
         ))}
@@ -722,56 +722,127 @@ function VerComprovanteButton({ pedidoId }: { pedidoId: number }) {
   );
 }
 
-function AbaPedidos({ pedidos, onAtualizar }: { pedidos: PlanRequestRow[]; onAtualizar: () => void }) {
-  const [processandoId, setProcessandoId] = useState<number | null>(null);
-  const [erro, setErro] = useState('');
+// Cada pedido mostra em que pe' esta o pagamento e o que falta - mesmo
+// formato da fila de aprovacao de anuncios.
+type EstadoPedido = 'comprovante' | 'pix_aberto' | 'sem_pagamento' | 'abandonado';
 
-  const executar = async (id: number, fn: () => Promise<unknown>) => {
-    setProcessandoId(id);
+function estadoPedido(p: PlanRequestRow): EstadoPedido {
+  if (p.tem_comprovante) return 'comprovante';
+  const horas = (Date.now() - new Date(p.created_at).getTime()) / 3600000;
+  if (horas > 48) return 'abandonado';
+  return p.pix_automatico ? 'pix_aberto' : 'sem_pagamento';
+}
+
+const ORDEM_ESTADO: Record<EstadoPedido, number> = { comprovante: 0, pix_aberto: 1, sem_pagamento: 2, abandonado: 3 };
+
+function EtapaPedido({ feito, titulo, detalhe }: { feito: boolean; titulo: string; detalhe: string }) {
+  return (
+    <div className={`flex items-start gap-2 p-2.5 border ${feito ? 'border-verificado/30 bg-verificado/5' : 'border-white/10 bg-white/[0.02]'}`}>
+      {feito ? <CheckCircle2 className="w-4 h-4 text-verificado-texto shrink-0 mt-0.5" /> : <Circle className="w-4 h-4 text-nevoa shrink-0 mt-0.5" />}
+      <div>
+        <div className={`text-xs font-semibold ${feito ? 'text-marfim' : 'text-nevoa'}`}>{titulo}</div>
+        <div className="text-[11px] text-nevoa">{detalhe}</div>
+      </div>
+    </div>
+  );
+}
+
+function CardPedido({ p, onAtualizar }: { p: PlanRequestRow; onAtualizar: () => void }) {
+  const [processando, setProcessando] = useState(false);
+  const [confirmandoAtivar, setConfirmandoAtivar] = useState(false);
+  const [erro, setErro] = useState('');
+  const estado = estadoPedido(p);
+
+  const executar = async (fn: () => Promise<unknown>) => {
+    setProcessando(true);
     setErro('');
     try {
       await fn();
       onAtualizar();
     } catch (err) {
       setErro(err instanceof ApiError ? err.message : 'Não foi possível concluir.');
-    } finally {
-      setProcessandoId(null);
+      setProcessando(false);
     }
   };
 
+  const falta: Record<EstadoPedido, { texto: string; cls: string }> = {
+    comprovante: { texto: 'Confira o comprovante e o extrato. Se o dinheiro caiu, ative o plano.', cls: 'text-ouro' },
+    pix_aberto: { texto: 'PIX automático gerado, aguardando ela pagar. Se pagar, o plano ativa sozinho, não precisa fazer nada.', cls: 'text-nevoa' },
+    sem_pagamento: { texto: 'Ela ainda não pagou nem mandou comprovante.', cls: 'text-nevoa' },
+    abandonado: { texto: 'Parado há mais de 2 dias sem pagamento. Chame no WhatsApp ou recuse para limpar a fila.', cls: 'text-amber-300' },
+  };
+
+  return (
+    <div className={`p-4 space-y-3 border ${estado === 'comprovante' ? 'border-ouro/40 bg-ouro/5' : 'border-white/10'}`}>
+      <div className="flex flex-wrap items-start justify-between gap-2">
+        <div>
+          <div className="text-sm font-semibold text-marfim">{p.stage_name}</div>
+          <div className="text-xs text-nevoa">
+            Plano <span className="text-ouro font-semibold">{p.plano_nome}</span> · {fmtReais(p.preco_centavos)} · pedido em {fmtDataHora(p.created_at)}
+          </div>
+        </div>
+        <a
+          href={`https://wa.me/55${p.whatsapp.replace(/\D/g, '')}`}
+          target="_blank"
+          rel="noopener noreferrer"
+          className={btnSecundario}
+        >
+          <MessageCircle className="w-3.5 h-3.5" /><span>WhatsApp</span>
+        </a>
+      </div>
+
+      <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
+        <EtapaPedido feito titulo="1. Pedido feito" detalhe="Escolheu o plano no painel dela" />
+        <EtapaPedido
+          feito={p.pix_automatico || p.tem_comprovante}
+          titulo="2. Pagamento"
+          detalhe={p.tem_comprovante ? 'Comprovante enviado (PIX direto)' : p.pix_automatico ? 'PIX automático gerado, ainda não pago' : 'Nada ainda'}
+        />
+        <EtapaPedido feito={false} titulo="3. Plano ativo" detalhe={estado === 'comprovante' ? 'Depende de você conferir' : 'Ativa ao confirmar o pagamento'} />
+      </div>
+
+      <p className={`text-xs ${falta[estado].cls}`}><strong>Próximo passo:</strong> {falta[estado].texto}</p>
+      <Erro texto={erro} />
+
+      <div className="flex flex-wrap gap-2">
+        {p.tem_comprovante && <VerComprovanteButton pedidoId={p.id} />}
+        {confirmandoAtivar ? (
+          <>
+            <button onClick={() => executar(() => atenderPedidoPlano(p.id))} disabled={processando} className={btnPrimario}>
+              <CheckCircle2 className="w-3.5 h-3.5" /><span>{processando ? 'Ativando...' : `Sim, recebi ${fmtReais(p.preco_centavos)}`}</span>
+            </button>
+            <button onClick={() => setConfirmandoAtivar(false)} className={btnSecundario}>Voltar</button>
+          </>
+        ) : (
+          <button
+            onClick={() => setConfirmandoAtivar(true)}
+            disabled={processando}
+            className={estado === 'comprovante' ? btnPrimario : btnSecundario}
+          >
+            <CheckCircle2 className="w-3.5 h-3.5" /><span>Confirmar pagamento e ativar</span>
+          </button>
+        )}
+        <button onClick={() => executar(() => recusarPedidoPlano(p.id))} disabled={processando} className={btnPerigo}>
+          <XCircle className="w-3.5 h-3.5" /><span>Recusar pedido</span>
+        </button>
+      </div>
+    </div>
+  );
+}
+
+function AbaPedidos({ pedidos, onAtualizar }: { pedidos: PlanRequestRow[]; onAtualizar: () => void }) {
+  const ordenados = [...pedidos].sort((a, b) => ORDEM_ESTADO[estadoPedido(a)] - ORDEM_ESTADO[estadoPedido(b)]);
+  const precisaVoce = pedidos.filter((p) => estadoPedido(p) === 'comprovante').length;
+
   return (
     <div className="space-y-3">
-      <p className="text-xs text-nevoa">Pedidos feitos pela própria profissional na aba "Plano" do painel dela. Confirme o PIX fora do site antes de atender.</p>
-      <Erro texto={erro} />
-      <div className="border border-white/10 divide-y divide-white/10">
-        {pedidos.length === 0 && <p className="text-sm text-nevoa p-4">Nenhum pedido pendente.</p>}
-        {pedidos.map((p) => (
-          <div key={p.id} className="flex flex-col sm:flex-row sm:items-center gap-3 p-3.5">
-            <div className="flex-1 min-w-0">
-              <div className="flex items-center gap-2">
-                <div className="text-sm font-semibold text-marfim">{p.stage_name}</div>
-                {p.tem_comprovante ? (
-                  <span className="text-[10px] px-2 py-0.5 rounded-campo bg-verificado/15 border border-verificado/30 text-verificado-texto font-bold uppercase">Comprovante enviado</span>
-                ) : (
-                  <span className="text-[10px] px-2 py-0.5 rounded-campo bg-white/5 border border-white/10 text-nevoa uppercase">Sem comprovante ainda</span>
-                )}
-              </div>
-              <div className="text-xs text-nevoa">
-                Quer o plano <span className="text-ouro font-semibold">{p.plano_nome}</span> ({fmtReais(p.preco_centavos)}) · pedido em {fmtDataHora(p.created_at)}
-              </div>
-            </div>
-            <div className="flex gap-2 shrink-0">
-              {p.tem_comprovante && <VerComprovanteButton pedidoId={p.id} />}
-              <button onClick={() => executar(p.id, () => atenderPedidoPlano(p.id))} disabled={processandoId === p.id} className={btnPrimario}>
-                <CheckCircle2 className="w-3.5 h-3.5" /><span>Atender</span>
-              </button>
-              <button onClick={() => executar(p.id, () => recusarPedidoPlano(p.id))} disabled={processandoId === p.id} className={btnPerigo}>
-                <XCircle className="w-3.5 h-3.5" /><span>Recusar</span>
-              </button>
-            </div>
-          </div>
-        ))}
-      </div>
+      <p className="text-xs text-nevoa">
+        Quem paga pelo PIX automático tem o plano ativado sozinho e sai desta lista, sem precisar de você.
+        Aqui ficam só os pedidos ainda sem pagamento confirmado.
+        {precisaVoce > 0 && <strong className="text-ouro"> {precisaVoce} com comprovante esperando sua conferência.</strong>}
+      </p>
+      {pedidos.length === 0 && <p className="text-sm text-nevoa p-4 border border-white/10">Nenhum pedido pendente.</p>}
+      {ordenados.map((p) => <CardPedido key={p.id} p={p} onAtualizar={onAtualizar} />)}
     </div>
   );
 }
@@ -780,6 +851,7 @@ function AbaPedidos({ pedidos, onAtualizar }: { pedidos: PlanRequestRow[]; onAtu
 
 export function FinancePanel() {
   const [aba, setAba] = useState<'assinaturas' | 'clientes' | 'planos' | 'pedidos' | 'pagamentos'>('assinaturas');
+  const primeiraCarga = useRef(true);
   const [pedidos, setPedidos] = useState<PlanRequestRow[]>([]);
   const [assinaturas, setAssinaturas] = useState<SubscriptionRow[]>([]);
   const [clientes, setClientes] = useState<ClienteRow[]>([]);
@@ -800,6 +872,10 @@ export function FinancePanel() {
         setPlanos(p.planos);
         setResumo(r);
         setPedidos(pd.pedidos);
+        // Abre direto nos pedidos quando tem algo esperando - so' na
+        // primeira carga, pra nao tirar a pessoa da aba que ela escolheu.
+        if (primeiraCarga.current && pd.pedidos.length > 0) setAba('pedidos');
+        primeiraCarga.current = false;
         setClientes(c.clientes);
         setVersaoPagamentos((v) => v + 1);
       })
@@ -830,25 +906,25 @@ export function FinancePanel() {
           <div className="text-2xl font-display text-marfim">{resumo ? resumo.assinantes_ativos : '...'}</div>
           <span className="text-[11px] text-nevoa">de {assinaturas.length} profissionais</span>
         </div>
-        <div className={`border p-4 space-y-1.5 ${resumo && resumo.vencendo_7_dias > 0 ? 'bg-amber-500/10 border-amber-500/30' : 'bg-grafite border-white/10'}`}>
+        <button onClick={() => { setAba('assinaturas'); setFiltro('vencendo'); }} className={`text-left border p-4 space-y-1.5 hover:border-ouro/50 transition-colors ${resumo && resumo.vencendo_7_dias > 0 ? 'bg-amber-500/10 border-amber-500/30' : 'bg-grafite border-white/10'}`}>
           <span className="text-[11px] text-nevoa uppercase tracking-wider">Vencendo em 7 dias</span>
           <div className={`text-2xl font-display ${resumo && resumo.vencendo_7_dias > 0 ? 'text-amber-300' : 'text-marfim'}`}>{resumo ? resumo.vencendo_7_dias : '...'}</div>
           <span className="text-[11px] text-nevoa">cobrar renovação</span>
-        </div>
+        </button>
         <div className="bg-grafite border border-white/10 p-4 space-y-1.5">
           <span className="text-[11px] text-nevoa uppercase tracking-wider">Impulsos ativos</span>
           <div className="text-2xl font-display text-marfim">{resumo ? resumo.impulsos_ativos : '...'}</div>
           <span className="text-[11px] text-nevoa">no topo agora</span>
         </div>
-        <div className={`border p-4 space-y-1.5 ${resumo && resumo.pedidos_pendentes > 0 ? 'bg-ouro/10 border-ouro/30' : 'bg-grafite border-white/10'}`}>
+        <button onClick={() => setAba('pedidos')} className={`text-left border p-4 space-y-1.5 hover:border-ouro/50 transition-colors ${resumo && resumo.pedidos_pendentes > 0 ? 'bg-ouro/10 border-ouro/30' : 'bg-grafite border-white/10'}`}>
           <span className="text-[11px] text-nevoa uppercase tracking-wider">Pedidos de plano</span>
           <div className={`text-2xl font-display ${resumo && resumo.pedidos_pendentes > 0 ? 'text-ouro' : 'text-marfim'}`}>{resumo ? resumo.pedidos_pendentes : '...'}</div>
-          <span className="text-[11px] text-nevoa">aguardando atendimento</span>
-        </div>
+          <span className="text-[11px] text-nevoa">aguardando pagamento</span>
+        </button>
       </div>
 
       <div className="flex gap-1 border-b border-white/10">
-        {([['assinaturas', 'Assinaturas'], ['clientes', `Clientes (${clientes.length})`], ['planos', 'Planos'], ['pedidos', `Pedidos${pedidos.length > 0 ? ` (${pedidos.length})` : ''}`], ['pagamentos', 'Pagamentos']] as const).map(([k, l]) => (
+        {([['pedidos', `Pedidos${pedidos.length > 0 ? ` (${pedidos.length})` : ''}`], ['assinaturas', 'Assinaturas'], ['pagamentos', 'Pagamentos'], ['planos', 'Planos'], ['clientes', `Clientes (${clientes.length})`]] as const).map(([k, l]) => (
           <button
             key={k}
             onClick={() => setAba(k)}
@@ -863,7 +939,7 @@ export function FinancePanel() {
 
       {aba === 'assinaturas' && (
         <div className="space-y-3">
-          <p className="text-xs text-nevoa">Pagamento é recebido via PIX fora do site. Registre aqui quando receber — o plano vence sozinho na data e o perfil volta pro gratuito.</p>
+          <p className="text-xs text-nevoa">Quem paga pelo PIX automático já aparece aqui com o plano ativo. Use "Ativar plano" só pra pagamento recebido por fora (PIX direto, dinheiro). O plano vence sozinho na data e o perfil volta pro gratuito.</p>
           <div className="flex flex-col sm:flex-row sm:items-center gap-3">
             <div className="flex flex-wrap gap-1.5">
               {FILTROS.map((f) => (
