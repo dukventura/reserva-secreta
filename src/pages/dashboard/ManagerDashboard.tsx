@@ -229,6 +229,11 @@ function CardAprovacao({ perfil: p, fotos, documento, selfie, acoes, onPublicar,
           {fotos.length > 0 && <ItensPendentes fotos={fotos} documento={null} selfie={null} acoes={acoes} />}
         </Etapa>
         <Etapa numero={2} titulo="Documento (RG/CNH)" estado={estDocumento} descricao={descDoc(p.documento_status, p.documento_enviado, 'Documento')}>
+          <p className="text-[11px] text-nevoa">
+            {p.cpf_mascara
+              ? <>CPF informado: <span className="font-mono text-marfim">{p.cpf_mascara}</span> — confira se bate com o documento.</>
+              : <span className="text-amber-300">Ainda não informou o CPF.</span>}
+          </p>
           {documento && <ItensPendentes fotos={[]} documento={documento} selfie={null} acoes={acoes} />}
         </Etapa>
         <Etapa numero={3} titulo="Selfie de verificação" estado={estSelfie} descricao={descDoc(p.selfie_status, p.selfie_enviada, 'Selfie')}>

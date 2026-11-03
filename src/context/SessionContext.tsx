@@ -16,6 +16,7 @@ interface SessionContextValue {
     category: 'Mulheres' | 'Trans';
     age: number;
     whatsapp: string;
+    cpf: string;
   }) => Promise<DemoSession>;
   sair: () => void;
 }
@@ -72,6 +73,7 @@ export const SessionProvider: React.FC<{ children: React.ReactNode }> = ({ child
       category: 'Mulheres' | 'Trans';
       age: number;
       whatsapp: string;
+      cpf: string;
     }) => {
       const { token, user } = await api.registrarProfissional(dados);
       api.setToken(token);

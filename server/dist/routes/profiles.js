@@ -18,6 +18,7 @@ const comprovanteUploads_1 = require("../lib/comprovanteUploads");
 const publicProfile_1 = require("../lib/publicProfile");
 const sicredi_1 = require("../lib/sicredi");
 const pixAutomatico_1 = require("../lib/pixAutomatico");
+const cpf_1 = require("../lib/cpf");
 exports.profilesRouter = (0, express_1.Router)();
 const categoriaQuerySchema = zod_1.z.enum(['Mulheres', 'Trans']);
 // Diretorio publico: only 'aprovado' aparece. E' o portao central do
@@ -82,7 +83,7 @@ exports.profilesRouter.get('/me', auth_1.autenticar, (0, auth_1.exigirPapel)('pr
         .where('plan_requests.user_id', '=', req.user.sub)
         .where('plan_requests.status', '=', 'pendente')
         .executeTakeFirst();
-    const { languages, services, locations, documento_url, selfie_url, ...resto } = perfil;
+    const { languages, services, locations, documento_url, selfie_url, cpf_hash: _cpfHash, ...resto } = perfil;
     res.json({
         perfil: {
             ...resto,
@@ -280,15 +281,47 @@ exports.profilesRouter.patch('/me', auth_1.autenticar, (0, auth_1.exigirPapel)('
     await db_1.db.updateTable('professional_profiles').set(valores).where('user_id', '=', req.user.sub).execute();
     res.json({ ok: true });
 });
+// Cadastros feitos antes da trava por CPF informam aqui. So' uma vez:
+// depois de gravado, trocar exige falar com a equipe.
+exports.profilesRouter.post('/me/cpf', auth_1.autenticar, (0, auth_1.exigirPapel)('profissional'), async (req, res) => {
+    const cpf = typeof req.body?.cpf === 'string' ? req.body.cpf : '';
+    if (!(0, cpf_1.cpfValido)(cpf)) {
+        res.status(400).json({ erro: 'CPF inválido. Confira os números.' });
+        return;
+    }
+    const perfil = await db_1.db.selectFrom('professional_profiles').select(['id', 'cpf_hash']).where('user_id', '=', req.user.sub).executeTakeFirst();
+    if (!perfil) {
+        res.status(404).json({ erro: 'Perfil não encontrado para esta conta.' });
+        return;
+    }
+    if (perfil.cpf_hash) {
+        res.status(409).json({ erro: 'O CPF já foi informado. Para corrigir, fale com a equipe.' });
+        return;
+    }
+    const emUso = await db_1.db.selectFrom('professional_profiles').select('id').where('cpf_hash', '=', (0, cpf_1.hashCpf)(cpf)).executeTakeFirst();
+    if (emUso) {
+        res.status(409).json({ erro: 'Este CPF já está em uso em outra conta de anunciante. Fale com a equipe.' });
+        return;
+    }
+    await db_1.db.updateTable('professional_profiles')
+        .set({ cpf_hash: (0, cpf_1.hashCpf)(cpf), cpf_mascara: (0, cpf_1.mascararCpf)(cpf) })
+        .where('id', '=', perfil.id)
+        .execute();
+    res.json({ ok: true, cpf_mascara: (0, cpf_1.mascararCpf)(cpf) });
+});
 // Rascunho/reprovado -> pendente: e' o unico jeito de entrar na fila do
 // gerente. Um perfil aprovado que volta a editar dados sensiveis nao
 // perde o selo aqui - so a Fase 2 decide se re-analise e' automatica.
 exports.profilesRouter.post('/me/submit', auth_1.autenticar, (0, auth_1.exigirPapel)('profissional'), async (req, res) => {
     const perfil = await db_1.db
         .selectFrom('professional_profiles')
-        .select(['id', 'status'])
+        .select(['id', 'status', 'cpf_hash'])
         .where('user_id', '=', req.user.sub)
         .executeTakeFirst();
+    if (perfil && !perfil.cpf_hash) {
+        res.status(400).json({ erro: 'Informe seu CPF na aba Verificação antes de enviar o anúncio.' });
+        return;
+    }
     if (!perfil) {
         res.status(404).json({ erro: 'Perfil não encontrado para esta conta.' });
         return;

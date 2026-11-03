@@ -8,6 +8,7 @@ import { useSession } from '../context/SessionContext';
 import { ApiError, enviarPerfilParaAprovacao, enviarDocumento, enviarSelfie, listarCidades, type CityOption } from '../lib/api';
 import { Monograma } from '../components/Logo';
 import { rotuloCidade, semAcento } from '../data/cities';
+import { formatarCpf } from '../lib/cpf';
 import { useSeo } from '../hooks/useSeo';
 
 type Etapa = 'dados' | 'verificacao' | 'sucesso';
@@ -38,6 +39,7 @@ export const AdvertisePage: React.FC = () => {
     uf: '',
     category: 'Mulheres' as Categoria,
     whatsapp: '',
+    cpf: '',
   });
 
   // Etapa de verificacao: documento e selfie viram obrigatorios logo
@@ -112,6 +114,7 @@ export const AdvertisePage: React.FC = () => {
         category: formData.category,
         age: Number(formData.age),
         whatsapp: formData.whatsapp.replace(/\D/g, ''),
+        cpf: formData.cpf,
       });
       // Registro cria o perfil como rascunho - antes de entrar na fila
       // do gerente, a etapa de verificacao exige documento e selfie.
@@ -331,6 +334,19 @@ export const AdvertisePage: React.FC = () => {
                 className="w-full bg-onix text-marfim text-sm rounded-campo px-4 py-3 border border-white/15 focus:border-ouro outline-none"
               />
               <p className="mt-1.5 text-[11px] text-nevoa">Essa informação fica visível no seu anúncio publicado.</p>
+            </div>
+
+            <div>
+              <label className="block text-xs font-semibold text-nevoa mb-1.5">CPF</label>
+              <input
+                inputMode="numeric"
+                required
+                value={formData.cpf}
+                onChange={(e) => setFormData({ ...formData, cpf: formatarCpf(e.target.value) })}
+                placeholder="000.000.000-00"
+                className="w-full bg-onix text-marfim text-sm rounded-campo px-4 py-3 border border-white/15 focus:border-ouro outline-none"
+              />
+              <p className="mt-1.5 text-[11px] text-nevoa">Só para garantir um cadastro por pessoa. Nunca aparece no anúncio e não guardamos o número completo.</p>
             </div>
 
             <button

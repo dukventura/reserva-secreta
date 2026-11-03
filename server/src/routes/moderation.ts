@@ -59,7 +59,7 @@ moderationRouter.get('/profiles/pending', async (_req, res) => {
       eb('verifications.selfie_url', 'is not', null).as('selfie_enviada'),
       'professional_profiles.id', 'professional_profiles.slug', 'professional_profiles.stage_name',
       'professional_profiles.age', 'professional_profiles.city', 'professional_profiles.uf', 'professional_profiles.category',
-      'professional_profiles.whatsapp', 'professional_profiles.submitted_at',
+      'professional_profiles.whatsapp', 'professional_profiles.submitted_at', 'professional_profiles.cpf_mascara',
       eb.selectFrom('media')
         .select('media.url')
         .whereRef('media.profile_id', '=', 'professional_profiles.id')

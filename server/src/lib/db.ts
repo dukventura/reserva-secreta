@@ -30,6 +30,8 @@ interface ProfessionalProfilesTable {
   age: number;
   city: string;
   uf: Generated<string>;
+  cpf_hash: string | null;
+  cpf_mascara: string | null;
   neighborhood: string | null;
   height: string | null;
   weight: string | null;

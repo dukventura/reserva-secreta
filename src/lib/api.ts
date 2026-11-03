@@ -161,6 +161,7 @@ export interface MyProfile {
   is_vip: number;
   cover_image: string | null;
   submitted_at: string | null;
+  cpf_mascara: string | null;
   email_confirmado: number;
   telefone_confirmado: number;
   documento_status: 'pendente' | 'aprovado' | 'reprovado';
@@ -192,6 +193,7 @@ export interface PendingModerationProfile {
   whatsapp: string;
   thumbnail_url: string | null;
   submitted_at: string | null;
+  cpf_mascara: string | null;
   approved_photos: number;
 }
 
@@ -255,6 +257,7 @@ export function registrarProfissional(dados: {
   category: 'Mulheres' | 'Trans';
   age: number;
   whatsapp: string;
+  cpf: string;
 }) {
   return request<AuthResponse>('/api/auth/register', {
     method: 'POST',
@@ -747,4 +750,8 @@ export function esqueciSenha(email: string) {
 
 export function redefinirSenha(dados: { email: string; codigo: string; nova_senha: string }) {
   return request<{ ok: true }>('/api/auth/senha/redefinir', { method: 'POST', body: dados });
+}
+
+export function informarCpf(cpf: string) {
+  return request<{ ok: true; cpf_mascara: string }>('/api/profiles/me/cpf', { method: 'POST', body: { cpf }, auth: true });
 }

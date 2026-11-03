@@ -6,6 +6,7 @@ import { slugUnico } from '../lib/slug';
 import { autenticar, exigirPapel } from '../middleware/auth';
 import { loginLimiter, registerLimiter, emailCodeLimiter, codeCheckLimiter } from '../lib/rateLimit';
 import { enviarCodigo, conferirCodigo } from '../lib/email';
+import { cpfValido, hashCpf, mascararCpf } from '../lib/cpf';
 import { registrarAuditoria } from '../lib/audit';
 
 export const authRouter = Router();
@@ -31,6 +32,7 @@ const cadastroSchema = z.discriminatedUnion('role', [
     category: z.enum(['Mulheres', 'Trans']),
     age: z.number().int().min(18).max(99),
     whatsapp: z.string().trim().min(10).max(20),
+    cpf: z.string().trim().min(11).max(14),
   }),
 ]);
 
@@ -45,6 +47,16 @@ authRouter.post('/register', registerLimiter, async (req, res) => {
   // Cidade valida contra a tabela `cities` em vez de um enum fixo no
   // codigo: atender uma cidade nova passa a ser so uma linha no banco.
   if (dados.role === 'profissional') {
+    // Um cadastro de anunciante por pessoa.
+    if (!cpfValido(dados.cpf)) {
+      res.status(400).json({ erro: 'CPF inválido. Confira os números.' });
+      return;
+    }
+    const cpfEmUso = await db.selectFrom('professional_profiles').select('id').where('cpf_hash', '=', hashCpf(dados.cpf)).executeTakeFirst();
+    if (cpfEmUso) {
+      res.status(409).json({ erro: 'Já existe uma conta de anunciante com este CPF. Use "Esqueci minha senha" na tela de login para recuperar o acesso.' });
+      return;
+    }
     const cidade = await db
       .selectFrom('cities')
       .select('id')
@@ -87,6 +99,8 @@ authRouter.post('/register', registerLimiter, async (req, res) => {
           uf: dados.uf,
           category: dados.category,
           whatsapp: dados.whatsapp.replace(/\D/g, ''),
+          cpf_hash: hashCpf(dados.cpf),
+          cpf_mascara: mascararCpf(dados.cpf),
           status: 'rascunho',
         })
         .execute();

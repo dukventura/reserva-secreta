@@ -9,6 +9,7 @@ const slug_1 = require("../lib/slug");
 const auth_2 = require("../middleware/auth");
 const rateLimit_1 = require("../lib/rateLimit");
 const email_1 = require("../lib/email");
+const cpf_1 = require("../lib/cpf");
 const audit_1 = require("../lib/audit");
 exports.authRouter = (0, express_1.Router)();
 const cadastroBase = zod_1.z.object({
@@ -31,6 +32,7 @@ const cadastroSchema = zod_1.z.discriminatedUnion('role', [
         category: zod_1.z.enum(['Mulheres', 'Trans']),
         age: zod_1.z.number().int().min(18).max(99),
         whatsapp: zod_1.z.string().trim().min(10).max(20),
+        cpf: zod_1.z.string().trim().min(11).max(14),
     }),
 ]);
 exports.authRouter.post('/register', rateLimit_1.registerLimiter, async (req, res) => {
@@ -43,6 +45,16 @@ exports.authRouter.post('/register', rateLimit_1.registerLimiter, async (req, re
     // Cidade valida contra a tabela `cities` em vez de um enum fixo no
     // codigo: atender uma cidade nova passa a ser so uma linha no banco.
     if (dados.role === 'profissional') {
+        // Um cadastro de anunciante por pessoa.
+        if (!(0, cpf_1.cpfValido)(dados.cpf)) {
+            res.status(400).json({ erro: 'CPF inválido. Confira os números.' });
+            return;
+        }
+        const cpfEmUso = await db_1.db.selectFrom('professional_profiles').select('id').where('cpf_hash', '=', (0, cpf_1.hashCpf)(dados.cpf)).executeTakeFirst();
+        if (cpfEmUso) {
+            res.status(409).json({ erro: 'Já existe uma conta de anunciante com este CPF. Use "Esqueci minha senha" na tela de login para recuperar o acesso.' });
+            return;
+        }
         const cidade = await db_1.db
             .selectFrom('cities')
             .select('id')
@@ -80,6 +92,8 @@ exports.authRouter.post('/register', rateLimit_1.registerLimiter, async (req, re
                 uf: dados.uf,
                 category: dados.category,
                 whatsapp: dados.whatsapp.replace(/\D/g, ''),
+                cpf_hash: (0, cpf_1.hashCpf)(dados.cpf),
+                cpf_mascara: (0, cpf_1.mascararCpf)(dados.cpf),
                 status: 'rascunho',
             })
                 .execute();
