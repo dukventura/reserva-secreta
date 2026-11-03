@@ -8,11 +8,35 @@ import { useSession } from '../context/SessionContext';
 import { ApiError, enviarPerfilParaAprovacao, enviarDocumento, enviarSelfie, listarCidades, type CityOption } from '../lib/api';
 import { Monograma } from '../components/Logo';
 import { rotuloCidade, semAcento } from '../data/cities';
-import { formatarCpf } from '../lib/cpf';
+import { formatarCpf, cpfValido } from '../lib/cpf';
 import { useSeo } from '../hooks/useSeo';
 
 type Etapa = 'dados' | 'verificacao' | 'sucesso';
 type Categoria = 'Mulheres' | 'Trans';
+type CampoCadastro = 'name' | 'email' | 'password' | 'age' | 'whatsapp' | 'cpf';
+
+const MENSAGEM_CAMPO: Record<CampoCadastro, string> = {
+  name: 'Informe seu nome (mínimo 2 letras).',
+  email: 'E-mail inválido.',
+  password: 'A senha precisa ter ao menos 8 caracteres.',
+  age: 'A idade precisa ser entre 18 e 99 anos.',
+  whatsapp: 'Informe o WhatsApp com DDD, ex: (35) 99999-9999.',
+  cpf: 'CPF incompleto.',
+};
+
+// Traduz o erro do servidor pro campo certo: detalhes do zod (campo a
+// campo) ou mensagens conhecidas (CPF/e-mail ja usados).
+function errosDoServidor(err: ApiError): Partial<Record<CampoCadastro, string>> {
+  const porCampo = (err.detalhes as { fieldErrors?: Record<string, string[]> } | undefined)?.fieldErrors ?? {};
+  const erros: Partial<Record<CampoCadastro, string>> = {};
+  for (const campo of Object.keys(porCampo) as CampoCadastro[]) {
+    if (campo in MENSAGEM_CAMPO) erros[campo] = MENSAGEM_CAMPO[campo];
+  }
+  if (/cpf/i.test(err.message)) erros.cpf = err.message;
+  else if (/e-mail/i.test(err.message)) erros.email = err.message;
+  return erros;
+}
+
 const MAX_SUGESTOES = 8;
 
 export const AdvertisePage: React.FC = () => {
@@ -28,6 +52,8 @@ export const AdvertisePage: React.FC = () => {
   const [cityDropdownAberto, setCityDropdownAberto] = useState(false);
   const cityDropdownRef = useRef<HTMLDivElement>(null);
   const [erro, setErro] = useState('');
+  const [errosCampo, setErrosCampo] = useState<Partial<Record<CampoCadastro, string>>>({});
+  const avisoRef = useRef<HTMLDivElement>(null);
   const [erroCidade, setErroCidade] = useState('');
   const [enviando, setEnviando] = useState(false);
   const [formData, setFormData] = useState({
@@ -92,15 +118,45 @@ export const AdvertisePage: React.FC = () => {
     setErroCidade('');
   };
 
+  // Ao aparecer erro, leva a tela ate o primeiro campo com problema
+  // (ou ate o aviso perto do botao) - antes o erro ficava la' em cima,
+  // fora da vista, e a pessoa nao sabia o que tinha acontecido.
+  useEffect(() => {
+    const primeiro = document.querySelector('[data-erro-campo="true"]') ?? avisoRef.current;
+    if ((erro || erroCidade || Object.keys(errosCampo).length > 0) && primeiro) {
+      primeiro.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    }
+  }, [erro, erroCidade, errosCampo]);
+
+  const borda = (campo: CampoCadastro) => (errosCampo[campo] ? 'border-red-500 focus:border-red-400' : 'border-white/15 focus:border-ouro');
+  const limparErro = (campo: CampoCadastro) => {
+    if (errosCampo[campo]) setErrosCampo((prev) => ({ ...prev, [campo]: undefined }));
+  };
+  const ErroCampo = ({ campo }: { campo: CampoCadastro }) =>
+    errosCampo[campo] ? (
+      <p data-erro-campo="true" className="mt-1.5 flex items-center gap-1 text-xs text-red-400 font-semibold">
+        <AlertCircle className="w-3.5 h-3.5 shrink-0" />{errosCampo[campo]}
+      </p>
+    ) : null;
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setErro('');
     setErroCidade('');
+    setErrosCampo({});
+    const antes: Partial<Record<CampoCadastro, string>> = {};
+    if (formData.whatsapp.replace(/\D/g, '').length < 10) antes.whatsapp = MENSAGEM_CAMPO.whatsapp;
+    if (!cpfValido(formData.cpf)) antes.cpf = formData.cpf.replace(/\D/g, '').length === 11 ? 'CPF inválido. Confira os números.' : MENSAGEM_CAMPO.cpf;
     // Cidade so' e' valida se veio de um clique na sugestao (garante
     // que bate com uma cidade real da lista, nao texto livre digitado
     // e nunca selecionado).
     if (!formData.city || rotuloCidade({ name: formData.city, uf: formData.uf }) !== cityQuery) {
       setErroCidade('Digite o nome da sua cidade e selecione uma opção da lista.');
+      setErrosCampo(antes);
+      return;
+    }
+    if (Object.keys(antes).length > 0) {
+      setErrosCampo(antes);
       return;
     }
     setEnviando(true);
@@ -120,7 +176,14 @@ export const AdvertisePage: React.FC = () => {
       // do gerente, a etapa de verificacao exige documento e selfie.
       setEtapa('verificacao');
     } catch (err) {
-      setErro(err instanceof ApiError ? err.message : 'Não foi possível concluir o cadastro. Tente novamente.');
+      if (err instanceof ApiError) {
+        const porCampo = errosDoServidor(err);
+        if (/cidade/i.test(err.message)) setErroCidade('Selecione sua cidade na lista.');
+        else if (Object.keys(porCampo).length > 0) setErrosCampo(porCampo);
+        else setErro(err.message);
+      } else {
+        setErro('Não foi possível concluir o cadastro. Tente novamente.');
+      }
     } finally {
       setEnviando(false);
     }
@@ -202,13 +265,6 @@ export const AdvertisePage: React.FC = () => {
               </div>
             </div>
 
-            {erro && (
-              <div className="flex items-start space-x-2 bg-red-500/10 border border-red-500/30 p-3 text-xs text-red-300">
-                <AlertCircle className="w-4 h-4 shrink-0 mt-0.5" />
-                <span>{erro}</span>
-              </div>
-            )}
-
             <div>
               <label className="block text-xs font-semibold text-nevoa mb-1">Seu Nome / Nome Artístico</label>
               <input
@@ -216,10 +272,11 @@ export const AdvertisePage: React.FC = () => {
                 required
                 minLength={2}
                 value={formData.name}
-                onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+                onChange={(e) => { limparErro('name'); setFormData({ ...formData, name: e.target.value }) }}
                 placeholder="Ex: Amanda Santos"
-                className="w-full bg-onix text-marfim text-sm rounded-campo px-4 py-2.5 border border-white/15 focus:border-ouro outline-none"
+                className={`w-full bg-onix text-marfim text-sm rounded-campo px-4 py-2.5 border ${borda('name')} outline-none`}
               />
+              <ErroCampo campo="name" />
             </div>
 
             <div>
@@ -230,11 +287,12 @@ export const AdvertisePage: React.FC = () => {
                   type="email"
                   required
                   value={formData.email}
-                  onChange={(e) => setFormData({ ...formData, email: e.target.value })}
+                  onChange={(e) => { limparErro('email'); setFormData({ ...formData, email: e.target.value }) }}
                   placeholder="seu@email.com"
-                  className="w-full bg-onix text-marfim text-sm rounded-campo pl-10 pr-4 py-3 border border-white/15 focus:border-ouro outline-none"
+                  className={`w-full bg-onix text-marfim text-sm rounded-campo pl-10 pr-4 py-3 border ${borda('email')} outline-none`}
                 />
               </div>
+              <ErroCampo campo="email" />
             </div>
 
             <div>
@@ -246,11 +304,12 @@ export const AdvertisePage: React.FC = () => {
                   required
                   minLength={8}
                   value={formData.password}
-                  onChange={(e) => setFormData({ ...formData, password: e.target.value })}
+                  onChange={(e) => { limparErro('password'); setFormData({ ...formData, password: e.target.value }) }}
                   placeholder="Mínimo 8 caracteres"
-                  className="w-full bg-onix text-marfim text-sm rounded-campo pl-10 pr-4 py-3 border border-white/15 focus:border-ouro outline-none"
+                  className={`w-full bg-onix text-marfim text-sm rounded-campo pl-10 pr-4 py-3 border ${borda('password')} outline-none`}
                 />
               </div>
+              <ErroCampo campo="password" />
             </div>
 
             <div className="grid grid-cols-2 gap-3">
@@ -262,10 +321,11 @@ export const AdvertisePage: React.FC = () => {
                   min={18}
                   max={99}
                   value={formData.age}
-                  onChange={(e) => setFormData({ ...formData, age: e.target.value })}
+                  onChange={(e) => { limparErro('age'); setFormData({ ...formData, age: e.target.value }) }}
                   placeholder="18"
-                  className="w-full bg-onix text-marfim text-sm rounded-campo px-3 py-2.5 border border-white/15 focus:border-ouro outline-none"
+                  className={`w-full bg-onix text-marfim text-sm rounded-campo px-3 py-2.5 border ${borda('age')} outline-none`}
                 />
+              <ErroCampo campo="age" />
               </div>
               <div>
                 <label className="block text-xs font-semibold text-nevoa mb-1">Categoria</label>
@@ -329,10 +389,11 @@ export const AdvertisePage: React.FC = () => {
                 type="tel"
                 required
                 value={formData.whatsapp}
-                onChange={(e) => setFormData({ ...formData, whatsapp: e.target.value })}
+                onChange={(e) => { limparErro('whatsapp'); setFormData({ ...formData, whatsapp: e.target.value }) }}
                 placeholder="(35) 99999-9999"
-                className="w-full bg-onix text-marfim text-sm rounded-campo px-4 py-3 border border-white/15 focus:border-ouro outline-none"
+                className={`w-full bg-onix text-marfim text-sm rounded-campo px-4 py-3 border ${borda('whatsapp')} outline-none`}
               />
+              <ErroCampo campo="whatsapp" />
               <p className="mt-1.5 text-[11px] text-nevoa">Essa informação fica visível no seu anúncio publicado.</p>
             </div>
 
@@ -342,12 +403,20 @@ export const AdvertisePage: React.FC = () => {
                 inputMode="numeric"
                 required
                 value={formData.cpf}
-                onChange={(e) => setFormData({ ...formData, cpf: formatarCpf(e.target.value) })}
+                onChange={(e) => { limparErro('cpf'); setFormData({ ...formData, cpf: formatarCpf(e.target.value) }) }}
                 placeholder="000.000.000-00"
-                className="w-full bg-onix text-marfim text-sm rounded-campo px-4 py-3 border border-white/15 focus:border-ouro outline-none"
+                className={`w-full bg-onix text-marfim text-sm rounded-campo px-4 py-3 border ${borda('cpf')} outline-none`}
               />
+              <ErroCampo campo="cpf" />
               <p className="mt-1.5 text-[11px] text-nevoa">Só para garantir um cadastro por pessoa. Nunca aparece no anúncio e não guardamos o número completo.</p>
             </div>
+
+            {(erro || erroCidade || Object.values(errosCampo).some(Boolean)) && (
+              <div ref={avisoRef} className="flex items-start space-x-2 bg-red-500/15 border border-red-500/50 p-3.5 text-sm text-red-200">
+                <AlertCircle className="w-5 h-5 shrink-0" />
+                <span>{erro || 'Corrija os campos marcados em vermelho acima e tente de novo.'}</span>
+              </div>
+            )}
 
             <button
               type="submit"

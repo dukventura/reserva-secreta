@@ -48,13 +48,6 @@ export const ClientSignupPage: React.FC = () => {
         </div>
 
         <form onSubmit={handleSubmit} className="space-y-6">
-          {erro && (
-            <div className="flex items-start space-x-2 bg-red-500/10 border border-red-500/30 rounded-xl p-3.5 text-xs text-red-300">
-              <AlertCircle className="w-4 h-4 shrink-0 mt-0.5" />
-              <span>{erro}</span>
-            </div>
-          )}
-
           <div className="space-y-2">
             <label className="block text-sm font-bold text-gray-200">Nome ou apelido</label>
             <div className="relative">
@@ -101,6 +94,14 @@ export const ClientSignupPage: React.FC = () => {
               />
             </div>
           </div>
+
+          {/* Perto do botao: e' onde a pessoa esta olhando quando clica. */}
+          {erro && (
+            <div className="flex items-start space-x-2 bg-red-500/15 border border-red-500/50 rounded-xl p-3.5 text-sm text-red-200">
+              <AlertCircle className="w-5 h-5 shrink-0" />
+              <span>{erro}</span>
+            </div>
+          )}
 
           <button
             type="submit"
