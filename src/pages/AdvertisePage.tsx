@@ -354,6 +354,8 @@ export const AdvertisePage: React.FC = () => {
               <ShieldCheck className="w-5 h-5 text-ouro shrink-0 mt-0.5" />
               <p className="text-xs text-nevoa">
                 Conta criada! Pra sua segurança e da plataforma, todo perfil passa por verificação de identidade antes de publicar. Envie os dois itens abaixo — nenhum fica visível no seu anúncio, são revisados só pela nossa equipe.
+                <br /><br />
+                Também mandamos um <strong className="text-marfim">código de confirmação para o seu e-mail</strong> — você digita ele depois, no seu painel, na aba Verificação.
               </p>
             </div>
 

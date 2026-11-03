@@ -176,11 +176,23 @@ interface RateLimitsTable {
   reset_at: Date;
 }
 
+interface EmailCodesTable {
+  id: Generated<number>;
+  user_id: number;
+  tipo: 'confirmacao' | 'senha';
+  code_hash: string;
+  expires_at: Date;
+  tentativas: Generated<number>;
+  usado_em: Date | null;
+  created_at: Generated<Date>;
+}
+
 export interface Database {
   users: UsersTable;
   professional_profiles: ProfessionalProfilesTable;
   media: MediaTable;
   verifications: VerificationsTable;
+  email_codes: EmailCodesTable;
   reports: ReportsTable;
   audit_log: AuditLogTable;
   cities: CitiesTable;

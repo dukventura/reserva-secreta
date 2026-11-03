@@ -730,3 +730,21 @@ export function desfavoritarPerfil(slug: string) {
 export function listarMinhasDenuncias() {
   return request<{ denuncias: ClientReport[] }>('/api/client/reports', { auth: true });
 }
+
+// ---- e-mail: confirmacao e senha ----
+
+export function pedirCodigoEmail() {
+  return request<{ ok: true; email: string }>('/api/auth/email/codigo', { method: 'POST', auth: true });
+}
+
+export function confirmarEmail(codigo: string) {
+  return request<{ ok: true }>('/api/auth/email/confirmar', { method: 'POST', body: { codigo }, auth: true });
+}
+
+export function esqueciSenha(email: string) {
+  return request<{ ok: true }>('/api/auth/senha/esqueci', { method: 'POST', body: { email } });
+}
+
+export function redefinirSenha(dados: { email: string; codigo: string; nova_senha: string }) {
+  return request<{ ok: true }>('/api/auth/senha/redefinir', { method: 'POST', body: dados });
+}

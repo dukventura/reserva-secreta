@@ -83,6 +83,10 @@ export const LoginPage: React.FC = () => {
           </div>
         </div>
 
+        <div className="text-right -mt-2">
+          <Link to="/recuperar-senha" className="text-xs text-ouro hover:text-champanhe">Esqueci minha senha</Link>
+        </div>
+
         <button
           type="submit"
           disabled={enviando}

@@ -10,6 +10,7 @@ import { AdvertisePage } from './pages/AdvertisePage';
 import { ClientSignupPage } from './pages/ClientSignupPage';
 import { ClientDashboard } from './pages/ClientDashboard';
 import { LoginPage } from './pages/LoginPage';
+import { RecuperarSenhaPage } from './pages/RecuperarSenhaPage';
 import { NotFoundPage } from './pages/NotFoundPage';
 import { ProfessionalDashboard } from './pages/dashboard/ProfessionalDashboard';
 import { ManagerDashboard } from './pages/dashboard/ManagerDashboard';
@@ -33,6 +34,7 @@ export function App() {
                 <Route path="/cadastro" element={<ClientSignupPage />} />
                 <Route path="/minha-conta" element={<ClientDashboard />} />
                 <Route path="/entrar" element={<LoginPage />} />
+                <Route path="/recuperar-senha" element={<RecuperarSenhaPage />} />
                 <Route path="/manual/profissional" element={<ManualProfissionalPage />} />
                 <Route path="/manual/administrativo" element={<ManualAdminPage />} />
                 <Route path="*" element={<NotFoundPage />} />

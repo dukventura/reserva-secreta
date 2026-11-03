@@ -3,7 +3,7 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
     return (mod && mod.__esModule) ? mod : { "default": mod };
 };
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.reportLimiter = exports.registerLimiter = exports.loginLimiter = void 0;
+exports.codeCheckLimiter = exports.emailCodeLimiter = exports.reportLimiter = exports.registerLimiter = exports.loginLimiter = void 0;
 const express_rate_limit_1 = __importDefault(require("express-rate-limit"));
 const rateLimitStore_1 = require("./rateLimitStore");
 /* Sem isso, um unico IP mal-intencionado pode tentar milhares de
@@ -38,4 +38,23 @@ exports.reportLimiter = (0, express_rate_limit_1.default)({
     legacyHeaders: false,
     store: new rateLimitStore_1.MysqlRateLimitStore('report'),
     message: { erro: 'Muitas denúncias enviadas. Aguarde uma hora e tente novamente.' },
+});
+// Pedido de codigo por e-mail (confirmacao / esqueci a senha): cada
+// pedido dispara um e-mail, entao limita pra ninguem usar o site pra
+// encher a caixa de outra pessoa.
+exports.emailCodeLimiter = (0, express_rate_limit_1.default)({
+    windowMs: 60 * 60 * 1000,
+    limit: 6,
+    standardHeaders: true,
+    legacyHeaders: false,
+    store: new rateLimitStore_1.MysqlRateLimitStore('email-code'),
+    message: { erro: 'Muitos códigos pedidos. Aguarde uma hora e tente novamente.' },
+});
+exports.codeCheckLimiter = (0, express_rate_limit_1.default)({
+    windowMs: 15 * 60 * 1000,
+    limit: 15,
+    standardHeaders: true,
+    legacyHeaders: false,
+    store: new rateLimitStore_1.MysqlRateLimitStore('code-check'),
+    message: { erro: 'Muitas tentativas. Aguarde alguns minutos e tente novamente.' },
 });

@@ -37,3 +37,24 @@ export const reportLimiter = rateLimit({
   store: new MysqlRateLimitStore('report'),
   message: { erro: 'Muitas denúncias enviadas. Aguarde uma hora e tente novamente.' },
 });
+
+// Pedido de codigo por e-mail (confirmacao / esqueci a senha): cada
+// pedido dispara um e-mail, entao limita pra ninguem usar o site pra
+// encher a caixa de outra pessoa.
+export const emailCodeLimiter = rateLimit({
+  windowMs: 60 * 60 * 1000,
+  limit: 6,
+  standardHeaders: true,
+  legacyHeaders: false,
+  store: new MysqlRateLimitStore('email-code'),
+  message: { erro: 'Muitos códigos pedidos. Aguarde uma hora e tente novamente.' },
+});
+
+export const codeCheckLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000,
+  limit: 15,
+  standardHeaders: true,
+  legacyHeaders: false,
+  store: new MysqlRateLimitStore('code-check'),
+  message: { erro: 'Muitas tentativas. Aguarde alguns minutos e tente novamente.' },
+});

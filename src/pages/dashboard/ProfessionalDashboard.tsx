@@ -6,6 +6,7 @@ import {
 import { DashboardLayout } from '../../layouts/DashboardLayout';
 import { RequireRole } from '../../components/RequireRole';
 import { PixPagamento } from '../../components/PixPagamento';
+import { ConfirmarEmail } from '../../components/ConfirmarEmail';
 import { PagamentoAutomatico } from '../../components/PagamentoAutomatico';
 import {
   buscarMeuPerfil, listarPlanosPublicos, atualizarMeuPerfil, enviarPerfilParaAprovacao, enviarFoto, removerFoto,
@@ -274,7 +275,7 @@ function ProfessionalDashboardContent() {
   }
 
   const podeEnviar = perfil.status === 'rascunho' || perfil.status === 'reprovado';
-  const verificacoes = [perfil.email_confirmado === 1, perfil.telefone_confirmado === 1, perfil.documento_status === 'aprovado', perfil.selfie_status === 'aprovado'];
+  const verificacoes = [perfil.email_confirmado === 1, perfil.documento_status === 'aprovado', perfil.selfie_status === 'aprovado'];
   const percentualVerificado = Math.round((verificacoes.filter(Boolean).length / verificacoes.length) * 100);
 
   const diasParaVencerVip = perfil.subscription_vence_em
@@ -403,14 +404,15 @@ function ProfessionalDashboardContent() {
               <div className="h-full bg-ouro" style={{ width: `${percentualVerificado}%` }} />
             </div>
             <div className="flex flex-wrap gap-3 text-xs text-nevoa">
-              <span className="flex items-center space-x-1.5">
-                {perfil.email_confirmado ? <CheckCircle2 className="w-4 h-4 text-verificado-texto" /> : <Circle className="w-4 h-4 text-nevoa" />}
-                <span>E-mail validado</span>
-              </span>
-              <span className="flex items-center space-x-1.5">
-                {perfil.telefone_confirmado ? <CheckCircle2 className="w-4 h-4 text-verificado-texto" /> : <Circle className="w-4 h-4 text-nevoa" />}
-                <span>Telefone verificado</span>
-              </span>
+              {perfil.email_confirmado ? (
+                <span className="flex items-center space-x-1.5">
+                  <CheckCircle2 className="w-4 h-4 text-verificado-texto" /><span>E-mail confirmado</span>
+                </span>
+              ) : (
+                <button onClick={() => setTab('verificacao')} className="flex items-center space-x-1.5 text-ouro hover:text-champanhe">
+                  <Circle className="w-4 h-4" /><span className="underline">Confirmar e-mail</span>
+                </button>
+              )}
               <span className="flex items-center space-x-1.5">
                 {perfil.documento_status === 'aprovado' ? <CheckCircle2 className="w-4 h-4 text-verificado-texto" /> : <Clock className="w-4 h-4 text-ouro" />}
                 <span>Documento {perfil.documento_status === 'aprovado' ? 'aprovado' : perfil.documento_status === 'reprovado' ? 'reprovado' : 'em análise'}</span>
@@ -570,18 +572,7 @@ function ProfessionalDashboardContent() {
             <div className="h-full bg-ouro" style={{ width: `${percentualVerificado}%` }} />
           </div>
 
-          <div className="flex items-center justify-between bg-grafite border border-white/10 p-4">
-            <div className="flex items-center space-x-2.5">
-              {perfil.email_confirmado ? <CheckCircle2 className="w-5 h-5 text-verificado-texto" /> : <Circle className="w-5 h-5 text-nevoa" />}
-              <span className="text-sm text-marfim">E-mail validado</span>
-            </div>
-          </div>
-          <div className="flex items-center justify-between bg-grafite border border-white/10 p-4">
-            <div className="flex items-center space-x-2.5">
-              {perfil.telefone_confirmado ? <CheckCircle2 className="w-5 h-5 text-verificado-texto" /> : <Circle className="w-5 h-5 text-nevoa" />}
-              <span className="text-sm text-marfim">Telefone verificado</span>
-            </div>
-          </div>
+          <ConfirmarEmail confirmado={perfil.email_confirmado === 1} onConfirmado={carregar} />
 
           <div className="flex items-center justify-between bg-grafite border border-white/10 p-4">
             <div className="flex items-center space-x-2.5">

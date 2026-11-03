@@ -4,7 +4,8 @@ import { db } from '../lib/db';
 import { hashSenha, conferirSenha, emitirToken } from '../lib/auth';
 import { slugUnico } from '../lib/slug';
 import { autenticar, exigirPapel } from '../middleware/auth';
-import { loginLimiter, registerLimiter } from '../lib/rateLimit';
+import { loginLimiter, registerLimiter, emailCodeLimiter, codeCheckLimiter } from '../lib/rateLimit';
+import { enviarCodigo, conferirCodigo } from '../lib/email';
 import { registrarAuditoria } from '../lib/audit';
 
 export const authRouter = Router();
@@ -94,6 +95,10 @@ authRouter.post('/register', registerLimiter, async (req, res) => {
     return userId;
   });
 
+  // Falha no envio nao derruba o cadastro - da' pra pedir outro codigo
+  // pelo painel.
+  enviarCodigo(resultado, dados.email, 'confirmacao').catch((err) => console.error('Falha ao enviar codigo de confirmacao:', err));
+
   const token = emitirToken({ sub: resultado, role: dados.role, name: dados.name });
   res.status(201).json({ token, user: { id: resultado, role: dados.role, name: dados.name } });
 });
@@ -126,6 +131,72 @@ authRouter.post('/login', loginLimiter, async (req, res) => {
 
   const token = emitirToken({ sub: usuario.id, role: usuario.role, name: usuario.name });
   res.json({ token, user: { id: usuario.id, role: usuario.role, name: usuario.name } });
+});
+
+// ---- confirmacao de e-mail ----
+
+authRouter.post('/email/codigo', autenticar, emailCodeLimiter, async (req, res) => {
+  const user = await db.selectFrom('users').select(['id', 'email']).where('id', '=', req.user!.sub).executeTakeFirstOrThrow();
+  try {
+    await enviarCodigo(user.id, user.email, 'confirmacao');
+  } catch (err) {
+    console.error('Falha ao enviar codigo de confirmacao:', err);
+    res.status(502).json({ erro: 'Não foi possível enviar o e-mail agora. Tente de novo em alguns minutos.' });
+    return;
+  }
+  res.json({ ok: true, email: user.email });
+});
+
+authRouter.post('/email/confirmar', autenticar, codeCheckLimiter, async (req, res) => {
+  const codigo = typeof req.body?.codigo === 'string' ? req.body.codigo : '';
+  if (!(await conferirCodigo(req.user!.sub, 'confirmacao', codigo))) {
+    res.status(400).json({ erro: 'Código inválido ou expirado. Confira o e-mail ou peça um novo código.' });
+    return;
+  }
+  await db.updateTable('verifications').set({ email_confirmado: 1 }).where('user_id', '=', req.user!.sub).execute();
+  res.json({ ok: true });
+});
+
+// ---- esqueci a senha ----
+
+const esqueciSchema = z.object({ email: z.string().trim().toLowerCase().email() });
+
+// Responde igual exista ou nao a conta, pra nao revelar quais e-mails
+// estao cadastrados.
+authRouter.post('/senha/esqueci', emailCodeLimiter, async (req, res) => {
+  const parsed = esqueciSchema.safeParse(req.body);
+  if (!parsed.success) {
+    res.status(400).json({ erro: 'Informe um e-mail válido.' });
+    return;
+  }
+  const user = await db.selectFrom('users').select(['id', 'email']).where('email', '=', parsed.data.email).executeTakeFirst();
+  if (user) {
+    enviarCodigo(user.id, user.email, 'senha').catch((err) => console.error('Falha ao enviar codigo de senha:', err));
+  }
+  res.json({ ok: true });
+});
+
+const redefinirSchema = z.object({
+  email: z.string().trim().toLowerCase().email(),
+  codigo: z.string().trim().min(1),
+  nova_senha: z.string().min(8, 'A nova senha precisa ter ao menos 8 caracteres.'),
+});
+
+authRouter.post('/senha/redefinir', codeCheckLimiter, async (req, res) => {
+  const parsed = redefinirSchema.safeParse(req.body);
+  if (!parsed.success) {
+    res.status(400).json({ erro: parsed.error.errors[0]?.message ?? 'Dados inválidos.' });
+    return;
+  }
+  const user = await db.selectFrom('users').select('id').where('email', '=', parsed.data.email).executeTakeFirst();
+  if (!user || !(await conferirCodigo(user.id, 'senha', parsed.data.codigo))) {
+    res.status(400).json({ erro: 'Código inválido ou expirado. Peça um novo código.' });
+    return;
+  }
+  await db.updateTable('users').set({ password_hash: await hashSenha(parsed.data.nova_senha) }).where('id', '=', user.id).execute();
+  // Quem recebeu o codigo no e-mail provou que e' dona dele.
+  await db.updateTable('verifications').set({ email_confirmado: 1 }).where('user_id', '=', user.id).execute();
+  res.json({ ok: true });
 });
 
 // Unica forma de virar master/gerente: o master cria a mao. O
