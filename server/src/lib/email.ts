@@ -62,20 +62,23 @@ export type TipoCodigo = 'confirmacao' | 'senha' | 'troca_email' | 'troca_whatsa
 const VALIDADE_MIN = 30;
 const MAX_TENTATIVAS = 5;
 
-function hashCodigo(codigo: string): string {
-  return createHash('sha256').update(codigo).digest('hex');
+// `alvo` amarra o codigo ao que ele autoriza (novo e-mail / novo
+// WhatsApp): sem isso, um codigo pedido pra um endereco valeria pra
+// confirmar outro qualquer.
+function hashCodigo(codigo: string, alvo = ''): string {
+  return createHash('sha256').update(`${codigo}:${alvo}`).digest('hex');
 }
 
 // Gera um codigo novo (invalida os anteriores do mesmo tipo) e manda
 // por e-mail.
-export async function enviarCodigo(userId: number, email: string, tipo: TipoCodigo): Promise<void> {
+export async function enviarCodigo(userId: number, email: string, tipo: TipoCodigo, alvo = ''): Promise<void> {
   const codigo = String(randomInt(0, 1_000_000)).padStart(6, '0');
   await db.updateTable('email_codes').set({ usado_em: new Date() })
     .where('user_id', '=', userId).where('tipo', '=', tipo).where('usado_em', 'is', null).execute();
   await db.insertInto('email_codes').values({
     user_id: userId,
     tipo,
-    code_hash: hashCodigo(codigo),
+    code_hash: hashCodigo(codigo, alvo),
     expires_at: new Date(Date.now() + VALIDADE_MIN * 60_000),
   }).execute();
 
@@ -101,7 +104,7 @@ export async function enviarCodigo(userId: number, email: string, tipo: TipoCodi
 
 // true se o codigo confere (e o marca como usado). Conta tentativa
 // errada; passou do limite, o codigo morre e e' preciso pedir outro.
-export async function conferirCodigo(userId: number, tipo: TipoCodigo, codigo: string): Promise<boolean> {
+export async function conferirCodigo(userId: number, tipo: TipoCodigo, codigo: string, alvo = ''): Promise<boolean> {
   const registro = await db.selectFrom('email_codes')
     .select(['id', 'code_hash', 'tentativas'])
     .where('user_id', '=', userId).where('tipo', '=', tipo)
@@ -110,7 +113,7 @@ export async function conferirCodigo(userId: number, tipo: TipoCodigo, codigo: s
     .executeTakeFirst();
   if (!registro || registro.tentativas >= MAX_TENTATIVAS) return false;
 
-  if (registro.code_hash !== hashCodigo(codigo.trim())) {
+  if (registro.code_hash !== hashCodigo(codigo.trim(), alvo)) {
     await db.updateTable('email_codes').set({ tentativas: registro.tentativas + 1 }).where('id', '=', registro.id).execute();
     return false;
   }

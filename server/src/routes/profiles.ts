@@ -521,7 +521,7 @@ profilesRouter.post('/me/whatsapp/solicitar', autenticar, exigirPapel('profissio
   }
   const user = await db.selectFrom('users').select(['id', 'email']).where('id', '=', req.user!.sub).executeTakeFirstOrThrow();
   try {
-    await enviarCodigo(user.id, user.email, 'troca_whatsapp');
+    await enviarCodigo(user.id, user.email, 'troca_whatsapp', novoWhatsappSanitizado);
   } catch (err) {
     console.error('Falha ao enviar codigo de troca de whatsapp:', err);
     res.status(502).json({ erro: 'Não foi possível enviar o e-mail agora. Tente de novo em alguns minutos.' });
@@ -554,7 +554,7 @@ profilesRouter.post('/me/whatsapp/confirmar', autenticar, exigirPapel('profissio
     res.status(400).json({ erro: 'O novo WhatsApp deve ser diferente do atual.' });
     return;
   }
-  if (!(await conferirCodigo(req.user!.sub, 'troca_whatsapp', parsed.data.codigo))) {
+  if (!(await conferirCodigo(req.user!.sub, 'troca_whatsapp', parsed.data.codigo, novoWhatsappSanitizado))) {
     res.status(400).json({ erro: 'Código inválido ou expirado. Confira o e-mail ou peça um novo código.' });
     return;
   }

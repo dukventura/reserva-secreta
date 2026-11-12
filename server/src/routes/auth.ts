@@ -415,7 +415,7 @@ authRouter.post('/email/trocar/solicitar', autenticar, emailCodeLimiter, async (
     return;
   }
   try {
-    await enviarCodigo(user.id, parsed.data.novo_email, 'troca_email');
+    await enviarCodigo(user.id, parsed.data.novo_email, 'troca_email', parsed.data.novo_email);
   } catch (err) {
     console.error('Falha ao enviar codigo de troca de e-mail:', err);
     res.status(502).json({ erro: 'Não foi possível enviar o e-mail agora. Tente de novo em alguns minutos.' });
@@ -445,7 +445,7 @@ authRouter.post('/email/trocar/confirmar', autenticar, codeCheckLimiter, async (
     res.status(409).json({ erro: 'Já existe uma conta com este e-mail.' });
     return;
   }
-  if (!(await conferirCodigo(user.id, 'troca_email', parsed.data.codigo))) {
+  if (!(await conferirCodigo(user.id, 'troca_email', parsed.data.codigo, parsed.data.novo_email))) {
     res.status(400).json({ erro: 'Código inválido ou expirado. Confira o e-mail ou peça um novo código.' });
     return;
   }

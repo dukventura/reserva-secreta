@@ -59,19 +59,22 @@ async function enviarEmail(para, assunto, titulo, corpoHtml, texto) {
 }
 const VALIDADE_MIN = 30;
 const MAX_TENTATIVAS = 5;
-function hashCodigo(codigo) {
-    return (0, node_crypto_1.createHash)('sha256').update(codigo).digest('hex');
+// `alvo` amarra o codigo ao que ele autoriza (novo e-mail / novo
+// WhatsApp): sem isso, um codigo pedido pra um endereco valeria pra
+// confirmar outro qualquer.
+function hashCodigo(codigo, alvo = '') {
+    return (0, node_crypto_1.createHash)('sha256').update(`${codigo}:${alvo}`).digest('hex');
 }
 // Gera um codigo novo (invalida os anteriores do mesmo tipo) e manda
 // por e-mail.
-async function enviarCodigo(userId, email, tipo) {
+async function enviarCodigo(userId, email, tipo, alvo = '') {
     const codigo = String((0, node_crypto_1.randomInt)(0, 1000000)).padStart(6, '0');
     await db_1.db.updateTable('email_codes').set({ usado_em: new Date() })
         .where('user_id', '=', userId).where('tipo', '=', tipo).where('usado_em', 'is', null).execute();
     await db_1.db.insertInto('email_codes').values({
         user_id: userId,
         tipo,
-        code_hash: hashCodigo(codigo),
+        code_hash: hashCodigo(codigo, alvo),
         expires_at: new Date(Date.now() + VALIDADE_MIN * 60000),
     }).execute();
     const caixa = `<div style="margin:20px 0;padding:16px;background:#0b0708;border:1px solid #c9a24b;text-align:center;font-size:32px;letter-spacing:10px;color:#c9a24b;font-weight:bold">${codigo}</div>`;
@@ -90,7 +93,7 @@ async function enviarCodigo(userId, email, tipo) {
 }
 // true se o codigo confere (e o marca como usado). Conta tentativa
 // errada; passou do limite, o codigo morre e e' preciso pedir outro.
-async function conferirCodigo(userId, tipo, codigo) {
+async function conferirCodigo(userId, tipo, codigo, alvo = '') {
     const registro = await db_1.db.selectFrom('email_codes')
         .select(['id', 'code_hash', 'tentativas'])
         .where('user_id', '=', userId).where('tipo', '=', tipo)
@@ -99,7 +102,7 @@ async function conferirCodigo(userId, tipo, codigo) {
         .executeTakeFirst();
     if (!registro || registro.tentativas >= MAX_TENTATIVAS)
         return false;
-    if (registro.code_hash !== hashCodigo(codigo.trim())) {
+    if (registro.code_hash !== hashCodigo(codigo.trim(), alvo)) {
         await db_1.db.updateTable('email_codes').set({ tentativas: registro.tentativas + 1 }).where('id', '=', registro.id).execute();
         return false;
     }
