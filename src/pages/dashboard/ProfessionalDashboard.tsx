@@ -9,8 +9,10 @@ import { PixPagamento } from '../../components/PixPagamento';
 import { ConfirmarEmail } from '../../components/ConfirmarEmail';
 import { InformarCpf } from '../../components/InformarCpf';
 import { PagamentoAutomatico } from '../../components/PagamentoAutomatico';
+import { TrocarEmail } from '../../components/TrocarEmail';
+import { TrocarWhatsapp } from '../../components/TrocarWhatsapp';
 import {
-  buscarMeuPerfil, listarPlanosPublicos, atualizarMeuPerfil, enviarPerfilParaAprovacao, enviarFoto, removerFoto,
+  buscarMeuPerfil, buscarMe, listarPlanosPublicos, atualizarMeuPerfil, enviarPerfilParaAprovacao, enviarFoto, removerFoto,
   enviarDocumento, enviarSelfie, solicitarPlano, cancelarPedidoPlano, enviarComprovantePedido, ApiError,
   type MyProfile, type AtualizacaoPerfil, type Plan,
 } from '../../lib/api';
@@ -37,6 +39,7 @@ function ProfessionalDashboardContent() {
   const [perfil, setPerfil] = useState<MyProfile | null>(null);
   const [carregando, setCarregando] = useState(true);
   const [erro, setErro] = useState('');
+  const [emailAtual, setEmailAtual] = useState('');
   const [form, setForm] = useState({
     tagline: '', bio: '', hourly_rate: '', neighborhood: '',
     height: '', weight: '', eyes: '', hair: '', silicone: '', tattoos: '',
@@ -65,6 +68,10 @@ function ProfessionalDashboardContent() {
 
   useEffect(() => {
     listarPlanosPublicos().then(({ planos }) => setPlanos(planos)).catch(() => {});
+  }, []);
+
+  useEffect(() => {
+    buscarMe().then(({ user }) => setEmailAtual(user.email ?? '')).catch(() => {});
   }, []);
 
   const carregar = () => {
@@ -433,6 +440,7 @@ function ProfessionalDashboardContent() {
       )}
 
       {tab === 'perfil' && (
+        <>
         <form onSubmit={salvar} className="max-w-xl space-y-4">
           <div>
             <label className="block text-xs font-semibold text-nevoa mb-1.5">Frase de destaque</label>
@@ -525,6 +533,25 @@ function ProfessionalDashboardContent() {
           </button>
           {salvo && <span className="ml-3 text-xs text-verificado-texto inline-flex items-center space-x-1"><Check className="w-3.5 h-3.5" /><span>Salvo</span></span>}
         </form>
+
+        {perfil && (
+          <div className="max-w-xl mt-6 space-y-3">
+            <h3 className="text-sm font-semibold text-marfim border-t border-white/10 pt-4">Dados de contato</h3>
+            <div>
+              <label className="block text-xs font-semibold text-nevoa mb-1.5">WhatsApp atual</label>
+              <input
+                value={perfil.whatsapp ?? ''}
+                disabled
+                className="w-full bg-onix/50 text-nevoa text-sm rounded-campo px-4 py-2.5 border border-white/10 outline-none"
+              />
+            </div>
+            <TrocarWhatsapp
+              whatsappAtual={perfil.whatsapp ?? ''}
+              onTrocado={carregar}
+            />
+          </div>
+        )}
+        </>
       )}
 
       {tab === 'galeria' && (
@@ -583,6 +610,7 @@ function ProfessionalDashboardContent() {
           </div>
 
           <ConfirmarEmail confirmado={perfil.email_confirmado === 1} onConfirmado={carregar} />
+          <TrocarEmail emailAtual={emailAtual} onTrocado={(novoEmail) => setEmailAtual(novoEmail)} />
           <InformarCpf cpfMascara={perfil.cpf_mascara} onInformado={carregar} />
 
           <div className="flex items-center justify-between bg-grafite border border-white/10 p-4">

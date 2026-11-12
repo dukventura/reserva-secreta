@@ -755,3 +755,39 @@ export function redefinirSenha(dados: { email: string; codigo: string; nova_senh
 export function informarCpf(cpf: string) {
   return request<{ ok: true; cpf_mascara: string }>('/api/profiles/me/cpf', { method: 'POST', body: { cpf }, auth: true });
 }
+
+// ---- troca de e-mail pós-cadastro ----
+
+export function solicitarTrocaEmail(novoEmail: string) {
+  return request<{ ok: true }>('/api/auth/email/trocar/solicitar', {
+    method: 'POST',
+    body: { novo_email: novoEmail },
+    auth: true,
+  });
+}
+
+export function confirmarTrocaEmail(novoEmail: string, codigo: string) {
+  return request<{ ok: true }>('/api/auth/email/trocar/confirmar', {
+    method: 'POST',
+    body: { novo_email: novoEmail, codigo },
+    auth: true,
+  });
+}
+
+// ---- troca de WhatsApp (profissional) ----
+
+export function solicitarTrocaWhatsapp(novoWhatsapp: string) {
+  return request<{ ok: true }>('/api/profiles/me/whatsapp/solicitar', {
+    method: 'POST',
+    body: { novo_whatsapp: novoWhatsapp },
+    auth: true,
+  });
+}
+
+export function confirmarTrocaWhatsapp(novoWhatsapp: string, codigo: string) {
+  return request<{ ok: true }>('/api/profiles/me/whatsapp/confirmar', {
+    method: 'POST',
+    body: { novo_whatsapp: novoWhatsapp, codigo },
+    auth: true,
+  });
+}

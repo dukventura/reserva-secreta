@@ -19,6 +19,8 @@ const publicProfile_1 = require("../lib/publicProfile");
 const sicredi_1 = require("../lib/sicredi");
 const pixAutomatico_1 = require("../lib/pixAutomatico");
 const cpf_1 = require("../lib/cpf");
+const email_1 = require("../lib/email");
+const rateLimit_1 = require("../lib/rateLimit");
 exports.profilesRouter = (0, express_1.Router)();
 const categoriaQuerySchema = zod_1.z.enum(['Mulheres', 'Trans']);
 // Diretorio publico: only 'aprovado' aparece. E' o portao central do
@@ -460,6 +462,80 @@ exports.profilesRouter.post('/me/selfie', auth_1.autenticar, (0, auth_1.exigirPa
             .execute();
         res.status(201).json({ ok: true });
     });
+});
+// ---- troca de WhatsApp pos-cadastro (profissional) ----
+const trocaWhatsappSchema = zod_1.z.object({
+    novo_whatsapp: zod_1.z.string().trim().min(10).max(20),
+});
+const confirmarTrocaWhatsappSchema = zod_1.z.object({
+    novo_whatsapp: zod_1.z.string().trim().min(10).max(20),
+    codigo: zod_1.z.string().trim().min(1),
+});
+exports.profilesRouter.post('/me/whatsapp/solicitar', auth_1.autenticar, (0, auth_1.exigirPapel)('profissional'), rateLimit_1.emailCodeLimiter, async (req, res) => {
+    const parsed = trocaWhatsappSchema.safeParse(req.body);
+    if (!parsed.success) {
+        res.status(400).json({ erro: 'Informe um número de WhatsApp válido (mín. 10 dígitos).' });
+        return;
+    }
+    const novoWhatsappSanitizado = parsed.data.novo_whatsapp.replace(/\D/g, '');
+    if (novoWhatsappSanitizado.length < 10 || novoWhatsappSanitizado.length > 15) {
+        res.status(400).json({ erro: 'Número de WhatsApp inválido.' });
+        return;
+    }
+    const perfil = await db_1.db
+        .selectFrom('professional_profiles')
+        .select(['id', 'whatsapp'])
+        .where('user_id', '=', req.user.sub)
+        .executeTakeFirst();
+    if (!perfil) {
+        res.status(404).json({ erro: 'Perfil não encontrado para esta conta.' });
+        return;
+    }
+    if (novoWhatsappSanitizado === perfil.whatsapp) {
+        res.status(400).json({ erro: 'O novo WhatsApp deve ser diferente do atual.' });
+        return;
+    }
+    const user = await db_1.db.selectFrom('users').select(['id', 'email']).where('id', '=', req.user.sub).executeTakeFirstOrThrow();
+    try {
+        await (0, email_1.enviarCodigo)(user.id, user.email, 'troca_whatsapp');
+    }
+    catch (err) {
+        console.error('Falha ao enviar codigo de troca de whatsapp:', err);
+        res.status(502).json({ erro: 'Não foi possível enviar o e-mail agora. Tente de novo em alguns minutos.' });
+        return;
+    }
+    res.json({ ok: true });
+});
+exports.profilesRouter.post('/me/whatsapp/confirmar', auth_1.autenticar, (0, auth_1.exigirPapel)('profissional'), rateLimit_1.codeCheckLimiter, async (req, res) => {
+    const parsed = confirmarTrocaWhatsappSchema.safeParse(req.body);
+    if (!parsed.success) {
+        res.status(400).json({ erro: 'Dados inválidos.' });
+        return;
+    }
+    const novoWhatsappSanitizado = parsed.data.novo_whatsapp.replace(/\D/g, '');
+    if (novoWhatsappSanitizado.length < 10 || novoWhatsappSanitizado.length > 15) {
+        res.status(400).json({ erro: 'Número de WhatsApp inválido.' });
+        return;
+    }
+    const perfil = await db_1.db
+        .selectFrom('professional_profiles')
+        .select(['id', 'whatsapp'])
+        .where('user_id', '=', req.user.sub)
+        .executeTakeFirst();
+    if (!perfil) {
+        res.status(404).json({ erro: 'Perfil não encontrado para esta conta.' });
+        return;
+    }
+    if (novoWhatsappSanitizado === perfil.whatsapp) {
+        res.status(400).json({ erro: 'O novo WhatsApp deve ser diferente do atual.' });
+        return;
+    }
+    if (!(await (0, email_1.conferirCodigo)(req.user.sub, 'troca_whatsapp', parsed.data.codigo))) {
+        res.status(400).json({ erro: 'Código inválido ou expirado. Confira o e-mail ou peça um novo código.' });
+        return;
+    }
+    await db_1.db.updateTable('professional_profiles').set({ whatsapp: novoWhatsappSanitizado }).where('user_id', '=', req.user.sub).execute();
+    res.json({ ok: true });
 });
 // Fica depois da rota /me de proposito: caso contrario "/me" seria
 // interpretado como um valor de :slug.

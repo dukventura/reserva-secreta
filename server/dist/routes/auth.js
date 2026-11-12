@@ -333,6 +333,64 @@ exports.authRouter.delete('/staff/:id', auth_2.autenticar, (0, auth_2.exigirPape
     await (0, audit_1.registrarAuditoria)(req.user.sub, `Excluiu membro da equipe (${membro.role === 'master' ? 'Admin Master' : 'Gerente'})`, membro.name);
     res.json({ ok: true });
 });
+// ---- troca de e-mail pos-cadastro ----
+const trocaEmailSchema = zod_1.z.object({
+    novo_email: zod_1.z.string().trim().toLowerCase().email(),
+});
+exports.authRouter.post('/email/trocar/solicitar', auth_2.autenticar, rateLimit_1.emailCodeLimiter, async (req, res) => {
+    const parsed = trocaEmailSchema.safeParse(req.body);
+    if (!parsed.success) {
+        res.status(400).json({ erro: 'Informe um e-mail válido.' });
+        return;
+    }
+    const user = await db_1.db.selectFrom('users').select(['id', 'email']).where('id', '=', req.user.sub).executeTakeFirstOrThrow();
+    if (parsed.data.novo_email === user.email) {
+        res.status(400).json({ erro: 'O novo e-mail deve ser diferente do atual.' });
+        return;
+    }
+    const emUso = await db_1.db.selectFrom('users').select('id').where('email', '=', parsed.data.novo_email).executeTakeFirst();
+    if (emUso) {
+        res.status(409).json({ erro: 'Já existe uma conta com este e-mail.' });
+        return;
+    }
+    try {
+        await (0, email_1.enviarCodigo)(user.id, parsed.data.novo_email, 'troca_email');
+    }
+    catch (err) {
+        console.error('Falha ao enviar codigo de troca de e-mail:', err);
+        res.status(502).json({ erro: 'Não foi possível enviar o e-mail agora. Tente de novo em alguns minutos.' });
+        return;
+    }
+    res.json({ ok: true });
+});
+const confirmarTrocaEmailSchema = zod_1.z.object({
+    novo_email: zod_1.z.string().trim().toLowerCase().email(),
+    codigo: zod_1.z.string().trim().min(1),
+});
+exports.authRouter.post('/email/trocar/confirmar', auth_2.autenticar, rateLimit_1.codeCheckLimiter, async (req, res) => {
+    const parsed = confirmarTrocaEmailSchema.safeParse(req.body);
+    if (!parsed.success) {
+        res.status(400).json({ erro: 'Dados inválidos.' });
+        return;
+    }
+    const user = await db_1.db.selectFrom('users').select(['id', 'email']).where('id', '=', req.user.sub).executeTakeFirstOrThrow();
+    if (parsed.data.novo_email === user.email) {
+        res.status(400).json({ erro: 'O novo e-mail deve ser diferente do atual.' });
+        return;
+    }
+    const emUso = await db_1.db.selectFrom('users').select('id').where('email', '=', parsed.data.novo_email).executeTakeFirst();
+    if (emUso) {
+        res.status(409).json({ erro: 'Já existe uma conta com este e-mail.' });
+        return;
+    }
+    if (!(await (0, email_1.conferirCodigo)(user.id, 'troca_email', parsed.data.codigo))) {
+        res.status(400).json({ erro: 'Código inválido ou expirado. Confira o e-mail ou peça um novo código.' });
+        return;
+    }
+    await db_1.db.updateTable('users').set({ email: parsed.data.novo_email }).where('id', '=', user.id).execute();
+    await db_1.db.updateTable('verifications').set({ email_confirmado: 1 }).where('user_id', '=', user.id).execute();
+    res.json({ ok: true });
+});
 exports.authRouter.get('/me', auth_2.autenticar, async (req, res) => {
     const usuario = await db_1.db
         .selectFrom('users')

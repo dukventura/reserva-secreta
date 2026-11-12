@@ -13,6 +13,8 @@ import { comVerificacao, parseJsonArray, paraPerfilPublico } from '../lib/public
 import { criarCobranca, consultarCobranca, gerarTxid, sicrediConfigurado } from '../lib/sicredi';
 import { verificarPedidoSicredi } from '../lib/pixAutomatico';
 import { cpfValido, hashCpf, mascararCpf } from '../lib/cpf';
+import { enviarCodigo, conferirCodigo } from '../lib/email';
+import { emailCodeLimiter, codeCheckLimiter } from '../lib/rateLimit';
 
 export const profilesRouter = Router();
 
@@ -480,6 +482,84 @@ profilesRouter.post('/me/selfie', autenticar, exigirPapel('profissional'), (req,
 
     res.status(201).json({ ok: true });
   });
+});
+
+// ---- troca de WhatsApp pos-cadastro (profissional) ----
+
+const trocaWhatsappSchema = z.object({
+  novo_whatsapp: z.string().trim().min(10).max(20),
+});
+
+const confirmarTrocaWhatsappSchema = z.object({
+  novo_whatsapp: z.string().trim().min(10).max(20),
+  codigo: z.string().trim().min(1),
+});
+
+profilesRouter.post('/me/whatsapp/solicitar', autenticar, exigirPapel('profissional'), emailCodeLimiter, async (req, res) => {
+  const parsed = trocaWhatsappSchema.safeParse(req.body);
+  if (!parsed.success) {
+    res.status(400).json({ erro: 'Informe um número de WhatsApp válido (mín. 10 dígitos).' });
+    return;
+  }
+  const novoWhatsappSanitizado = parsed.data.novo_whatsapp.replace(/\D/g, '');
+  if (novoWhatsappSanitizado.length < 10 || novoWhatsappSanitizado.length > 15) {
+    res.status(400).json({ erro: 'Número de WhatsApp inválido.' });
+    return;
+  }
+  const perfil = await db
+    .selectFrom('professional_profiles')
+    .select(['id', 'whatsapp'])
+    .where('user_id', '=', req.user!.sub)
+    .executeTakeFirst();
+  if (!perfil) {
+    res.status(404).json({ erro: 'Perfil não encontrado para esta conta.' });
+    return;
+  }
+  if (novoWhatsappSanitizado === perfil.whatsapp) {
+    res.status(400).json({ erro: 'O novo WhatsApp deve ser diferente do atual.' });
+    return;
+  }
+  const user = await db.selectFrom('users').select(['id', 'email']).where('id', '=', req.user!.sub).executeTakeFirstOrThrow();
+  try {
+    await enviarCodigo(user.id, user.email, 'troca_whatsapp');
+  } catch (err) {
+    console.error('Falha ao enviar codigo de troca de whatsapp:', err);
+    res.status(502).json({ erro: 'Não foi possível enviar o e-mail agora. Tente de novo em alguns minutos.' });
+    return;
+  }
+  res.json({ ok: true });
+});
+
+profilesRouter.post('/me/whatsapp/confirmar', autenticar, exigirPapel('profissional'), codeCheckLimiter, async (req, res) => {
+  const parsed = confirmarTrocaWhatsappSchema.safeParse(req.body);
+  if (!parsed.success) {
+    res.status(400).json({ erro: 'Dados inválidos.' });
+    return;
+  }
+  const novoWhatsappSanitizado = parsed.data.novo_whatsapp.replace(/\D/g, '');
+  if (novoWhatsappSanitizado.length < 10 || novoWhatsappSanitizado.length > 15) {
+    res.status(400).json({ erro: 'Número de WhatsApp inválido.' });
+    return;
+  }
+  const perfil = await db
+    .selectFrom('professional_profiles')
+    .select(['id', 'whatsapp'])
+    .where('user_id', '=', req.user!.sub)
+    .executeTakeFirst();
+  if (!perfil) {
+    res.status(404).json({ erro: 'Perfil não encontrado para esta conta.' });
+    return;
+  }
+  if (novoWhatsappSanitizado === perfil.whatsapp) {
+    res.status(400).json({ erro: 'O novo WhatsApp deve ser diferente do atual.' });
+    return;
+  }
+  if (!(await conferirCodigo(req.user!.sub, 'troca_whatsapp', parsed.data.codigo))) {
+    res.status(400).json({ erro: 'Código inválido ou expirado. Confira o e-mail ou peça um novo código.' });
+    return;
+  }
+  await db.updateTable('professional_profiles').set({ whatsapp: novoWhatsappSanitizado }).where('user_id', '=', req.user!.sub).execute();
+  res.json({ ok: true });
 });
 
 // Fica depois da rota /me de proposito: caso contrario "/me" seria

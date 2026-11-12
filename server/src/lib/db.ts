@@ -181,7 +181,7 @@ interface RateLimitsTable {
 interface EmailCodesTable {
   id: Generated<number>;
   user_id: number;
-  tipo: 'confirmacao' | 'senha';
+  tipo: 'confirmacao' | 'senha' | 'troca_email' | 'troca_whatsapp';
   code_hash: string;
   expires_at: Date;
   tentativas: Generated<number>;

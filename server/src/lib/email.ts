@@ -57,7 +57,7 @@ export async function enviarEmail(para: string, assunto: string, titulo: string,
 
 // ---- codigos de 6 digitos ----
 
-export type TipoCodigo = 'confirmacao' | 'senha';
+export type TipoCodigo = 'confirmacao' | 'senha' | 'troca_email' | 'troca_whatsapp';
 
 const VALIDADE_MIN = 30;
 const MAX_TENTATIVAS = 5;
@@ -84,10 +84,18 @@ export async function enviarCodigo(userId: number, email: string, tipo: TipoCodi
     await enviarEmail(email, `${codigo} é seu código de confirmação`, 'Confirme seu e-mail',
       `<p style="margin:0;font-size:14px;line-height:1.6">Use o código abaixo no seu painel para confirmar seu e-mail:</p>${caixa}<p style="margin:0;font-size:12px;color:#8c8079">Vale por ${VALIDADE_MIN} minutos. Se não foi você que criou a conta, ignore este e-mail.</p>`,
       `Seu código de confirmação do Reserva Secreta: ${codigo} (vale por ${VALIDADE_MIN} minutos).`);
-  } else {
+  } else if (tipo === 'senha') {
     await enviarEmail(email, `${codigo} é seu código para redefinir a senha`, 'Redefinir senha',
       `<p style="margin:0;font-size:14px;line-height:1.6">Recebemos um pedido para redefinir sua senha. Use este código:</p>${caixa}<p style="margin:0;font-size:12px;color:#8c8079">Vale por ${VALIDADE_MIN} minutos. Se não foi você, ignore este e-mail — sua senha continua a mesma.</p>`,
       `Seu código para redefinir a senha do Reserva Secreta: ${codigo} (vale por ${VALIDADE_MIN} minutos).`);
+  } else if (tipo === 'troca_email') {
+    await enviarEmail(email, `${codigo} é seu código para confirmar o novo e-mail`, 'Confirme seu novo e-mail',
+      `<p style="margin:0;font-size:14px;line-height:1.6">Você solicitou a troca do seu e-mail no Reserva Secreta. Use o código abaixo para confirmar este novo endereço:</p>${caixa}<p style="margin:0;font-size:12px;color:#8c8079">Vale por ${VALIDADE_MIN} minutos. Se não foi você quem solicitou, ignore este e-mail — seu e-mail atual não será alterado.</p>`,
+      `Seu código para confirmar o novo e-mail no Reserva Secreta: ${codigo} (vale por ${VALIDADE_MIN} minutos).`);
+  } else {
+    await enviarEmail(email, `${codigo} é seu código para confirmar a troca de WhatsApp`, 'Confirme a troca de WhatsApp',
+      `<p style="margin:0;font-size:14px;line-height:1.6">Você solicitou a troca do número de WhatsApp no seu perfil do Reserva Secreta. Use o código abaixo para confirmar a alteração:</p>${caixa}<p style="margin:0;font-size:12px;color:#8c8079">Vale por ${VALIDADE_MIN} minutos. Se não foi você quem solicitou, ignore este e-mail — seu WhatsApp atual não será alterado.</p>`,
+      `Seu código para confirmar a troca de WhatsApp no Reserva Secreta: ${codigo} (vale por ${VALIDADE_MIN} minutos).`);
   }
 }
 
