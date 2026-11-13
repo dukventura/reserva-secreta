@@ -30,8 +30,10 @@ export const PagamentoAutomatico: React.FC<PagamentoAutomaticoProps> = ({ pedido
       })
       .catch((err) => {
         if (!ativo) return;
-        if (err instanceof ApiError && err.status === 503) onIndisponivel();
-        else setErro(err instanceof ApiError ? err.message : 'Não foi possível gerar o PIX automático.');
+        // Sem opcao manual na tela, qualquer falha do banco cai no PIX
+        // direto - senao a anunciante ficaria sem como pagar.
+        if (err instanceof ApiError && (err.status === 503 || err.status >= 500)) onIndisponivel();
+        else setErro(err instanceof ApiError ? err.message : 'Não foi possível gerar o PIX. Recarregue a página e tente de novo.');
       })
       .finally(() => { if (ativo) setCarregando(false); });
     return () => { ativo = false; };
@@ -79,7 +81,7 @@ export const PagamentoAutomatico: React.FC<PagamentoAutomaticoProps> = ({ pedido
           <img src={qrDataUrl} alt="QR Code PIX" className="w-40 h-40 bg-white p-1.5 shrink-0" />
         )}
         <div className="flex-1 min-w-0 space-y-2 w-full">
-          <p className="text-xs text-nevoa">Escaneie o QR Code ou copie o código. Assim que o banco confirmar o pagamento, seu plano é ativado sozinho — pode deixar esta tela aberta.</p>
+          <p className="text-xs text-nevoa">Pague por este QR Code ou pelo código abaixo — <strong className="text-marfim">não use outra chave PIX</strong>, senão o pagamento não é reconhecido. Assim que o banco confirmar, seu plano é ativado sozinho em poucos segundos, sem precisar mandar comprovante.</p>
           <button
             onClick={copiar}
             disabled={!codigo}

@@ -756,17 +756,19 @@ function ProfessionalDashboardContent() {
                       </>
                     )}
                   </div>
-                  <button onClick={() => setMostrarPixManual(false)} className="text-xs text-nevoa hover:text-ouro underline transition-colors">
-                    Prefere o pagamento automático?
-                  </button>
                 </>
+              ) : perfil.pedido_plano_pendente.comprovante_enviado ? (
+                // Pedido antigo, pago pela chave fixa antes do PIX
+                // automatico: so' resta a equipe conferir.
+                <div className="flex items-center space-x-1.5 text-xs text-verificado-texto font-semibold">
+                  <Check className="w-4 h-4" /><span>Comprovante enviado — aguardando a equipe confirmar.</span>
+                </div>
               ) : (
-                <>
-                  <PagamentoAutomatico pedidoId={perfil.pedido_plano_pendente.id} onIndisponivel={irParaPixManual} onPago={recarregarAposPagamento} />
-                  <button onClick={() => setMostrarPixManual(true)} className="text-xs text-nevoa hover:text-ouro underline transition-colors">
-                    Prefere pagar direto?
-                  </button>
-                </>
+                // So' o PIX automatico: a chave fixa nao identifica o
+                // pedido, entao todo pagamento por ela dependia de
+                // conferencia manual. O PIX direto so' aparece se o
+                // automatico estiver fora do ar (onIndisponivel).
+                <PagamentoAutomatico pedidoId={perfil.pedido_plano_pendente.id} onIndisponivel={irParaPixManual} onPago={recarregarAposPagamento} />
               )}
             </div>
           )}
